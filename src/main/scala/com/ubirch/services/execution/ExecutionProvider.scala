@@ -15,11 +15,6 @@ trait Execution {
   implicit def ec: ExecutionContextExecutor
 }
 
-trait ExecutionImpl extends Execution {
-
-  override implicit def ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
-}
-
 /**
   * Represents the Execution Context provider.
   * Whenever someone injects an ExecutionContext, this provider defines what will
@@ -28,7 +23,7 @@ trait ExecutionImpl extends Execution {
 @Singleton
 class ExecutionProvider @Inject() (config: Config) extends Provider[ExecutionContext] with Execution with ExecutionContextConfPaths {
 
-  def threadPoolSize: Int = config.getInt(THREAD_POOL_SIZE)
+  val threadPoolSize: Int = config.getInt(THREAD_POOL_SIZE)
 
   override implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(threadPoolSize))
 

@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.ubirch.services.cluster._
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.ExecutionProvider
+import com.ubirch.services.kafka.{ DefaultTiger, Tiger }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 
 import scala.concurrent.ExecutionContext
@@ -20,6 +21,7 @@ class IdServiceBinder
     bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
     bind(classOf[ClusterService]).to(classOf[DefaultClusterService])
     bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
+    bind(classOf[Tiger]).to(classOf[DefaultTiger])
 
   }
 
