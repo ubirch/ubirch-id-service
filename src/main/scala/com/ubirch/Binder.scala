@@ -10,7 +10,7 @@ import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook
 
 import scala.concurrent.ExecutionContext
 
-class IdServiceBinder
+class Binder
   extends AbstractModule {
 
   def configure(): Unit = {
@@ -27,6 +27,6 @@ class IdServiceBinder
 
 }
 
-object IdServiceBinder {
-  val modules: List[Module] = List(new IdServiceBinder)
+object Binder {
+  val modules: List[Module] = List(new Binder)
 }
