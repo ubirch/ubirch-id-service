@@ -30,6 +30,10 @@
         </encoder>
     </appender>
 
+    <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="com.github.nosan.embedded.cassandra" level="WARN"/>
+    <logger name="com.datastax.driver" level="WARN"/>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

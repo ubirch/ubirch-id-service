@@ -95,9 +95,24 @@
         </dependency>
 
         <dependency>
+            <groupId>io.monix</groupId>
+            <artifactId>monix_${scala.compat.version}</artifactId>
+            <version>3.1.0</version>
+            <type>pom</type>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/io.getquill/quill-cassandra-monix -->
+        <dependency>
+            <groupId>io.getquill</groupId>
+            <artifactId>quill-cassandra-monix_${scala.compat.version}</artifactId>
+            <version>3.4.10</version>
+        </dependency>
+
+
+        <dependency>
             <groupId>io.getquill</groupId>
             <artifactId>quill-cassandra_${scala.compat.version}</artifactId>
-            <version>${quill.cassandra.version}</version>
+            <version>3.4.10</version>
         </dependency>
 
         <dependency>

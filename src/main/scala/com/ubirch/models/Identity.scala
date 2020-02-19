@@ -1,12 +1,13 @@
 package com.ubirch.models
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraAsyncContext, SnakeCase }
+import io.getquill.{ CassandraStreamContext, SnakeCase }
 import javax.inject.Inject
+import monix.reactive.Observable
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.ExecutionContext
 
-class Identity(val id: String, val cert: String)
+case class Identity(id: String, category: String, cert: String)
 
 trait IdentityByIdQueries extends TablePointer[Identity] {
 
@@ -14,22 +15,28 @@ trait IdentityByIdQueries extends TablePointer[Identity] {
 
   //These represent query descriptions only
 
-  implicit val eventSchemaMeta: db.SchemaMeta[Identity] = schemaMeta[Identity]("identity_by_cat")
+  implicit val eventSchemaMeta: db.SchemaMeta[Identity] = schemaMeta[Identity]("identities")
 
-  def byIdQ(id: String) = quote {
+  def byIdAndCatQ(id: String, category: String): db.Quoted[db.EntityQuery[Identity]] = quote {
     query[Identity]
       .filter(x => x.id == lift(id))
+      .filter(x => x.category == lift(category))
       .map(x => x)
+  }
+
+  def insertQ(identity: Identity): db.Quoted[db.Insert[Identity]] = quote {
+    query[Identity].insert(lift(identity))
   }
 
 }
 
-class EventsByCat @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends IdentityByIdQueries {
-  val db: CassandraAsyncContext[SnakeCase.type] = connectionService.context
+class IdentitiesDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends IdentityByIdQueries {
+  val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._
 
-  def byId(id: String): Future[List[Identity]] = run(byIdQ(id))
+  def byIdAndCat(id: String, category: String): Observable[Identity] = run(byIdAndCatQ(id, category))
+  def insert(identity: Identity): Observable[Unit] = run(insertQ(identity))
 
 }
 

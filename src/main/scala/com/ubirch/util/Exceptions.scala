@@ -42,4 +42,6 @@ object Exceptions {
     */
   case class InvalidContactPointsException(message: String) extends IdServiceException(message)
 
+  case class StoringException(message: String, reason: String) extends IdServiceException(message)
+
 }

@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.CassandraClusterConfPaths
 import com.ubirch.services.lifeCycle.Lifecycle
 import com.ubirch.util.Exceptions.NoKeyspaceException
-import io.getquill.{ CassandraAsyncContext, NamingStrategy, SnakeCase }
+import io.getquill.{ CassandraStreamContext, NamingStrategy, SnakeCase }
 import javax.inject._
 
 import scala.concurrent.Future
@@ -25,7 +25,7 @@ trait ConnectionServiceConfig {
   */
 trait ConnectionServiceBase extends ConnectionServiceConfig {
   type N <: NamingStrategy
-  val context: CassandraAsyncContext[N]
+  val context: CassandraStreamContext[N]
 }
 
 /**
@@ -56,7 +56,7 @@ class DefaultConnectionService @Inject() (clusterService: ClusterService, config
     throw NoKeyspaceException("Keyspace must be provided.")
   }
 
-  private def createContext() = new CassandraAsyncContext(
+  private def createContext() = new CassandraStreamContext(
     SnakeCase,
     clusterService.cluster,
     keyspace,

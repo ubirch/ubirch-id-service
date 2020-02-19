@@ -1,4 +1,4 @@
-keyspace: event_log
+keyspace: identity_system
 profiles:
   prod:
     replication:
