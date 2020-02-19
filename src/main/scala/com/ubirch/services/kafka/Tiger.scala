@@ -87,7 +87,7 @@ class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, life
     p
   }
 
-  override val process: Process = Process.async {logic(_).future}
+  override val process: Process = Process.async { logic(_).future }
 
   override def prefix: String = "Ubirch"
 
