@@ -108,23 +108,10 @@
             <version>3.4.10</version>
         </dependency>
 
-
         <dependency>
             <groupId>io.getquill</groupId>
             <artifactId>quill-cassandra_${scala.compat.version}</artifactId>
             <version>3.4.10</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.nosan</groupId>
-            <artifactId>embedded-cassandra-test</artifactId>
-            <version>${embedded-cassandra-test}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>28.2-jre</version>
         </dependency>
 
         <dependency>
@@ -196,6 +183,13 @@
             <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.nosan</groupId>
+            <artifactId>embedded-cassandra-test</artifactId>
+            <version>${embedded-cassandra-test}</version>
+        </dependency>
+
 
     </dependencies>
 
@@ -328,15 +322,6 @@
                 </configuration>
             </plugin>
 
-            <plugin>
-                <groupId>io.gatling</groupId>
-                <artifactId>gatling-maven-plugin</artifactId>
-                <version>3.0.2</version>
-                <configuration>
-                    <resultsFolder>${project.basedir}/gatling-results</resultsFolder>
-                    <jvmArgs>-Xmx4G</jvmArgs>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 
