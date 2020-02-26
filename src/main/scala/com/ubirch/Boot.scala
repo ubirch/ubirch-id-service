@@ -2,6 +2,7 @@ package com.ubirch
 
 import com.google.inject.{ Guice, Injector, Module }
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.services.metrics.PrometheusMetrics
 
 import scala.reflect._
 import scala.util.Try
@@ -43,7 +44,18 @@ abstract class InjectorHelper(val modules: List[Module]) extends LazyLogging {
 
 }
 
-abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) {
+/**
+  * Util that integrates an elegant way to add shut down hooks to the JVM.
+  */
+trait WithPrometheusMetrics {
+
+  _: InjectorHelper =>
+
+  get[PrometheusMetrics]
+
+}
+
+abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithPrometheusMetrics {
   def *[T](block: => T): Unit =
     try { block } catch {
       case e: Exception =>
