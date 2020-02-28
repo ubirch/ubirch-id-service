@@ -55,6 +55,12 @@ class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, life
       .mapEval { bytes =>
 
         Task(read[Identity](new ByteArrayInputStream(bytes)))
+          .map { identity =>
+            if (identity.validate) identity
+            else {
+              throw new Exception("Identity received is not valid. The validation process failed: " + identity.toString)
+            }
+          }
           .doOnFinish { maybeError =>
             Task {
               maybeError.foreach { x =>

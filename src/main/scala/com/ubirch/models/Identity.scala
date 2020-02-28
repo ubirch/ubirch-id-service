@@ -7,7 +7,9 @@ import monix.reactive.Observable
 
 import scala.concurrent.ExecutionContext
 
-case class Identity(id: String, category: String, cert: String)
+case class Identity(id: String, category: String, cert: String) {
+  def validate = id.nonEmpty && category.nonEmpty && cert.nonEmpty
+}
 
 trait IdentityByIdQueries extends TablePointer[Identity] {
 
