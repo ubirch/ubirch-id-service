@@ -2,7 +2,7 @@ package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.RequestHelpers
-import com.ubirch.models.PublicKey
+import com.ubirch.models.{ NOK, PublicKey }
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._
@@ -43,7 +43,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats)(implicit
 
   notFound {
     logger.info("route_not_found={} query_string={}", requestPath, request.getQueryString)
-    NotFound("Not found")
+    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
   }
 
 }

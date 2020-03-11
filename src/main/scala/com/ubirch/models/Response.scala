@@ -15,11 +15,13 @@ case class NOK(version: String, status: Symbol, errorType: Symbol, errorMessage:
 
 object NOK {
 
-  val PARSING_ERROR = 'ParsingError
+  final val PARSING_ERROR = 'ParsingError
+  final val NO_ROUTE_FOUND_ERROR = 'NoRouteFound
 
   def apply(errorType: Symbol, errorMessage: String): NOK = new NOK("1.0", 'NOK, errorType, errorMessage)
 
   def parsingError(errorMessage: String) = NOK(PARSING_ERROR, errorMessage)
+  def noRouteFound(errorMessage: String) = NOK(NO_ROUTE_FOUND_ERROR, errorMessage)
 
 }
 
