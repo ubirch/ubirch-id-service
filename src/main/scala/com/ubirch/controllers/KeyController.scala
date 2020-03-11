@@ -1,8 +1,10 @@
 package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.controllers.concerns.RequestHelpers
+import com.ubirch.models.PublicKey
 import javax.inject._
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport }
@@ -10,31 +12,33 @@ import org.scalatra.swagger.{ Swagger, SwaggerSupport }
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class IdentityController @Inject() (val swagger: Swagger)(implicit val executor: ExecutionContext)
+class KeyController @Inject() (val swagger: Swagger, jFormats: Formats)(implicit val executor: ExecutionContext)
   extends ScalatraServlet
   with NativeJsonSupport
   with SwaggerSupport
   with CorsSupport
+  with RequestHelpers
   with LazyLogging {
 
-  override protected def applicationDescription: String = "Identity Manager"
-  override protected implicit def jsonFormats: Formats = DefaultFormats
+  override protected val applicationDescription: String = "Key Controller"
+  override protected implicit val jsonFormats: Formats = jFormats
 
   before() {
     contentType = formats("json")
   }
 
-  get("/:id") {
-    val t = params.get("id")
-    "This is an identity " + t
+  get("/v1/pubkey/:id") {
+    "This is a key " + params.get("id")
   }
 
-  post("/") {
-    "This is a new identity"
+  post("/v1/pubkey") {
+    withData[PublicKey] { pk =>
+      pk
+    }
   }
 
-  delete("/:id") {
-    "This was an identity" + queryParam("id")
+  delete("/v1/pubkey") {
+    "This was an key" + params.get("id")
   }
 
   notFound {

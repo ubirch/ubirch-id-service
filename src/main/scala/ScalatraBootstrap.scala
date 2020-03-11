@@ -1,12 +1,11 @@
 import com.ubirch.Service
-import com.ubirch.controllers.{ IdentityController, InfoController, ResourcesController }
+import com.ubirch.controllers.{ KeyController, ResourcesController }
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
 class ScalatraBootstrap extends LifeCycle {
 
-  lazy val infoController = Service.get[InfoController]
-  lazy val identityController = Service.get[IdentityController]
+  lazy val keyController = Service.get[KeyController]
   lazy val resourceController = Service.get[ResourcesController]
 
   override def init(context: ServletContext) {
@@ -15,14 +14,9 @@ class ScalatraBootstrap extends LifeCycle {
     context.initParameters("org.scalatra.cors.allowCredentials") = "false"
 
     context.mount(
-      handler = infoController,
-      urlPattern = "/",
-      name = "Info"
-    )
-    context.mount(
-      handler = identityController,
-      urlPattern = "/identities",
-      name = "Identities"
+      handler = keyController,
+      urlPattern = "/api/keyService",
+      name = "Keys"
     )
     context.mount(
       handler = resourceController,

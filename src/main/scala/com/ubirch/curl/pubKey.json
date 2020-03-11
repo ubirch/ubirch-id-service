@@ -1,0 +1,12 @@
+{
+  "pubKeyInfo": {
+    "algorithm": "ECC_ED25519",
+    "created": "2020-03-11T15:59:22.813Z",
+    "hwDeviceId": "This is an id",
+    "pubKey": "This is a public key",
+    "pubKeyId": "This is a public key Id",
+    "validNotAfter": "2021-03-11T21:59:22.813Z",
+    "validNotBefore": "2020-03-11T15:59:22.813Z"
+  },
+  "signature": "This is a signature"
+}

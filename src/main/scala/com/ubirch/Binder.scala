@@ -5,9 +5,11 @@ import com.typesafe.config.Config
 import com.ubirch.services.cluster._
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.ExecutionProvider
+import com.ubirch.services.formats.JsonFormatsProvider
 import com.ubirch.services.kafka.{ DefaultTiger, Tiger }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.rest.SwaggerProvider
+import org.json4s.Formats
 import org.scalatra.swagger.Swagger
 
 import scala.concurrent.ExecutionContext
@@ -25,6 +27,7 @@ class Binder
     bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
     bind(classOf[Tiger]).to(classOf[DefaultTiger])
     bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
+    bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
 
   }
 
