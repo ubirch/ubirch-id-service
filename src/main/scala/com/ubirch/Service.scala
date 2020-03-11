@@ -15,7 +15,7 @@ import org.json4s.{ DefaultFormats, Formats }
 import scala.util.{ Failure, Random, Success }
 
 object Service extends Boot(List(new Binder)) {
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = * {
     get[IdentitySystem].start
   }
 }
