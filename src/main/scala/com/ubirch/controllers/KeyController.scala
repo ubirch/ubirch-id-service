@@ -4,13 +4,12 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.RequestHelpers
 import com.ubirch.models.{NOK, PublicKey, PublicKeyDAO}
 import javax.inject._
-import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport}
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.{Failure, Success}
 
 @Singleton
@@ -39,22 +38,24 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKe
   post("/v1/pubkey") {
     withData[PublicKey] { pk =>
 
-      val promise = Promise[ActionResult]()
-      publicKeyDAO.insert(pk)
-        .headOptionL
-        .runToFuture
-        .onComplete {
-          case Success(Some(_)) =>
-            promise.success(Ok(pk))
-          case Success(None) =>
-            promise.success(InternalServerError(NOK.pubKeyError("Error creating")))
-          case Failure(e) =>
-            logger.error("Error creating pub key {}", e.getMessage)
-            promise.success(InternalServerError(NOK.pubKeyError("Error creating pub key")))
-        }
+      async {
 
-      new AsyncResult() {
-        override val is = promise.future
+        val promise = Promise[ActionResult]()
+        publicKeyDAO.insert(pk)
+          .headOptionL
+          .runToFuture
+          .onComplete {
+            case Success(Some(_)) =>
+              promise.success(Ok(pk))
+            case Success(None) =>
+              promise.success(InternalServerError(NOK.pubKeyError("Error creating")))
+            case Failure(e) =>
+              logger.error("Error creating pub key {}", e.getMessage)
+              promise.success(InternalServerError(NOK.pubKeyError("Error creating pub key")))
+          }
+
+        promise.future
+
       }
 
     }
