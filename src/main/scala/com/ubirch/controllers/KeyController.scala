@@ -2,23 +2,28 @@ package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.RequestHelpers
-import com.ubirch.models.{ NOK, PublicKey }
+import com.ubirch.models.{NOK, PublicKey, PublicKeyDAO}
 import javax.inject._
+import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport }
+import org.scalatra.swagger.{Swagger, SwaggerSupport}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success}
 
 @Singleton
-class KeyController @Inject() (val swagger: Swagger, jFormats: Formats)(implicit val executor: ExecutionContext)
+class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKeyDAO: PublicKeyDAO)(implicit val executor: ExecutionContext)
   extends ScalatraServlet
+  with FutureSupport
   with NativeJsonSupport
   with SwaggerSupport
   with CorsSupport
   with RequestHelpers
   with LazyLogging {
+
+  implicit val scheduler = monix.execution.Scheduler(executor)
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -33,7 +38,25 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats)(implicit
 
   post("/v1/pubkey") {
     withData[PublicKey] { pk =>
-      pk
+
+      val promise = Promise[ActionResult]()
+      publicKeyDAO.insert(pk)
+        .headOptionL
+        .runToFuture
+        .onComplete {
+          case Success(Some(_)) =>
+            promise.success(Ok(pk))
+          case Success(None) =>
+            promise.success(InternalServerError(NOK.pubKeyError("Error creating")))
+          case Failure(e) =>
+            logger.error("Error creating pub key {}", e.getMessage)
+            promise.success(InternalServerError(NOK.pubKeyError("Error creating pub key")))
+        }
+
+      new AsyncResult() {
+        override val is = promise.future
+      }
+
     }
   }
 

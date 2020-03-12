@@ -5,13 +5,13 @@
 
 drop table if exists keys;
 
-create table if not exists keys (pubKey text,
-                                 pubKeyId text,
-                                 hwDeviceId text,
+create table if not exists keys (pub_key text,
+                                 pub_key_id text,
+                                 hw_device_id text,
                                  algorithm text,
-                                 validNotAfter timestamp,
-                                 validNotBefore timestamp,
+                                 valid_not_after timestamp,
+                                 valid_not_before timestamp,
                                  signature text,
                                  created timestamp,
-                                 PRIMARY KEY (pubKey)
+                                 PRIMARY KEY (pub_key)
                                  );
