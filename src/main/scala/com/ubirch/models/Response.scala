@@ -1,14 +1,11 @@
 package com.ubirch.models
 
-sealed trait Response {
-  val version: String
-  val status: Symbol
-}
+sealed trait Response
 
-case class OK(version: String, status: Symbol, message: String) extends Response
+case class Simple(version: String, status: Symbol, message: String) extends Response
 
-object OK {
-  def apply(message: String): OK = new OK("1.0", 'OK, message)
+object Simple {
+  def apply(message: String): Simple = new Simple("1.0", 'OK, message)
 }
 
 case class NOK(version: String, status: Symbol, errorType: Symbol, errorMessage: String) extends Response
