@@ -10,7 +10,7 @@ import scala.util.Try
 
 trait RequestHelpers extends NativeJsonSupport {
 
-  def withData[T: Manifest](action: T => Any): Any = {
+  def readBody[T: Manifest](action: T => Any): Any = {
     parsedBody.extractOpt[T] match {
       case Some(t) => action(t)
       case None =>

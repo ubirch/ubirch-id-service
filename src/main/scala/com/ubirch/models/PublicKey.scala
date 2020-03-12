@@ -3,23 +3,21 @@ package com.ubirch.models
 import java.util.Date
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{CassandraStreamContext, SnakeCase}
+import io.getquill.{ CassandraStreamContext, Embedded, SnakeCase }
 import javax.inject.Inject
 import monix.reactive.Observable
-import org.joda.time.DateTime
-import io.getquill.Embedded
 
 import scala.concurrent.ExecutionContext
 
 case class PublicKeyInfo(
-                          pubKey: String,
-                          pubKeyId: String,
-                          hwDeviceId: String,
-                          algorithm: String,
-                          validNotAfter: Option[Date] = None,
-                          validNotBefore: Date = new Date(),
-                          created: Date = new Date()
-                        ) extends Embedded
+    pubKey: String,
+    pubKeyId: String,
+    hwDeviceId: String,
+    algorithm: String,
+    validNotAfter: Option[Date] = None,
+    validNotBefore: Date = new Date(),
+    created: Date = new Date()
+) extends Embedded
 
 case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String)
 
@@ -43,12 +41,12 @@ trait PublicKeyQueries extends TablePointer[PublicKey] {
 
 }
 
-class PublicKeyDAO @Inject()(val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends PublicKeyQueries {
+class PublicKeyDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends PublicKeyQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._
 
-  def byIdAndCat(pubKey: String): Observable[PublicKey] = run(byPubKeyQ(pubKey))
+  def byPubKey(pubKey: String): Observable[PublicKey] = run(byPubKeyQ(pubKey))
 
   def insert(publicKey: PublicKey): Observable[Unit] = run(insertQ(publicKey))
 

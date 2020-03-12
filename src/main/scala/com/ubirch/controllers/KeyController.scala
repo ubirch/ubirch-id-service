@@ -2,18 +2,18 @@ package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.RequestHelpers
-import com.ubirch.models.{NOK, PublicKey, PublicKeyDAO}
+import com.ubirch.models.{ NOK, PublicKey }
+import com.ubirch.services.key.PubKeyService
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport }
 
-import scala.concurrent.{ExecutionContext, Promise}
-import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContext
 
 @Singleton
-class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKeyDAO: PublicKeyDAO)(implicit val executor: ExecutionContext)
+class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeyService: PubKeyService)(implicit val executor: ExecutionContext)
   extends ScalatraServlet
   with FutureSupport
   with NativeJsonSupport
@@ -21,8 +21,6 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKe
   with CorsSupport
   with RequestHelpers
   with LazyLogging {
-
-  implicit val scheduler = monix.execution.Scheduler(executor)
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -37,23 +35,13 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKe
 
   post("/v1/pubkey") {
     readBodyAsync[PublicKey] { pk =>
-
-        val promise = Promise[ActionResult]()
-        publicKeyDAO.insert(pk)
-          .headOptionL
-          .runToFuture
-          .onComplete {
-            case Success(Some(_)) =>
-              promise.success(Ok(pk))
-            case Success(None) =>
-              promise.success(InternalServerError(NOK.pubKeyError("Error creating")))
-            case Failure(e) =>
-              logger.error("Error creating pub key {}", e.getMessage)
-              promise.success(InternalServerError(NOK.pubKeyError("Error creating pub key")))
-          }
-
-        promise.future
-
+      pubKeyService.process(pk)
+        .map { key => Ok(key) }
+        .recover {
+          case e: Exception =>
+            logger.error("Error creating pub key {}", e.getMessage)
+            InternalServerError(NOK.pubKeyError("Error creating pub key"))
+        }
     }
   }
 
