@@ -19,7 +19,7 @@ trait RequestHelpers extends NativeJsonSupport {
     }
   }
 
-  def withDataAsync[T: Manifest](action: T => Future[_]): Future[_] = {
+  def readBodyAsync[T: Manifest](action: T => Future[_]): AsyncResult = async {
     parsedBody.extractOpt[T] match {
       case Some(t) => action(t)
       case None =>
@@ -28,7 +28,7 @@ trait RequestHelpers extends NativeJsonSupport {
     }
   }
 
-  def async(body: => Future[_]) = {
+  def async(body: => Future[_]): AsyncResult = {
     new AsyncResult() {
       override val is = body
     }

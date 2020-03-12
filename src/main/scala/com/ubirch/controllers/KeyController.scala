@@ -36,9 +36,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKe
   }
 
   post("/v1/pubkey") {
-    withData[PublicKey] { pk =>
-
-      async {
+    readBodyAsync[PublicKey] { pk =>
 
         val promise = Promise[ActionResult]()
         publicKeyDAO.insert(pk)
@@ -55,8 +53,6 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, publicKe
           }
 
         promise.future
-
-      }
 
     }
   }
