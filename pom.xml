@@ -67,6 +67,7 @@
         <scala.logging.version>3.9.0</scala.logging.version>
 
         <ubirch-kafka-express.version>1.2.10-SNAPSHOT</ubirch-kafka-express.version>
+        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <quill.cassandra.version>3.4.1</quill.cassandra.version>
         <embedded-cassandra-test>1.2.9</embedded-cassandra-test>
 
@@ -112,6 +113,12 @@
             <groupId>com.ubirch</groupId>
             <artifactId>ubirch-kafka-express</artifactId>
             <version>${ubirch-kafka-express.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-crypto</artifactId>
+            <version>${ubirch-crypto.version}</version>
         </dependency>
 
         <dependency>

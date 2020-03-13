@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.NoStackTrace
 
 @Singleton
-class PubKeyService @Inject() (publicKeyDAO: PublicKeyDAO)(implicit ec: ExecutionContext) extends LazyLogging {
+class PubKeyService @Inject() (publicKeyDAO: PublicKeyDAO, pubKeyVerificationService: PubKeyVerificationService)(implicit ec: ExecutionContext) extends LazyLogging {
 
   implicit private val scheduler = monix.execution.Scheduler(ec)
 
@@ -22,6 +22,7 @@ class PubKeyService @Inject() (publicKeyDAO: PublicKeyDAO)(implicit ec: Executio
   }
 
   case class KeyExists(publicKey: PublicKey) extends Exception with NoStackTrace
+  case class InvalidVerification(publicKey: PublicKey) extends Exception with NoStackTrace
   case class InsertReturnsNone() extends Exception with NoStackTrace
 
   def process(publicKey: PublicKey) = {
@@ -29,6 +30,10 @@ class PubKeyService @Inject() (publicKeyDAO: PublicKeyDAO)(implicit ec: Executio
       maybeKey <- publicKeyDAO.byPubKey(publicKey.pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
+
+      verification <- Task.delay(pubKeyVerificationService.validateSignature(publicKey))
+      _ = if (!verification) logger.info("Verification failed " + maybeKey)
+      _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       res <- publicKeyDAO.insert(publicKey).headOptionL
       _ = if (res.isEmpty) logger.info("Creation seems to have failed...for " + publicKey.toString)

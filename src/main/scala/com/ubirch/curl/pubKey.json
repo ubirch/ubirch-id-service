@@ -1,12 +1,12 @@
 {
   "pubKeyInfo": {
     "algorithm": "ECC_ED25519",
-    "created": "2020-03-11T15:59:22.813Z",
-    "hwDeviceId": "This is an id",
-    "pubKey": "This is a public key",
-    "pubKeyId": "This is a public key Id",
-    "validNotAfter": "2021-03-11T21:59:22.813Z",
-    "validNotBefore": "2020-03-11T15:59:22.813Z"
+    "created": "2020-03-13T17:13:42.790Z",
+    "hwDeviceId": "e686b4ba-26b4-4a6d-8b57-f904299d4a5e",
+    "pubKey": "Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=",
+    "pubKeyId": "Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=",
+    "validNotAfter": "2021-03-13T23:13:42.790Z",
+    "validNotBefore": "2020-03-13T17:13:42.790Z"
   },
-  "signature": "This is a signature"
+  "signature": "6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="
 }

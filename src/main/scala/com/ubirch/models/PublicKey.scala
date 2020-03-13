@@ -10,16 +10,16 @@ import monix.reactive.Observable
 import scala.concurrent.ExecutionContext
 
 case class PublicKeyInfo(
+    algorithm: String,
+    created: Date = new Date(),
+    hwDeviceId: String,
     pubKey: String,
     pubKeyId: String,
-    hwDeviceId: String,
-    algorithm: String,
     validNotAfter: Option[Date] = None,
-    validNotBefore: Date = new Date(),
-    created: Date = new Date()
+    validNotBefore: Date = new Date()
 ) extends Embedded
 
-case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String)
+case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, raw: Option[String] = None)
 
 trait PublicKeyQueries extends TablePointer[PublicKey] {
 
