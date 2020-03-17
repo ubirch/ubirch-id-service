@@ -29,20 +29,35 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     contentType = formats("json")
   }
 
-  get("/v1/pubkey/:id") {
-    "This is a key " + params.get("id")
+  get("/v1/pubkey/:hardwareId") {
+
+    val hwDeviceId = params.get("hardwareId")
+      .filter(_.nonEmpty)
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found"))))
+
+    pubKeyService.get(hwDeviceId)
+      .map { pks => Ok(pks) }
+      .recover {
+        case e: Exception =>
+          logger.error("Error retrieving pub key {}", e.getMessage)
+          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+      }
   }
 
   post("/v1/pubkey") {
-    readBodyAsync[PublicKey] { pk =>
-      pubKeyService.process(pk)
-        .map { key => Ok(key) }
-        .recover {
-          case e: Exception =>
-            logger.error("Error creating pub key {}", e.getMessage)
-            InternalServerError(NOK.pubKeyError("Error creating pub key"))
-        }
-    }
+
+    ReadBody.read[PublicKey]
+      .map(pk => pk.copy(raw = Some("-999")))
+      .async { pk =>
+        pubKeyService.create(pk)
+          .map { key => Ok(key) }
+          .recover {
+            case e: Exception =>
+              logger.error("Error creating pub key {}", e.getMessage)
+              InternalServerError(NOK.pubKeyError("Error creating pub key"))
+          }
+      }
+
   }
 
   delete("/v1/pubkey") {

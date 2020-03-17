@@ -3,8 +3,8 @@ package com.ubirch.models
 import java.util.Date
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, Embedded, SnakeCase }
-import javax.inject.Inject
+import io.getquill.{CassandraStreamContext, Embedded, SnakeCase}
+import javax.inject.{Inject, Singleton}
 import monix.reactive.Observable
 
 import scala.concurrent.ExecutionContext
@@ -35,12 +35,19 @@ trait PublicKeyQueries extends TablePointer[PublicKey] {
       .map(x => x)
   }
 
+  def byHwDeviceIdQ(hwDeviceId: String): db.Quoted[db.EntityQuery[PublicKey]] = quote {
+    query[PublicKey]
+      .filter(x => x.pubKeyInfo.hwDeviceId == lift(hwDeviceId))
+      .map(x => x)
+  }
+
   def insertQ(publicKey: PublicKey): db.Quoted[db.Insert[PublicKey]] = quote {
     query[PublicKey].insert(lift(publicKey))
   }
 
 }
 
+@Singleton
 class PublicKeyDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends PublicKeyQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
@@ -49,5 +56,7 @@ class PublicKeyDAO @Inject() (val connectionService: ConnectionService)(implicit
   def byPubKey(pubKey: String): Observable[PublicKey] = run(byPubKeyQ(pubKey))
 
   def insert(publicKey: PublicKey): Observable[Unit] = run(insertQ(publicKey))
+
+  def byHwDeviceId(hwDeviceId: String): Observable[PublicKey] = run(byHwDeviceIdQ(hwDeviceId))
 
 }

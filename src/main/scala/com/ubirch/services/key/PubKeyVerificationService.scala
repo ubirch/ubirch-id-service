@@ -18,6 +18,29 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
   def validateSignature(publicKey: PublicKey): Boolean = {
 
     publicKey.raw match {
+
+      case Some("-999") =>
+        jsonConverter.toString(publicKey.pubKeyInfo) match {
+
+          case Right(publicKeyInfoString) =>
+            //TODO added prevPubKey signature check!!!
+            logger.info(s"publicKeyInfoString: '$publicKeyInfoString'")
+            try {
+              val pubKeyBytes = Base64.getDecoder.decode(publicKey.pubKeyInfo.pubKey)
+              val pubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, PublicKeyUtil.associateCurve(publicKey.pubKeyInfo.algorithm))
+              pubKey.verify(publicKeyInfoString.getBytes, Base64.getDecoder.decode(publicKey.signature))
+            } catch {
+              case e: InvalidKeySpecException =>
+                logger.error("failed to validate signature", e)
+                false
+            }
+
+          case Left(e) =>
+            logger.error(e.getMessage)
+            false
+
+        }
+
       case Some(raw) =>
         val sigIndex: Int = raw.charAt(2) match {
           // check v2 of the ubirch-protocol encoding, but make sure we don't fall for a mix (legacy bin encoding)
@@ -41,27 +64,8 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
             logger.error("failed to validate signature", e)
             false
         }
-      case None =>
-        jsonConverter.toString(publicKey.pubKeyInfo) match {
 
-          case Right(publicKeyInfoString) =>
-            //TODO added prevPubKey signature check!!!
-            logger.info(s"publicKeyInfoString: '$publicKeyInfoString'")
-            try {
-              val pubKeyBytes = Base64.getDecoder.decode(publicKey.pubKeyInfo.pubKey)
-              val pubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, PublicKeyUtil.associateCurve(publicKey.pubKeyInfo.algorithm))
-              pubKey.verify(publicKeyInfoString.getBytes, Base64.getDecoder.decode(publicKey.signature))
-            } catch {
-              case e: InvalidKeySpecException =>
-                logger.error("failed to validate signature", e)
-                false
-            }
-
-          case Left(e) =>
-            logger.error(e.getMessage)
-            false
-
-        }
+      case None => false
     }
   }
 

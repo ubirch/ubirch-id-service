@@ -12,8 +12,8 @@ create table if not exists keys(
     algorithm        text,
     valid_not_after  timestamp,
     valid_not_before timestamp,
-    signature        text,
-    raw              text,
-    created          timestamp,
-    PRIMARY KEY (pub_key)
+    signature         text,
+    raw               text,
+    created           timestamp,
+    PRIMARY KEY (pub_key, hw_device_id)
 );

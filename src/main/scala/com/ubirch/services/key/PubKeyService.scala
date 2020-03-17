@@ -1,31 +1,34 @@
 package com.ubirch.services.key
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{ PublicKey, PublicKeyDAO }
+import com.ubirch.models.{ PublicKey, PublicKeyByHwDeviceIdDAO, PublicKeyDAO }
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
+import monix.execution.{ CancelableFuture, Scheduler }
 
-import scala.concurrent.ExecutionContext
 import scala.util.control.NoStackTrace
 
+trait PubKeyService {
+  def create(publicKey: PublicKey): CancelableFuture[PublicKey]
+  def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
+}
+
 @Singleton
-class PubKeyService @Inject() (publicKeyDAO: PublicKeyDAO, pubKeyVerificationService: PubKeyVerificationService)(implicit ec: ExecutionContext) extends LazyLogging {
+class DefaultPubKeyService @Inject() (
+    publicKeyDAO: PublicKeyDAO,
+    publicKeyByHwDeviceIdDao: PublicKeyByHwDeviceIdDAO,
+    pubKeyVerificationService: PubKeyVerificationService
+)(implicit scheduler: Scheduler)
+  extends PubKeyService with LazyLogging {
 
-  implicit private val scheduler = monix.execution.Scheduler(ec)
-
-  private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
-    if (condition) Task.raiseError(response) else Task.unit
-
-  private def finalize(response: Task[PublicKey]) = response.onErrorRecover {
-    case KeyExists(publicKey) => publicKey
-    case e: Throwable => throw e
+  def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = {
+    publicKeyByHwDeviceIdDao
+      .byHwDeviceId(hwDeviceId)
+      .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+      .runToFuture
   }
 
-  case class KeyExists(publicKey: PublicKey) extends Exception with NoStackTrace
-  case class InvalidVerification(publicKey: PublicKey) extends Exception with NoStackTrace
-  case class InsertReturnsNone() extends Exception with NoStackTrace
-
-  def process(publicKey: PublicKey) = {
+  def create(publicKey: PublicKey): CancelableFuture[PublicKey] = {
     val res = for {
       maybeKey <- publicKeyDAO.byPubKey(publicKey.pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
@@ -42,7 +45,21 @@ class PubKeyService @Inject() (publicKeyDAO: PublicKeyDAO, pubKeyVerificationSer
       publicKey
     }
 
-    finalize(res).runToFuture
+    res.onErrorRecover {
+      case KeyExists(publicKey) => publicKey
+      case e: Throwable => throw e
+    }
+
+    res.runToFuture
   }
+
+  private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
+    if (condition) Task.raiseError(response) else Task.unit
+
+  private case class KeyExists(publicKey: PublicKey) extends Exception with NoStackTrace
+
+  private case class InvalidVerification(publicKey: PublicKey) extends Exception with NoStackTrace
+
+  private case class InsertReturnsNone() extends Exception with NoStackTrace
 
 }
