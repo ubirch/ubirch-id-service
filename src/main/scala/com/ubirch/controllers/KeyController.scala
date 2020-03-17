@@ -2,7 +2,7 @@ package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.RequestHelpers
-import com.ubirch.models.{ NOK, PublicKey }
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, Simple }
 import com.ubirch.services.key.PubKeyService
 import javax.inject._
 import org.json4s.Formats
@@ -61,7 +61,19 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
   }
 
   delete("/v1/pubkey") {
-    "This was an key" + params.get("id")
+    ReadBody.read[PublicKeyDelete]
+      .async { pkd =>
+        pubKeyService.delete(pkd)
+          .map { dr =>
+            if (dr) Ok(Simple("Key deleted"))
+            else BadRequest(NOK.deleteKeyError("Failed to delete public key"))
+          }
+          .recover {
+            case e: Exception =>
+              logger.error("Error deleting pub key {}", e.getMessage)
+              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+          }
+      }
   }
 
   notFound {

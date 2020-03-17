@@ -5,7 +5,7 @@ import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.crypto.utils.Utils
+import com.ubirch.crypto.utils.{ Curve, Utils }
 import com.ubirch.models.PublicKey
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.PublicKeyUtil
@@ -15,7 +15,9 @@ import org.apache.commons.codec.binary.Hex
 @Singleton
 class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) extends LazyLogging {
 
-  def validateSignature(publicKey: PublicKey): Boolean = {
+  def getCurve(algorithm: String): Curve = PublicKeyUtil.associateCurve(algorithm)
+
+  def validate(publicKey: PublicKey): Boolean = {
 
     publicKey.raw match {
 
@@ -25,16 +27,8 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
           case Right(publicKeyInfoString) =>
             //TODO added prevPubKey signature check!!!
             logger.info(s"publicKeyInfoString: '$publicKeyInfoString'")
-            try {
-              val pubKeyBytes = Base64.getDecoder.decode(publicKey.pubKeyInfo.pubKey)
-              val pubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, PublicKeyUtil.associateCurve(publicKey.pubKeyInfo.algorithm))
-              pubKey.verify(publicKeyInfoString.getBytes, Base64.getDecoder.decode(publicKey.signature))
-            } catch {
-              case e: InvalidKeySpecException =>
-                logger.error("failed to validate signature", e)
-                false
-            }
-
+            val curve = getCurve(publicKey.pubKeyInfo.algorithm)
+            validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, publicKeyInfoString.getBytes, curve)
           case Left(e) =>
             logger.error(e.getMessage)
             false
@@ -55,17 +49,53 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
         val part: Array[Byte] = Hex.decodeHex(raw).dropRight(sigIndex)
         logger.debug("pubKey: '%s'".format(publicKey.pubKeyInfo.pubKey))
         logger.debug("signed part: '%s'".format(Hex.encodeHexString(part)))
-        try {
-          val pubKeyBytes = Base64.getDecoder.decode(publicKey.pubKeyInfo.pubKey)
-          val pubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, PublicKeyUtil.associateCurve(publicKey.pubKeyInfo.algorithm))
-          pubKey.verify(Utils.hash(part, PublicKeyUtil.associateHash(publicKey.pubKeyInfo.algorithm)), Base64.getDecoder.decode(publicKey.signature))
-        } catch {
-          case e: InvalidKeySpecException =>
-            logger.error("failed to validate signature", e)
-            false
-        }
+
+        val curve = getCurve(publicKey.pubKeyInfo.algorithm)
+        val message = Utils.hash(part, PublicKeyUtil.associateHash(publicKey.pubKeyInfo.algorithm))
+        validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, message, curve)
 
       case None => false
+    }
+  }
+
+  def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean = {
+    val decoder = Base64.getDecoder
+    import decoder._
+    try {
+      validate(decode(publicKey), decode(signature), message, curve)
+    } catch {
+      case e: Exception =>
+        logger.error("failed to decode", e)
+        false
+    }
+  }
+
+  def validate(publicKey: Array[Byte], signature: Array[Byte], message: Array[Byte], curve: Curve): Boolean = {
+    try {
+      GeneratorKeyFactory
+        .getPubKey(publicKey, curve)
+        .verify(message, signature)
+    } catch {
+      case e: InvalidKeySpecException =>
+        logger.error("failed to validate signature", e)
+        false
+    }
+  }
+
+  def validate(publicKey: Array[Byte], signature: Array[Byte], curve: Curve): Boolean = {
+    validate(publicKey, signature, publicKey, curve)
+  }
+
+  def validateFromBase64(publicKey: String, signature: String, curve: Curve): Boolean = {
+    val decoder = Base64.getDecoder
+    import decoder._
+    try {
+      val pubKey = decode(publicKey)
+      validate(pubKey, decode(signature), pubKey, curve)
+    } catch {
+      case e: Exception =>
+        logger.error("failed to decode", e)
+        false
     }
   }
 
