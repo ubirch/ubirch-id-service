@@ -44,7 +44,7 @@ class DefaultPubKeyService @Inject() (
       _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone("Delete"))
 
     } yield true).onErrorRecover {
-      case KeyNotExists(publicKey) => false
+      case KeyNotExists(_) => false
       case InvalidVerification(_) => false
       case OperationReturnsNone(_) => false
       case e: Throwable => throw e
@@ -53,10 +53,19 @@ class DefaultPubKeyService @Inject() (
   }
 
   def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = {
-    publicKeyByHwDeviceIdDao
-      .byHwDeviceId(hwDeviceId)
-      .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      .runToFuture
+    (for {
+      pubKeys <- publicKeyByHwDeviceIdDao
+        .byHwDeviceId(hwDeviceId)
+        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+      _ = logger.info(s"found ${pubKeys.size} results for: hardwareId=$hwDeviceId")
+
+      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
+      _ = logger.info(s"valid keys ${pubKeys.size} results for: hardwareId=$hwDeviceId")
+
+    } yield {
+      validPubKeys
+    }).runToFuture
+
   }
 
   def create(publicKey: PublicKey): CancelableFuture[PublicKey] = {

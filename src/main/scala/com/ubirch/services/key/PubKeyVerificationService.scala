@@ -11,11 +11,19 @@ import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.PublicKeyUtil
 import javax.inject._
 import org.apache.commons.codec.binary.Hex
+import org.joda.time.{ DateTime, DateTimeZone }
 
 @Singleton
 class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) extends LazyLogging {
 
   def getCurve(algorithm: String): Curve = PublicKeyUtil.associateCurve(algorithm)
+
+  def validateTime(publicKey: PublicKey): Boolean = {
+    val now = DateTime.now(DateTimeZone.UTC)
+    val validNotBefore = new DateTime(publicKey.pubKeyInfo.validNotBefore)
+    val validNotAfter = publicKey.pubKeyInfo.validNotAfter.map(x => new DateTime(x))
+    validNotBefore.isBefore(now) && validNotAfter.exists(_.isAfter(now))
+  }
 
   def validate(publicKey: PublicKey): Boolean = {
 
