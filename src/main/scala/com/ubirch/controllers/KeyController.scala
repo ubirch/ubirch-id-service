@@ -3,6 +3,7 @@ package com.ubirch.controllers
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.RequestHelpers
 import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, Simple }
+import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
 import javax.inject._
 import org.json4s.Formats
@@ -52,9 +53,12 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
         pubKeyService.create(pk)
           .map { key => Ok(key) }
           .recover {
-            case e: Exception =>
+            case e: PubKeyServiceException =>
               logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.pubKeyError("Error creating pub key"))
+            case e: Exception =>
+              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
           }
       }
 

@@ -22,6 +22,8 @@ class DefaultPubKeyService @Inject() (
 )(implicit scheduler: Scheduler)
   extends PubKeyService with LazyLogging {
 
+  import DefaultPubKeyService._
+
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = {
 
     (for {
@@ -79,14 +81,17 @@ class DefaultPubKeyService @Inject() (
   private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
     if (condition) Task.raiseError(response) else Task.unit
 
+}
+
+object DefaultPubKeyService {
+
   abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
 
-  private case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
+  case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
 
-  private case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
+  case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
 
-  private case class OperationReturnsNone(message: String) extends PubKeyServiceException(message)
+  case class OperationReturnsNone(message: String) extends PubKeyServiceException(message)
 
-  private case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
-
+  case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
 }
