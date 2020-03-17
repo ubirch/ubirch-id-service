@@ -16,4 +16,4 @@ case class PublicKeyInfo(
 
 case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, raw: Option[String] = None)
 
-case class PublicKeyDelete(publicKey: String, signature: String)
+case class PublicKeyDelete(pubKey: String, signature: String)

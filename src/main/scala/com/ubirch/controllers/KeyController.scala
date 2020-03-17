@@ -53,7 +53,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
           .map { key => Ok(key) }
           .recover {
             case e: Exception =>
-              logger.error("Error creating pub key {}", e.getMessage)
+              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.pubKeyError("Error creating pub key"))
           }
       }
@@ -70,7 +70,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
           }
           .recover {
             case e: Exception =>
-              logger.error("Error deleting pub key {}", e.getMessage)
+              logger.error("Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
           }
       }

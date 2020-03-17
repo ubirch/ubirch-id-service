@@ -24,35 +24,29 @@ class DefaultPubKeyService @Inject() (
 
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = {
 
-    val res = for {
-      maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.publicKey).headOptionL
-      _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.publicKey)
-      _ <- earlyResponseIf(maybeKey.isDefined)(KeyNotExists(publicKeyDelete.publicKey))
+    (for {
+      maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.pubKey).headOptionL
+      _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.pubKey)
+      _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.pubKey))
 
       key = maybeKey.get
       pubKeyInfo = key.pubKeyInfo
       pubKey = pubKeyInfo.pubKey
       curve = verification.getCurve(pubKeyInfo.algorithm)
       verification <- Task.delay(verification.validateFromBase64(pubKey, publicKeyDelete.signature, curve))
-      _ = if (!verification) logger.error("Unable to delete public key with invalid signature:" + publicKeyDelete)
+      _ = if (!verification) logger.error("Unable to delete public key with invalid signature: " + publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidVerification(key))
 
-      deletion <- publicKeyDAO.delete(publicKeyDelete.publicKey).headOptionL
+      deletion <- publicKeyDAO.delete(publicKeyDelete.pubKey).headOptionL
       _ = if (deletion.isEmpty) logger.error("Deletion seems to have failed...for " + publicKeyDelete.toString)
-      _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone())
+      _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone("Delete"))
 
-    } yield {
-      true
-    }
-
-    res.onErrorRecover {
+    } yield true).onErrorRecover {
       case KeyNotExists(publicKey) => false
       case InvalidVerification(_) => false
-      case OperationReturnsNone() => false
+      case OperationReturnsNone(_) => false
       case e: Throwable => throw e
-    }
-
-    res.runToFuture
+    }.runToFuture
 
   }
 
@@ -64,7 +58,7 @@ class DefaultPubKeyService @Inject() (
   }
 
   def create(publicKey: PublicKey): CancelableFuture[PublicKey] = {
-    val res = for {
+    (for {
       maybeKey <- publicKeyDAO.byPubKey(publicKey.pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
@@ -75,30 +69,24 @@ class DefaultPubKeyService @Inject() (
 
       res <- publicKeyDAO.insert(publicKey).headOptionL
       _ = if (res.isEmpty) logger.error("Creation seems to have failed...for " + publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone())
-    } yield {
-      publicKey
-    }
-
-    res.onErrorRecover {
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Insert"))
+    } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e
-    }
-
-    res.runToFuture
+    }.runToFuture
   }
 
   private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
     if (condition) Task.raiseError(response) else Task.unit
 
-  abstract class PubKeyServiceException() extends Exception with NoStackTrace
+  abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
 
-  private case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException
+  private case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
 
-  private case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException
+  private case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
 
-  private case class OperationReturnsNone() extends PubKeyServiceException
+  private case class OperationReturnsNone(message: String) extends PubKeyServiceException(message)
 
-  private case class KeyNotExists(publicKey: String) extends PubKeyServiceException
+  private case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
 
 }
