@@ -30,7 +30,7 @@ trait RequestHelpers extends NativeJsonSupport {
         case Failure(e) =>
           () =>
             val bodyAsString = Try(jackson.compactJson(parsedBody)).getOrElse(parsedBody.toString)
-            Future.successful(NOK.parsingError(s"Couldn't parse [$bodyAsString] error=${e.getMessage}"))
+            Future.successful(NOK.parsingError(s"Couldn't parse [$bodyAsString] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"))
       }
       asyncResult(res)
     }
