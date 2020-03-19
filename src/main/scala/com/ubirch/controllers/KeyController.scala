@@ -64,6 +64,29 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
 
   }
 
+  before("/v1/pubkey/mpack") {
+    contentType = "application/octet-stream"
+  }
+
+  post("/v1/pubkey/mpack") {
+    ReadBody.readMsgPack[PublicKey]
+      .map { case (pk, _, raw) =>
+        pk.copy(raw = Some(raw))
+      }.async { pk =>
+        pubKeyService.create(pk)
+          .map { key => Ok(key) }
+          .recover {
+            case e: PubKeyServiceException =>
+              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.pubKeyError("Error creating pub key"))
+            case e: Exception =>
+              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+          }
+      }
+
+  }
+
   delete("/v1/pubkey") {
     ReadBody.read[PublicKeyDelete]
       .async { pkd =>

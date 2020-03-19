@@ -121,6 +121,13 @@
             <version>${ubirch-crypto.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.ubirch/ubirch-protocol-java -->
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-protocol-java</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+
         <dependency>
             <groupId>io.monix</groupId>
             <artifactId>monix_${scala.compat.version}</artifactId>
