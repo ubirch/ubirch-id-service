@@ -47,7 +47,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
 
   post("/v1/pubkey") {
 
-    ReadBody.read[PublicKey]
+    ReadBody.readJson[PublicKey]
       .map(pk => pk.copy(raw = Some("-999")))
       .async { pk =>
         pubKeyService.create(pk)
@@ -88,7 +88,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
   }
 
   delete("/v1/pubkey") {
-    ReadBody.read[PublicKeyDelete]
+    ReadBody.readJson[PublicKeyDelete]
       .async { pkd =>
         pubKeyService.delete(pkd)
           .map { dr =>

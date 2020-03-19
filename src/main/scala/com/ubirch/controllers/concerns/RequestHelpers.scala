@@ -39,7 +39,7 @@ trait RequestHelpers extends NativeJsonSupport {
 
   object ReadBody {
 
-    def read[T: Manifest]: ReadBody[T] = ReadBody(Try(parsedBody.extract[T]))
+    def readJson[T: Manifest]: ReadBody[T] = ReadBody(Try(parsedBody.extract[T]))
     def readMsgPack[T: Manifest]: ReadBody[(T, ProtocolMessage, String)] = {
       ReadBody {
         for {
