@@ -35,7 +35,7 @@ class DefaultPubKeyService @Inject() (
       pubKeyInfo = key.pubKeyInfo
       pubKey = pubKeyInfo.pubKey
       curve = verification.getCurve(pubKeyInfo.algorithm)
-      verification <- Task.delay(verification.validateFromBase64(pubKey, publicKeyDelete.signature, curve))
+      verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.pubKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("Unable to delete public key with invalid signature: " + publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidVerification(key))
 

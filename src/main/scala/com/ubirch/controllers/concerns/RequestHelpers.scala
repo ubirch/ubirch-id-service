@@ -7,7 +7,7 @@ import com.ubirch.protocol.codec.MsgPackProtocolDecoder
 import org.apache.commons.codec.binary.Hex
 import org.json4s.jackson
 import org.json4s.jackson.JsonMethods._
-import org.scalatra.AsyncResult
+import org.scalatra.{ AsyncResult, BadRequest }
 import org.scalatra.json.NativeJsonSupport
 
 import scala.concurrent.Future
@@ -33,7 +33,7 @@ trait RequestHelpers extends NativeJsonSupport with LazyLogging {
             val bodyAsString = Try(jackson.compactJson(parsedBody)).getOrElse(parsedBody.toString)
             val msg = s"Couldn't parse [$bodyAsString] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
             logger.error(msg)
-            Future.successful(NOK.parsingError(msg))
+            Future.successful(BadRequest(NOK.parsingError(msg)))
       }
       asyncResult(res)
     }

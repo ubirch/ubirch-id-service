@@ -89,7 +89,16 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
 
   }
 
-  delete("/v1/pubkey") {
+  delete("/v1/pubkey") { delete }
+
+  patch("/v1/pubkey") { delete }
+
+  notFound {
+    logger.info("route_not_found={} query_string={}", requestPath, request.getQueryString)
+    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+  }
+
+  private def delete = {
     ReadBody.readJson[PublicKeyDelete]
       .async { pkd =>
         pubKeyService.delete(pkd)
@@ -103,11 +112,6 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
               InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
           }
       }
-  }
-
-  notFound {
-    logger.info("route_not_found={} query_string={}", requestPath, request.getQueryString)
-    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
   }
 
 }

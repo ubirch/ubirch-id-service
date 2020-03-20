@@ -4,15 +4,12 @@ import java.util.{ Base64, UUID }
 
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.models.{ PublicKey, PublicKeyInfo }
-import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, TestBase }
-import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
-import com.ubirch.services.key.DefaultPubKeyService
+import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
+import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
+import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.joda.time.format.ISODateTimeFormat
-import org.scalatest.{ MustMatchers, WordSpecLike }
-import org.scalatra.test.scalatest.{ ScalatraSuite, ScalatraWordSpec }
+import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.util.Try
 
@@ -40,11 +37,12 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     for {
       publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
-      signature <- Try(Base64.getEncoder.encodeToString(newPrivKey.sign(publicKeyInfoAsString.getBytes))).toEither
+      signatureAsBytes <- Try(newPrivKey.sign(publicKeyInfoAsString.getBytes)).toEither
+      signature <- Try(Base64.getEncoder.encodeToString(signatureAsBytes)).toEither
       publicKey = PublicKey(pubKeyInfo, signature)
       publicKeyAsString <- jsonConverter.toString[PublicKey](publicKey)
     } yield {
-      (publicKey, publicKeyAsString)
+      (publicKey, publicKeyAsString, signatureAsBytes, signature, newPrivKey)
     }
 
   }
@@ -79,7 +77,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
     "create key using the json endpoint" in {
 
       getPublicKey(PublicKeyUtil.ECDSA) match {
-        case Right((_, pkAsString)) =>
+        case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
             body should equal(pkAsString)
@@ -89,7 +87,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
       }
       getPublicKey(PublicKeyUtil.EDDSA) match {
-        case Right((_, pkAsString)) =>
+        case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
             body should equal(pkAsString)
@@ -100,6 +98,33 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       }
 
     }
+
+    "delete key" in {
+
+      (for {
+        res <- getPublicKey(PublicKeyUtil.ECDSA)
+        (pk, pkAsString, _, _, pkr) = res
+        signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
+        signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
+        pubDelete = PublicKeyDelete(pk.pubKeyInfo.pubKey, signatureAsString)
+        pubDeleteAsString <- jsonConverter.toString[PublicKeyDelete](pubDelete)
+
+      } yield {
+
+        post("/v1/pubkey", body = pkAsString) {
+          status should equal(200)
+          body should equal(pkAsString)
+        }
+
+        println(pubDeleteAsString)
+        patch("/v1/pubkey", body = pubDeleteAsString) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
+        }
+      }).getOrElse(fail())
+
+    }
+
   }
 
   protected override def afterAll(): Unit = {
