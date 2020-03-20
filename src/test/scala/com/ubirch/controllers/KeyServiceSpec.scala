@@ -116,7 +116,6 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           body should equal(pkAsString)
         }
 
-        println(pubDeleteAsString)
         patch("/v1/pubkey", body = pubDeleteAsString) {
           status should equal(200)
           body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
