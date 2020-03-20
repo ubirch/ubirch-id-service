@@ -39,16 +39,18 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     pubKeyService.get(hwDeviceId)
       .map { pks => Ok(pks) }
       .recover {
+        case e: PubKeyServiceException =>
+          logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
         case e: Exception =>
           logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
       }
   }
 
   post("/v1/pubkey") {
 
     ReadBody.readJson[PublicKey]
-      .map(pk => pk.copy(raw = Some("-999")))
       .async { pk =>
         pubKeyService.create(pk)
           .map { key => Ok(key) }

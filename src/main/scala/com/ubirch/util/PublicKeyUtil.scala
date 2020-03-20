@@ -8,6 +8,9 @@ import com.ubirch.crypto.utils.{ Curve, Hash }
   */
 object PublicKeyUtil extends LazyLogging {
 
+  final val ECDSA: String = "ecdsa-p256v1"
+  final val EDDSA: String = "ed25519-sha-512"
+
   /**
     * Associate a string to a curve used by the crypto lib
     * @param curve the string representing the curve

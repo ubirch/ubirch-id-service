@@ -6,7 +6,7 @@ import com.ubirch.{ Binder, EmbeddedCassandra, TestBase }
 
 class ClusterSpec extends TestBase with EmbeddedCassandra {
 
-  val serviceInjector = Guice.createInjector(new Binder())
+  lazy val serviceInjector = Guice.createInjector(new Binder())
 
   "Cluster and Cassandra Context" must {
 
@@ -16,7 +16,7 @@ class ClusterSpec extends TestBase with EmbeddedCassandra {
 
       val db = connectionService.context
 
-      val t = db.executeQuery("SELECT * FROM Identities").headOptionL.runToFuture
+      val t = db.executeQuery("SELECT * FROM identities").headOptionL.runToFuture
       assert(await(t).nonEmpty)
     }
 
@@ -48,7 +48,7 @@ class ClusterSpec extends TestBase with EmbeddedCassandra {
     cassandra.executeScripts(
       CqlScript.statements("CREATE KEYSPACE IF NOT EXISTS identity_system  WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };"),
       CqlScript.statements("drop table if exists identity_system.identities;"),
-      CqlScript.statements("USE identities;"),
+      CqlScript.statements("USE identity_system;"),
       CqlScript.statements(
         """
           |create table if not exists identities (

@@ -15,8 +15,7 @@ trait TestBase
   with ScalaFutures
   with BeforeAndAfterEach
   with BeforeAndAfterAll
-  with MustMatchers
-  with EmbeddedKafka {
+  with MustMatchers {
 
   implicit lazy val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
 

@@ -29,7 +29,27 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
 
     publicKey.raw match {
 
-      case Some("-999") =>
+      case Some(raw) =>
+        val sigIndex: Int = raw.charAt(2) match {
+          // check v2 of the ubirch-protocol encoding, but make sure we don't fall for a mix (legacy bin encoding)
+          case '2' if raw.charAt(4).toLower != 'b' =>
+            logger.debug(s"Registration message: '$raw'")
+            66
+          // legacy ubirch-protocol encoding
+          case _ =>
+            logger.warn(s"Legacy registration message: '$raw'")
+            67
+        }
+        val part: Array[Byte] = Hex.decodeHex(raw).dropRight(sigIndex)
+        logger.debug("pubKey: '%s'".format(publicKey.pubKeyInfo.pubKey))
+        logger.debug("signed part: '%s'".format(Hex.encodeHexString(part)))
+
+        val curve = getCurve(publicKey.pubKeyInfo.algorithm)
+        val message = Utils.hash(part, PublicKeyUtil.associateHash(publicKey.pubKeyInfo.algorithm))
+        validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, message, curve)
+
+      case None =>
+
         jsonConverter.toString(publicKey.pubKeyInfo) match {
 
           case Right(publicKeyInfoString) =>
@@ -43,26 +63,6 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
 
         }
 
-      case Some(raw) =>
-        val sigIndex: Int = raw.charAt(2) match {
-          // check v2 of the ubirch-protocol encoding, but make sure we don't fall for a mix (legacy bin encoding)
-          case '2' if raw.charAt(4).toLower != 'b' =>
-            logger.debug(s"registration message: '$raw'")
-            66
-          // legacy ubirch-protocol encoding
-          case _ =>
-            logger.warn(s"legacy registration message: '$raw'")
-            67
-        }
-        val part: Array[Byte] = Hex.decodeHex(raw).dropRight(sigIndex)
-        logger.debug("pubKey: '%s'".format(publicKey.pubKeyInfo.pubKey))
-        logger.debug("signed part: '%s'".format(Hex.encodeHexString(part)))
-
-        val curve = getCurve(publicKey.pubKeyInfo.algorithm)
-        val message = Utils.hash(part, PublicKeyUtil.associateHash(publicKey.pubKeyInfo.algorithm))
-        validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, message, curve)
-
-      case None => false
     }
   }
 
@@ -73,7 +73,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
       validate(decode(publicKey), decode(signature), message, curve)
     } catch {
       case e: Exception =>
-        logger.error("failed to decode", e)
+        logger.error("Failed to decode -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
   }
@@ -85,7 +85,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
         .verify(message, signature)
     } catch {
       case e: InvalidKeySpecException =>
-        logger.error("failed to validate signature", e)
+        logger.error("Failed to decode -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
   }
@@ -102,7 +102,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
       validate(pubKey, decode(signature), pubKey, curve)
     } catch {
       case e: Exception =>
-        logger.error("failed to decode", e)
+        logger.error("Failed to decode -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
   }
