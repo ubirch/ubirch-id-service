@@ -91,8 +91,8 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
 
   delete("/v1/pubkey") { delete }
   /**
-   * This has been added since the delete method cannot be tested with a body.
-   */
+    * This has been added since the delete method cannot be tested with a body.
+    */
   patch("/v1/pubkey") { delete }
 
   notFound {

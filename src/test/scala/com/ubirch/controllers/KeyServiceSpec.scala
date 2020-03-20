@@ -9,30 +9,34 @@ import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
 import net.manub.embeddedkafka.EmbeddedKafka
+import org.joda.time.DateTime
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.util.Try
 
 class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka {
 
-  def getPublicKey(curveName: String) = {
+  def getPublicKey(
+      curveName: String,
+      created: DateTime,
+      validNotAfter: Option[DateTime],
+      validNotBefore: DateTime
+  ) = {
 
     val curve = PublicKeyUtil.associateCurve(curveName)
     val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
     val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
     val hardwareDeviceId = UUID.randomUUID()
 
-    val now = DateUtil.nowUTC
-    val inSixMonths = now.plusMonths(6)
     val pubKeyUUID = UUID.randomUUID()
     val pubKeyInfo = PublicKeyInfo(
       algorithm = curveName,
-      created = now.toDate,
+      created = created.toDate,
       hwDeviceId = hardwareDeviceId.toString,
       pubKey = newPublicKey,
       pubKeyId = pubKeyUUID.toString,
-      validNotAfter = Some(inSixMonths.toDate),
-      validNotBefore = now.toDate
+      validNotAfter = validNotAfter.map(_.toDate),
+      validNotBefore = validNotBefore.toDate
     )
 
     for {
@@ -76,7 +80,11 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "create key using the json endpoint" in {
 
-      getPublicKey(PublicKeyUtil.ECDSA) match {
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+
+      getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -86,7 +94,36 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           fail(e)
 
       }
-      getPublicKey(PublicKeyUtil.EDDSA) match {
+      getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
+        case Right((_, pkAsString, _, _, _)) =>
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+        case Left(e) =>
+          fail(e)
+
+      }
+
+    }
+
+    "not create key using the json endpoint" in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = None
+      val validNotBefore = created
+
+      getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
+        case Right((_, pkAsString, _, _, _)) =>
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+        case Left(e) =>
+          fail(e)
+
+      }
+      getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, created) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -101,8 +138,12 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "delete key" in {
 
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+
       (for {
-        res <- getPublicKey(PublicKeyUtil.ECDSA)
+        res <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore)
         (pk, pkAsString, _, _, pkr) = res
         signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
         signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
