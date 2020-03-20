@@ -1,18 +1,19 @@
 package com.ubirch.controllers.concerns
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.protocol.codec.MsgPackProtocolDecoder
 import org.apache.commons.codec.binary.Hex
 import org.json4s.jackson
+import org.json4s.jackson.JsonMethods._
 import org.scalatra.AsyncResult
 import org.scalatra.json.NativeJsonSupport
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
-import org.json4s.jackson.JsonMethods._
 
-trait RequestHelpers extends NativeJsonSupport {
+trait RequestHelpers extends NativeJsonSupport with LazyLogging {
 
   private def asyncResult(body: () => Future[_]): AsyncResult = {
     new AsyncResult() {
@@ -30,7 +31,9 @@ trait RequestHelpers extends NativeJsonSupport {
         case Failure(e) =>
           () =>
             val bodyAsString = Try(jackson.compactJson(parsedBody)).getOrElse(parsedBody.toString)
-            Future.successful(NOK.parsingError(s"Couldn't parse [$bodyAsString] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"))
+            val msg = s"Couldn't parse [$bodyAsString] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
+            logger.error(msg)
+            Future.successful(NOK.parsingError(msg))
       }
       asyncResult(res)
     }

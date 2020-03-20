@@ -3,7 +3,6 @@ package com.ubirch
 import java.util.concurrent.Executors
 
 import monix.execution.Scheduler
-import net.manub.embeddedkafka.EmbeddedKafka
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, WordSpec }
 

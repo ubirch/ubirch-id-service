@@ -57,10 +57,10 @@ class DefaultPubKeyService @Inject() (
       pubKeys <- publicKeyByHwDeviceIdDao
         .byHwDeviceId(hwDeviceId)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info(s"found ${pubKeys.size} results for: hardwareId=$hwDeviceId")
+      _ = logger.info(s"Found ${pubKeys.size} results for: hardwareId=$hwDeviceId")
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info(s"valid keys ${pubKeys.size} results for: hardwareId=$hwDeviceId")
+      _ = logger.info(s"Valid keys ${pubKeys.size} results for: hardwareId=$hwDeviceId")
 
     } yield {
       validPubKeys

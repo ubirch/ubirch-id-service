@@ -12,3 +12,6 @@ val now = System.currentTimeMillis()
 df.format(now)
 
 df.format(now + 31557600000L)
+
+
+"hola".substring(1, 3)
