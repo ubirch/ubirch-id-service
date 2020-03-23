@@ -107,7 +107,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "not create key using the json endpoint" in {
+    "create key using the json endpoint when no validNotAfter is provided" in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = None

@@ -7,8 +7,8 @@ import com.ubirch.protocol.codec.MsgPackProtocolDecoder
 import org.apache.commons.codec.binary.Hex
 import org.json4s.jackson
 import org.json4s.jackson.JsonMethods._
-import org.scalatra.{ AsyncResult, BadRequest }
 import org.scalatra.json.NativeJsonSupport
+import org.scalatra.{ AsyncResult, BadRequest }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
