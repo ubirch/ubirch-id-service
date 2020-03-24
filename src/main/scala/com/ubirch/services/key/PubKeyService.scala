@@ -74,7 +74,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
-      verification <- Task.delay(verification.validate(publicKey))
+      verification <- Task.delay(verification.validate(publicKey.copy(raw = None)))
       _ = if (!verification) logger.error("Verification failed " + maybeKey)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 

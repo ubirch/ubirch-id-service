@@ -2,11 +2,9 @@ package com.ubirch.controllers.concerns
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
-import com.ubirch.protocol.ProtocolMessage
-import com.ubirch.protocol.codec.MsgPackProtocolDecoder
-import org.apache.commons.codec.binary.Hex
+import com.ubirch.util.ProtocolHelpers
+import com.ubirch.util.ProtocolHelpers.UnPacked
 import org.json4s.jackson
-import org.json4s.jackson.JsonMethods._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.{ AsyncResult, BadRequest }
 
@@ -43,21 +41,9 @@ trait RequestHelpers extends NativeJsonSupport with LazyLogging {
   object ReadBody {
 
     def readJson[T: Manifest]: ReadBody[T] = ReadBody(Try(parsedBody.extract[T]))
-    def readMsgPack[T: Manifest]: ReadBody[(T, ProtocolMessage, String)] = {
-      ReadBody {
-        for {
-          bodyString <- Try(request.body)
-          bodyBytes <- Try(Hex.decodeHex(bodyString))
-          decoder = MsgPackProtocolDecoder.getDecoder
-          pm <- Try(decoder.decode(bodyBytes))
-          payloadJsonNode = pm.getPayload
-          payloadJValue <- Try(fromJsonNode(payloadJsonNode))
-          pt <- Try(payloadJValue.extract[T])
-        } yield {
-          (pt, pm, bodyString)
-        }
-      }
-    }
+
+    def readMsgPack[T: Manifest]: ReadBody[UnPacked[T]] =
+      ReadBody(ProtocolHelpers.unpack[T](request.body))
   }
 
 }

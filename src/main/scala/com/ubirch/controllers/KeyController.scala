@@ -66,14 +66,10 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
 
   }
 
-  before("/v1/pubkey/mpack") {
-    contentType = "application/octet-stream"
-  }
-
   post("/v1/pubkey/mpack") {
     ReadBody.readMsgPack[PublicKey]
-      .map { case (pk, _, raw) =>
-        pk.copy(raw = Some(raw))
+      .map { unpacked =>
+        unpacked.t.copy(raw = Some(unpacked.rawBody))
       }.async { pk =>
         pubKeyService.create(pk)
           .map { key => Ok(key) }
