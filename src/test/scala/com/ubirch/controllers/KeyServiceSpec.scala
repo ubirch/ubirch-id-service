@@ -11,6 +11,7 @@ import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.apache.commons.codec.binary.Hex
 import org.joda.time.DateTime
+import org.scalatest.Tag
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.util.Try
@@ -58,12 +59,18 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   "Key Service" must {
 
-    "get public key object when data exists" in {
+    "get public key object when data exists" taggedAs (Tag("current")) in {
 
       val expectedBody = """[{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T16:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T22:13:42.790Z","validNotBefore":"2020-03-13T16:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}]""".stripMargin
 
+
+
       get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5e") {
         status should equal(200)
+
+        println("$$$ " +expectedBody)
+        println("$$$ " + body)
+
         body should equal(expectedBody)
       }
 
