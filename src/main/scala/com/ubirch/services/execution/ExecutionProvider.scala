@@ -5,6 +5,7 @@ import java.util.concurrent.Executors
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.ExecutionContextConfPaths
 import javax.inject._
+import monix.execution.Scheduler
 
 import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor }
 
@@ -30,3 +31,17 @@ class ExecutionProvider @Inject() (config: Config) extends Provider[ExecutionCon
   override def get(): ExecutionContext = ec
 
 }
+
+trait SchedulerBase {
+  implicit val scheduler: Scheduler
+}
+
+@Singleton
+class SchedulerProvider @Inject() (ec: ExecutionContext) extends Provider[Scheduler] with SchedulerBase {
+
+  override implicit val scheduler: Scheduler = monix.execution.Scheduler(ec)
+
+  override def get(): Scheduler = monix.execution.Scheduler(ec)
+
+}
+
