@@ -11,7 +11,6 @@ import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.apache.commons.codec.binary.Hex
 import org.joda.time.DateTime
-import org.scalatest.Tag
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.util.Try
@@ -59,19 +58,18 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   "Key Service" must {
 
-    "get public key object when data exists" taggedAs (Tag("current")) in {
+    "get public key object when data exists" in {
 
-      val expectedBody = """[{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T16:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T22:13:42.790Z","validNotBefore":"2020-03-13T16:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}]""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
 
-
+      post("/v1/pubkey", body = expectedBody) {
+        status should equal(200)
+        body should equal(expectedBody)
+      }
 
       get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5e") {
         status should equal(200)
-
-        println("$$$ " +expectedBody)
-        println("$$$ " + body)
-
-        body should equal(expectedBody)
+        body should equal("[" + expectedBody + "]")
       }
 
     }
@@ -103,7 +101,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
       }
       getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
-        case Right((_, pkAsString, _, _, _)) =>
+        case Right((pk, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
             body should equal(pkAsString)
@@ -249,8 +247,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |    and created           is not null
           |PRIMARY KEY (hw_device_id, pub_key);
           |""".stripMargin
-      ),
-      CqlScript.statements("INSERT INTO identity_system.keys (pub_key, hw_device_id, algorithm, created, pub_key_id, raw, signature, valid_not_after, valid_not_before) VALUES ('Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=', 'e686b4ba-26b4-4a6d-8b57-f904299d4a5e', 'ECC_ED25519', '2020-03-13 17:13:42.790', 'Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=', null, '6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA==', '2021-03-13 23:13:42.790', '2020-03-13 17:13:42.790');")
+      )
     )
 
     super.beforeAll()
