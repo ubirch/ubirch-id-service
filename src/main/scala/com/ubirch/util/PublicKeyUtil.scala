@@ -18,7 +18,7 @@ object PublicKeyUtil extends LazyLogging {
     */
   def associateCurve(curve: String): Curve = {
     curve match {
-      case "ecdsa-p256v1" => Curve.PRIME256V1
+      case ECDSA => Curve.PRIME256V1
       case _ => Curve.Ed25519
     }
   }
@@ -30,7 +30,7 @@ object PublicKeyUtil extends LazyLogging {
     */
   def associateHash(curve: String): Hash = {
     curve match {
-      case "ecdsa-p256v1" => Hash.SHA256
+      case ECDSA => Hash.SHA256
       case _ => Hash.SHA512
     }
   }

@@ -29,6 +29,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
 
     publicKey.raw match {
 
+      //TODO: This part is possible to be removed after tests
       case Some(raw) =>
         val sigIndex: Int = raw.charAt(2) match {
           // check v2 of the ubirch-protocol encoding, but make sure we don't fall for a mix (legacy bin encoding)

@@ -23,7 +23,7 @@ object ProtocolHelpers extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
     val re = for {
-      random <- packRandom
+      random <- packRandom(PublicKeyUtil.EDDSA)
       (bytes, _) = random
       res <- unpack[PublicKey](Hex.encodeHexString(bytes)).toEither
       verifier <- Try(protocolVerifier(res.t.pubKeyInfo.pubKey, PublicKeyUtil.associateCurve(res.t.pubKeyInfo.algorithm))).toEither
@@ -72,14 +72,14 @@ object ProtocolHelpers extends LazyLogging {
     List(key)
   })
 
-  def packRandom = {
+  def packRandom(curve: String) = {
     val created = DateUtil.nowUTC
     val validNotAfter = Some(created.plusMonths(6))
     val validNotBefore = created
 
     for {
       protocolEncoder <- Try(MsgPackProtocolEncoder.getEncoder).toEither
-      pkData <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore)
+      pkData <- getPublicKey(curve, created, validNotAfter, validNotBefore)
       (pk, pkAsString, _, _, privKey) = pkData
       _ = logger.info(pk.pubKeyInfo.hwDeviceId)
       uuid = UUID.fromString(pk.pubKeyInfo.hwDeviceId)
