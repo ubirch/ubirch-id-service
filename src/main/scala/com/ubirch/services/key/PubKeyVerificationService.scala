@@ -74,7 +74,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
       validate(decode(publicKey), decode(signature), message, curve)
     } catch {
       case e: Exception =>
-        logger.error("Failed to decode -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+        logger.error("Failed to decode 1 -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
   }
@@ -86,7 +86,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
         .verify(message, signature)
     } catch {
       case e: InvalidKeySpecException =>
-        logger.error("Failed to decode -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+        logger.error("Failed to decode 2 -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
   }
@@ -103,7 +103,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
       validate(pubKey, decode(signature), pubKey, curve)
     } catch {
       case e: Exception =>
-        logger.error("Failed to decode -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+        logger.error("Failed to decode 3 -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
   }

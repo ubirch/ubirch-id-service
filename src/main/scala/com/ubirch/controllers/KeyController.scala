@@ -40,7 +40,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
       .map { pks => Ok(pks) }
       .recover {
         case e: PubKeyServiceException =>
-          logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
           InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
         case e: Exception =>
           logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
