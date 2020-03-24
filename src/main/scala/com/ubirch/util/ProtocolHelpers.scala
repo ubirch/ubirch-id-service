@@ -1,20 +1,21 @@
 package com.ubirch.util
 
-import java.util.{ Base64, UUID }
+import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, OutputStream}
+import java.util.{Base64, UUID}
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.client.protocol.{ DefaultProtocolSigner, DefaultProtocolVerifier }
+import com.ubirch.client.protocol.{DefaultProtocolSigner, DefaultProtocolVerifier}
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.crypto.utils.Curve
-import com.ubirch.models.{ PublicKey, PublicKeyInfo }
-import com.ubirch.protocol.codec.{ MsgPackProtocolDecoder, MsgPackProtocolEncoder }
-import com.ubirch.protocol.{ ProtocolException, ProtocolMessage }
-import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
+import com.ubirch.models.{PublicKey, PublicKeyInfo}
+import com.ubirch.protocol.codec.{MsgPackProtocolDecoder, MsgPackProtocolEncoder}
+import com.ubirch.protocol.{ProtocolException, ProtocolMessage}
+import com.ubirch.services.formats.{JsonConverterService, JsonFormatsProvider}
 import org.apache.commons.codec.binary.Hex
 import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object ProtocolHelpers extends LazyLogging {
 
@@ -28,6 +29,11 @@ object ProtocolHelpers extends LazyLogging {
       res <- unpack[PublicKey](Hex.encodeHexString(bytes)).toEither
       verifier <- Try(protocolVerifier(res.t.pubKeyInfo.pubKey, PublicKeyUtil.associateCurve(res.t.pubKeyInfo.algorithm))).toEither
     } yield {
+
+      val os = new BufferedWriter(new FileWriter("hola.pack"))
+      os.write(Hex.encodeHexString(bytes))
+      os.close()
+
       verifier.verify(res.pm.getUUID, res.pm.getSigned, 0, res.pm.getSigned.length, res.pm.getSignature)
     }
 
