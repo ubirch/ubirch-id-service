@@ -10,8 +10,8 @@ class ScalatraBootstrap extends LifeCycle {
 
   override def init(context: ServletContext) {
 
-    context.initParameters("org.scalatra.cors.preflightMaxAge") = "5"
-    context.initParameters("org.scalatra.cors.allowCredentials") = "false"
+    context.setInitParameter("org.scalatra.cors.preflightMaxAge", "5")
+    context.setInitParameter("org.scalatra.cors.allowCredentials", "false")
 
     context.mount(
       handler = keyController,
