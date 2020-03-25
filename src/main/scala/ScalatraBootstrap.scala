@@ -1,5 +1,5 @@
 import com.ubirch.Service
-import com.ubirch.controllers.{InfoController, KeyController, ResourcesController}
+import com.ubirch.controllers.{ InfoController, KeyController, ResourcesController }
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 

@@ -3,13 +3,13 @@ package com.ubirch.services.key
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.models.{PublicKey, PublicKeyByHwDeviceIdDAO, PublicKeyDAO, PublicKeyDelete}
+import com.ubirch.models.{ PublicKey, PublicKeyByHwDeviceIdDAO, PublicKeyDAO, PublicKeyDelete }
 import io.prometheus.client.Counter
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
-import monix.execution.{CancelableFuture, Scheduler}
+import monix.execution.{ CancelableFuture, Scheduler }
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 import scala.util.control.NoStackTrace
 
 trait PubKeyService {
@@ -43,9 +43,29 @@ class DefaultPubKeyService @Inject() (
     .labelNames("service", "method")
     .register()
 
-  def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = {
+  def countWhen[T](method: String)(ft: T => Boolean)(cf: CancelableFuture[T]): CancelableFuture[T] = {
 
-    val res = (for {
+    def s = successCounter.labels(service, method).inc()
+    def f = errorCounter.labels(service, method).inc()
+
+    cf.onComplete {
+      case Success(t) => if (ft(t)) s else f
+      case Failure(_) => f
+    }
+    cf
+  }
+
+  def count[T](method: String)(cf: CancelableFuture[T]): CancelableFuture[T] = {
+    cf.onComplete {
+      case Success(_) => successCounter.labels(service, method).inc()
+      case Failure(_) => errorCounter.labels(service, method).inc()
+    }
+    cf
+  }
+
+  def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
+
+    (for {
       maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.pubKey).headOptionL
       _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.pubKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.pubKey))
@@ -68,18 +88,10 @@ class DefaultPubKeyService @Inject() (
       case e: Throwable => throw e
     }.runToFuture
 
-
-    res.onComplete{
-      case Success(true) => successCounter.labels(service, "delete").inc()
-      case _ => errorCounter.labels(service, "delete").inc()
-    }
-
-    res
-
   }
 
-  def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = {
-    val res =  (for {
+  def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get") {
+    (for {
       pubKeys <- publicKeyByHwDeviceIdDao
         .byHwDeviceId(hwDeviceId)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
@@ -92,18 +104,10 @@ class DefaultPubKeyService @Inject() (
       validPubKeys
     }).runToFuture
 
-    res.onComplete {
-      case Success(_) => successCounter.labels(service, "get").inc()
-      case Failure(_) => errorCounter.labels(service, "get").inc()
-    }
-
-    res
-
-
   }
 
-  def create(publicKey: PublicKey): CancelableFuture[PublicKey] = {
-    val res = (for {
+  def create(publicKey: PublicKey): CancelableFuture[PublicKey] = count("create") {
+    (for {
       maybeKey <- publicKeyDAO.byPubKey(publicKey.pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
@@ -119,13 +123,6 @@ class DefaultPubKeyService @Inject() (
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e
     }.runToFuture
-
-    res.onComplete {
-      case Success(_) => successCounter.labels(service, "create").inc()
-      case Failure(_) => errorCounter.labels(service, "create").inc()
-    }
-
-    res
 
   }
 

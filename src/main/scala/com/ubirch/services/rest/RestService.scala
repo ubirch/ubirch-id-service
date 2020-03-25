@@ -6,7 +6,7 @@ import com.ubirch.ConfPaths.HttpServerConfPaths
 import com.ubirch.services.lifeCycle.Lifecycle
 import javax.inject._
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
-import org.eclipse.jetty.server.{Handler, Server}
+import org.eclipse.jetty.server.{ Handler, Server }
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener

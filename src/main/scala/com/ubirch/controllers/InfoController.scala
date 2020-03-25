@@ -1,17 +1,17 @@
 package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{NOK, Simple}
+import com.ubirch.models.{ NOK, Simple }
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.{NotFound, Ok, ScalatraServlet}
+import org.scalatra.{ NotFound, Ok, ScalatraServlet }
 
 @Singleton
-class InfoController @Inject()(jFormats: Formats) extends ScalatraServlet with NativeJsonSupport with LazyLogging {
+class InfoController @Inject() (jFormats: Formats) extends ScalatraServlet with NativeJsonSupport with LazyLogging {
   override protected implicit def jsonFormats: Formats = jFormats
 
-  get("/"){
+  get("/") {
     Ok(Simple("Hallo, Hola, Hello, this is the ubirch identity service."))
   }
 
