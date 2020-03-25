@@ -4,6 +4,9 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import com.ubirch.util.ProtocolHelpers
 import com.ubirch.util.ProtocolHelpers.UnPacked
+import javax.servlet.http.HttpServletRequest
+import org.apache.commons.codec.binary.Hex
+import org.apache.commons.compress.utils.IOUtils
 import org.json4s.jackson
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.{ AsyncResult, BadRequest }
@@ -41,10 +44,11 @@ trait RequestHelpers extends NativeJsonSupport with LazyLogging {
   object ReadBody {
 
     def readJson[T: Manifest]: ReadBody[T] = ReadBody(Try(parsedBody.extract[T]))
-    def readMsgPack[T: Manifest]: ReadBody[UnPacked[T]] = {
+    def readMsgPack[T: Manifest](implicit request: HttpServletRequest): ReadBody[UnPacked[T]] = {
       ReadBody[UnPacked[T]](for {
-        b <- Try(request.body)
-        up <- ProtocolHelpers.unpack[T](b)
+        bytes <- Try(IOUtils.toByteArray(request.getInputStream))
+        h <- Try(Hex.encodeHexString(bytes))
+        up <- ProtocolHelpers.unpack[T](h)
       } yield up)
     }
   }
