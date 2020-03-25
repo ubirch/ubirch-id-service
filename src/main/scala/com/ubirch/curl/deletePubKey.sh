@@ -1,2 +1,14 @@
 #!/bin/bash -x
-curl -s -X DELETE -H "content-type: application/json" -d @PublicKeyDelete.json http://localhost:8081/api/keyService/v1/pubkey | jq .
+
+local=$1
+remote_host="https://identity.dev.ubirch.com"
+host="http://localhost:8081"
+
+if [ "$local" == "-r" ]
+then
+  host=$remote_host
+fi
+
+echo "=> host: $host"
+
+curl -s -X DELETE -H "content-type: application/json" -d @PublicKeyDelete.json $host/api/keyService/v1/pubkey | jq .
