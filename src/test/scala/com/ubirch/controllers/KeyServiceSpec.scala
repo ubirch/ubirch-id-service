@@ -11,6 +11,7 @@ import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.apache.commons.codec.binary.Hex
 import org.joda.time.DateTime
+import org.scalatest.Tag
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.util.Try
@@ -113,13 +114,13 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the mpack endpoint" in {
+    "create key using the mpack endpoint" taggedAs (Tag("current")) in {
 
       for {
         res <- ProtocolHelpers.packRandom(PublicKeyUtil.ECDSA)
         (bytes, _) = res
       } yield {
-        post("/v1/pubkey/mpack", body = Hex.encodeHexString(bytes)) {
+        post("/v1/pubkey/mpack", body = bytes) {
           status should equal(200)
         }
       }
@@ -128,7 +129,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         res <- ProtocolHelpers.packRandom(PublicKeyUtil.EDDSA)
         (bytes, _) = res
       } yield {
-        post("/v1/pubkey/mpack", body = Hex.encodeHexString(bytes)) {
+        post("/v1/pubkey/mpack", body = bytes) {
           status should equal(200)
         }
       }
