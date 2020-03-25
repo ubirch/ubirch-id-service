@@ -49,7 +49,6 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
   }
 
   post("/v1/pubkey") {
-
     ReadBody.readJson[PublicKey]
       .async { pk =>
         pubKeyService.create(pk)

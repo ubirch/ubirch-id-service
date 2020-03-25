@@ -2,10 +2,11 @@ package com.ubirch.services.rest
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.ConfPaths.HttpServerConfPaths
 import com.ubirch.services.lifeCycle.Lifecycle
 import javax.inject._
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
-import org.eclipse.jetty.server.{ Handler, Server }
+import org.eclipse.jetty.server.{Handler, Server}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
@@ -14,8 +15,8 @@ import scala.concurrent.Future
 
 class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyLogging {
 
-  val serverPort: Int = config.getInt("identitySystem.server.port")
-  val swaggerPath: String = config.getString("identitySystem.server.swaggerPath")
+  val serverPort: Int = config.getInt(HttpServerConfPaths.PORT)
+  val swaggerPath: String = config.getString(HttpServerConfPaths.SWAGGER_PATH)
   val contextPathBase: String = ""
 
   def start = {

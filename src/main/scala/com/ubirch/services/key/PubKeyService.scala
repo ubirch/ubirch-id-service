@@ -1,11 +1,15 @@
 package com.ubirch.services.key
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{ PublicKey, PublicKeyByHwDeviceIdDAO, PublicKeyDAO, PublicKeyDelete }
-import javax.inject.{ Inject, Singleton }
+import com.ubirch.ConfPaths.GenericConfPaths
+import com.ubirch.models.{PublicKey, PublicKeyByHwDeviceIdDAO, PublicKeyDAO, PublicKeyDelete}
+import io.prometheus.client.Counter
+import javax.inject.{Inject, Singleton}
 import monix.eval.Task
-import monix.execution.{ CancelableFuture, Scheduler }
+import monix.execution.{CancelableFuture, Scheduler}
 
+import scala.util.{Failure, Success}
 import scala.util.control.NoStackTrace
 
 trait PubKeyService {
@@ -16,6 +20,7 @@ trait PubKeyService {
 
 @Singleton
 class DefaultPubKeyService @Inject() (
+    config: Config,
     publicKeyDAO: PublicKeyDAO,
     publicKeyByHwDeviceIdDao: PublicKeyByHwDeviceIdDAO,
     verification: PubKeyVerificationService
@@ -24,16 +29,29 @@ class DefaultPubKeyService @Inject() (
 
   import DefaultPubKeyService._
 
+  val service: String = config.getString(GenericConfPaths.NAME)
+
+  val successCounter = Counter.build()
+    .name("pubkey_management_success")
+    .help("Represents the number of public key management successes")
+    .labelNames("service", "method")
+    .register()
+
+  val errorCounter = Counter.build()
+    .name("pubkey_management_failures")
+    .help("Represents the number of public key management failures")
+    .labelNames("service", "method")
+    .register()
+
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = {
 
-    (for {
+    val res = (for {
       maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.pubKey).headOptionL
       _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.pubKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.pubKey))
 
       key = maybeKey.get
       pubKeyInfo = key.pubKeyInfo
-      pubKey = pubKeyInfo.pubKey
       curve = verification.getCurve(pubKeyInfo.algorithm)
       verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.pubKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("Unable to delete public key with invalid signature: " + publicKeyDelete)
@@ -50,10 +68,18 @@ class DefaultPubKeyService @Inject() (
       case e: Throwable => throw e
     }.runToFuture
 
+
+    res.onComplete{
+      case Success(true) => successCounter.labels(service, "delete").inc()
+      case _ => errorCounter.labels(service, "delete").inc()
+    }
+
+    res
+
   }
 
   def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = {
-    (for {
+    val res =  (for {
       pubKeys <- publicKeyByHwDeviceIdDao
         .byHwDeviceId(hwDeviceId)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
@@ -66,10 +92,18 @@ class DefaultPubKeyService @Inject() (
       validPubKeys
     }).runToFuture
 
+    res.onComplete {
+      case Success(_) => successCounter.labels(service, "get").inc()
+      case Failure(_) => errorCounter.labels(service, "get").inc()
+    }
+
+    res
+
+
   }
 
   def create(publicKey: PublicKey): CancelableFuture[PublicKey] = {
-    (for {
+    val res = (for {
       maybeKey <- publicKeyDAO.byPubKey(publicKey.pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
@@ -85,6 +119,14 @@ class DefaultPubKeyService @Inject() (
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e
     }.runToFuture
+
+    res.onComplete {
+      case Success(_) => successCounter.labels(service, "create").inc()
+      case Failure(_) => errorCounter.labels(service, "create").inc()
+    }
+
+    res
+
   }
 
   private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
