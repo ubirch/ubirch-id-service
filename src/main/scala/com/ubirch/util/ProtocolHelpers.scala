@@ -58,6 +58,7 @@ object ProtocolHelpers extends LazyLogging {
       pm <- Try(decoder.decode(bodyBytes))
 
       payloadJValue <- Try(fromJsonNode(pm.getPayload))
+      _ = logger.info("protocol_message_payload {}", payloadJValue.toString)
       pt <- Try(payloadJValue.extract[T])
     } yield {
       UnPacked(pt, pm, bodyString)
