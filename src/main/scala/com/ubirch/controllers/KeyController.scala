@@ -92,7 +92,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
   patch("/v1/pubkey") { delete }
 
   notFound {
-    logger.info("route_not_found={} query_string={}", requestPath, request.getQueryString)
+    logger.info("controller=KeyController route_not_found={} query_string={}", requestPath, request.getQueryString)
     NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
   }
 

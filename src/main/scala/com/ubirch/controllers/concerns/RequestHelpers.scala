@@ -41,9 +41,7 @@ trait RequestHelpers extends NativeJsonSupport with LazyLogging {
   object ReadBody {
 
     def readJson[T: Manifest]: ReadBody[T] = ReadBody(Try(parsedBody.extract[T]))
-
-    def readMsgPack[T: Manifest]: ReadBody[UnPacked[T]] =
-      ReadBody(ProtocolHelpers.unpack[T](request.body))
+    def readMsgPack[T: Manifest]: ReadBody[UnPacked[T]] = ReadBody(ProtocolHelpers.unpack[T](request.body))
   }
 
 }
