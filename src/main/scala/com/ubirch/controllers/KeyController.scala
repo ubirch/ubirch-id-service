@@ -64,9 +64,9 @@ class KeyController @Inject() (
   }
 
   post("/v1/pubkey/mpack") {
-    ReadBody.readMsgPack[PublicKeyInfo]
+    ReadBody.readMsgPack
       .async { up =>
-        pubKeyService.create(up.payload, up.pm, up.rawProtocolMessage)
+        pubKeyService.create(up.pm, up.rawProtocolMessage)
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>

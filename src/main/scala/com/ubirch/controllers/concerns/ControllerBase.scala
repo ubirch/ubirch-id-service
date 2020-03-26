@@ -1,5 +1,7 @@
 package com.ubirch.controllers.concerns
 
+import java.io.FileOutputStream
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import com.ubirch.services.pm.ProtocolMessageService
@@ -48,11 +50,18 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
   object ReadBody {
 
+    def store(bytes: Array[Byte]) = {
+      val os = new FileOutputStream("src/main/scala/com/ubirch/curl/dataO.mpack")
+      os.write(bytes)
+      os.close()
+    }
+
     def readJson[T: Manifest]: ReadBody[T] = ReadBody(Try(parsedBody.extract[T]))
-    def readMsgPack[T: Manifest](implicit request: HttpServletRequest): ReadBody[UnPacked[T]] = {
-      ReadBody[UnPacked[T]](for {
+    def readMsgPack(implicit request: HttpServletRequest): ReadBody[UnPacked] = {
+      ReadBody[UnPacked](for {
         bytes <- Try(IOUtils.toByteArray(request.getInputStream))
-        unpacked <- pmService.unpackFromBytes[T](bytes)
+        // _ <- Try(store(bytes))
+        unpacked <- pmService.unpackFromBytes(bytes)
       } yield unpacked)
     }
   }

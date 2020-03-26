@@ -1,6 +1,6 @@
 package com.ubirch.util
 
-import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.format.{ DateTimeFormatter, ISODateTimeFormat }
 import org.joda.time.{ DateTime, DateTimeZone, LocalTime, Period }
 
 object DateUtil {
@@ -16,6 +16,8 @@ object DateUtil {
       .withZone(DateTimeZone.UTC)
 
   }
+
+  def ISOFormatter: DateTimeFormatter = ISODateTimeFormat.dateTime().withZoneUTC()
 
   def dateRange(from: DateTime, to: DateTime, stepSize: Period): Seq[DateTime] = {
 

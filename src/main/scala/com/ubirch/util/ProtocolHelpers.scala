@@ -1,6 +1,5 @@
 package com.ubirch.util
 
-import java.io.{ BufferedWriter, FileWriter }
 import java.util.{ Base64, UUID }
 
 import com.typesafe.scalalogging.LazyLogging
@@ -12,7 +11,6 @@ import com.ubirch.protocol.codec.MsgPackProtocolEncoder
 import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.key.PubKeyVerificationService
 import com.ubirch.services.pm.ProtocolMessageService
-import org.apache.commons.codec.binary.Hex
 import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods._
 
@@ -26,15 +24,19 @@ object ProtocolHelpers extends LazyLogging {
   val verification = new PubKeyVerificationService(jsonConverter, pmService)
 
   def main(args: Array[String]): Unit = {
-    val re = for {
+    /*    val re = for {
       random <- packRandomPublicKeyInfo(PublicKeyUtil.EDDSA)
       (bytes, _) = random
-      res <- pmService.unpackFromString[PublicKeyInfo](Hex.encodeHexString(bytes)).toEither
+      res <- pmService.unpackFromBytes(bytes).toEither
       verification <- Try(verification.validate(res.payload, res.pm)).toEither
     } yield {
 
-      val os = new BufferedWriter(new FileWriter("src/main/scala/com/ubirch/curl/data.mpack"))
-      os.write(Hex.encodeHexString(bytes))
+      val bw = new BufferedWriter(new FileWriter("src/main/scala/com/ubirch/curl/data.mpack"))
+      bw.write(Hex.encodeHexString(bytes))
+      bw.close()
+
+      val os = new FileOutputStream("src/main/scala/com/ubirch/curl/data2.mpack")
+      os.write(bytes)
       os.close()
 
       verification
@@ -46,7 +48,7 @@ object ProtocolHelpers extends LazyLogging {
         logger.info(value.toString)
       case Left(value) =>
         logger.error(value.getMessage)
-    }
+    }*/
 
   }
 

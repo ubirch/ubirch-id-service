@@ -1,22 +1,29 @@
 package com.ubirch.services.key
 
+import java.util.Base64
+
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
+import com.ubirch.protocol.codec.UUIDUtil
+import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.DateUtil
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
+import org.json4s.Formats
+import org.json4s.JsonAST.{ JInt, JString }
 
 import scala.util.control.NoStackTrace
 import scala.util.{ Failure, Success }
 
 trait PubKeyService {
   def create(publicKey: PublicKey): CancelableFuture[PublicKey]
-  def create(data: PublicKeyInfo, pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
+  def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
   def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
 }
@@ -26,8 +33,9 @@ class DefaultPubKeyService @Inject() (
     config: Config,
     publicKeyDAO: PublicKeyDAO,
     publicKeyByHwDeviceIdDao: PublicKeyByHwDeviceIdDAO,
-    verification: PubKeyVerificationService
-)(implicit scheduler: Scheduler)
+    verification: PubKeyVerificationService,
+    jsonConverterService: JsonConverterService
+)(implicit scheduler: Scheduler, jsFormats: Formats)
   extends PubKeyService with LazyLogging {
 
   import DefaultPubKeyService._
@@ -129,8 +137,26 @@ class DefaultPubKeyService @Inject() (
 
   }
 
-  def create(pubKeyInfo: PublicKeyInfo, pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msgpack") {
+  def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msgpack") {
     (for {
+
+      text <- Task(pm.getPayload.toString)
+      payloadJValue <- Task.fromTry {
+        jsonConverterService.toJValue(text).toTry
+      }
+      _ = logger.info("protocol_message_payload {}", payloadJValue.toString)
+      pubKeyInfo <- Task(payloadJValue).map { jv =>
+        def formatter(time: Long) = DateUtil.ISOFormatter.print(time.toLong * 1000)
+        jv.mapField {
+          case ("algorithm", JString(value)) => ("algorithm", JString(new String(Base64.getDecoder.decode(value))))
+          case ("hwDeviceId", JString(value)) => ("hwDeviceId", JString(UUIDUtil.bytesToUUID(Base64.getDecoder.decode(value)).toString))
+          case ("created", JInt(num)) => ("created", JString(formatter(num.toLong)))
+          case ("validNotAfter", JInt(num)) => ("validNotAfter", JString(formatter(num.toLong)))
+          case ("validNotBefore", JInt(num)) => ("validNotAfter", JString(formatter(num.toLong)))
+          case x => x
+        }.extract[PublicKeyInfo]
+      }
+
       maybeKey <- publicKeyDAO.byPubKey(pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
 
