@@ -5,16 +5,19 @@ import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.crypto.utils.{ Curve, Utils }
-import com.ubirch.models.PublicKey
+import com.ubirch.crypto.utils.Curve
+import com.ubirch.models.{ PublicKey, PublicKeyInfo }
+import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.PublicKeyUtil
 import javax.inject._
-import org.apache.commons.codec.binary.Hex
 import org.joda.time.{ DateTime, DateTimeZone }
 
+import scala.util.Try
+
 @Singleton
-class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) extends LazyLogging {
+class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, pmService: ProtocolMessageService) extends LazyLogging {
 
   def getCurve(algorithm: String): Curve = PublicKeyUtil.associateCurve(algorithm)
 
@@ -26,44 +29,14 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
   }
 
   def validate(publicKey: PublicKey): Boolean = {
-
-    publicKey.raw match {
-
-      //TODO: This part is possible to be removed after tests
-      case Some(raw) =>
-        val sigIndex: Int = raw.charAt(2) match {
-          // check v2 of the ubirch-protocol encoding, but make sure we don't fall for a mix (legacy bin encoding)
-          case '2' if raw.charAt(4).toLower != 'b' =>
-            logger.debug(s"Registration message: '$raw'")
-            66
-          // legacy ubirch-protocol encoding
-          case _ =>
-            logger.warn(s"Legacy registration message: '$raw'")
-            67
-        }
-        val part: Array[Byte] = Hex.decodeHex(raw).dropRight(sigIndex)
-        logger.debug("pubKey: '%s'".format(publicKey.pubKeyInfo.pubKey))
-        logger.debug("signed part: '%s'".format(Hex.encodeHexString(part)))
-
+    jsonConverter.toString(publicKey.pubKeyInfo) match {
+      case Right(publicKeyInfoString) =>
+        logger.info(s"public_key_info= '$publicKeyInfoString'")
         val curve = getCurve(publicKey.pubKeyInfo.algorithm)
-        val message = Utils.hash(part, PublicKeyUtil.associateHash(publicKey.pubKeyInfo.algorithm))
-        validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, message, curve)
-
-      case None =>
-
-        jsonConverter.toString(publicKey.pubKeyInfo) match {
-
-          case Right(publicKeyInfoString) =>
-            //TODO added prevPubKey signature check!!!
-            logger.info(s"publicKeyInfoString: '$publicKeyInfoString'")
-            val curve = getCurve(publicKey.pubKeyInfo.algorithm)
-            validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, publicKeyInfoString.getBytes, curve)
-          case Left(e) =>
-            logger.error(e.getMessage)
-            false
-
-        }
-
+        validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, publicKeyInfoString.getBytes, curve)
+      case Left(e) =>
+        logger.error(e.getMessage)
+        false
     }
   }
 
@@ -106,6 +79,19 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService) 
         logger.error("Failed to decode 3 -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
     }
+  }
+
+  def validate(pubKeyInfo: PublicKeyInfo, pm: ProtocolMessage): Boolean = {
+    (for {
+      verifier <- Try(pmService.protocolVerifier(pubKeyInfo.pubKey, getCurve(pubKeyInfo.algorithm)))
+      verification <- Try(verifier.verify(pm.getUUID, pm.getSigned, 0, pm.getSigned.length, pm.getSignature))
+    } yield {
+      verification
+    }).recover {
+      case e: Exception =>
+        logger.error("Failed to validate -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+        false
+    }.get
   }
 
 }

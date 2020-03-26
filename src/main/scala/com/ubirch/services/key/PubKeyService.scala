@@ -3,17 +3,20 @@ package com.ubirch.services.key
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.models.{ PublicKey, PublicKeyByHwDeviceIdDAO, PublicKeyDAO, PublicKeyDelete }
+import com.ubirch.models._
+import com.ubirch.protocol.ProtocolMessage
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
+import org.apache.commons.codec.binary.Hex
 
-import scala.util.{ Failure, Success }
 import scala.util.control.NoStackTrace
+import scala.util.{ Failure, Success }
 
 trait PubKeyService {
   def create(publicKey: PublicKey): CancelableFuture[PublicKey]
+  def create(data: PublicKeyInfo, pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
   def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
 }
@@ -112,13 +115,36 @@ class DefaultPubKeyService @Inject() (
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
-      verification <- Task.delay(verification.validate(publicKey.copy(raw = None)))
+      verification <- Task.delay(verification.validate(publicKey))
       _ = if (!verification) logger.error("Verification failed " + maybeKey)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       res <- publicKeyDAO.insert(publicKey).headOptionL
       _ = if (res.isEmpty) logger.error("Creation seems to have failed...for " + publicKey.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Insert"))
+    } yield publicKey).onErrorRecover {
+      case KeyExists(publicKey) => publicKey
+      case e: Throwable => throw e
+    }.runToFuture
+
+  }
+
+  def create(pubKeyInfo: PublicKeyInfo, pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msgpack") {
+    (for {
+      maybeKey <- publicKeyDAO.byPubKey(pubKeyInfo.pubKey).headOptionL
+      _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
+
+      publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature), Some(rawMsgPack)))
+      _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
+
+      verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
+      _ = if (!verification) logger.error("Verification failed " + maybeKey)
+      _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
+
+      res <- publicKeyDAO.insert(publicKey).headOptionL
+      _ = if (res.isEmpty) logger.error("Creation seems to have failed...for " + publicKey.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Insert"))
+
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e

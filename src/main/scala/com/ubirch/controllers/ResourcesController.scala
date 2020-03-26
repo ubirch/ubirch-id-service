@@ -2,7 +2,7 @@ package com.ubirch.controllers
 
 import javax.inject._
 import org.scalatra.ScalatraServlet
-import org.scalatra.swagger.{ ApiInfo, ContactInfo, LicenseInfo, NativeSwaggerBase, Swagger }
+import org.scalatra.swagger._
 
 @Singleton
 class ResourcesController @Inject() (val swagger: Swagger) extends ScalatraServlet with NativeSwaggerBase

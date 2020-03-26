@@ -2,19 +2,24 @@ package com.ubirch.controllers.concerns
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
-import com.ubirch.util.ProtocolHelpers
-import com.ubirch.util.ProtocolHelpers.UnPacked
+import com.ubirch.services.pm.ProtocolMessageService
+import com.ubirch.services.pm.ProtocolMessageService.UnPacked
 import javax.servlet.http.HttpServletRequest
-import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
 import org.json4s.jackson
+import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.{ AsyncResult, BadRequest }
+import org.scalatra.swagger.SwaggerSupport
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
-trait RequestHelpers extends NativeJsonSupport with LazyLogging {
+abstract class ControllerBase(pmService: ProtocolMessageService) extends ScalatraServlet
+  with FutureSupport
+  with NativeJsonSupport
+  with SwaggerSupport
+  with CorsSupport
+  with LazyLogging {
 
   private def asyncResult(body: () => Future[_]): AsyncResult = {
     new AsyncResult() {
@@ -47,9 +52,8 @@ trait RequestHelpers extends NativeJsonSupport with LazyLogging {
     def readMsgPack[T: Manifest](implicit request: HttpServletRequest): ReadBody[UnPacked[T]] = {
       ReadBody[UnPacked[T]](for {
         bytes <- Try(IOUtils.toByteArray(request.getInputStream))
-        h <- Try(Hex.encodeHexString(bytes))
-        up <- ProtocolHelpers.unpack[T](h)
-      } yield up)
+        unpacked <- pmService.unpackFromBytes[T](bytes)
+      } yield unpacked)
     }
   }
 

@@ -4,37 +4,41 @@ import java.io.{ BufferedWriter, FileWriter }
 import java.util.{ Base64, UUID }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.client.protocol.{ DefaultProtocolSigner, DefaultProtocolVerifier }
+import com.ubirch.client.protocol.DefaultProtocolSigner
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.crypto.utils.Curve
 import com.ubirch.models.{ PublicKey, PublicKeyInfo }
-import com.ubirch.protocol.codec.{ MsgPackProtocolDecoder, MsgPackProtocolEncoder }
-import com.ubirch.protocol.{ ProtocolException, ProtocolMessage }
+import com.ubirch.protocol.ProtocolMessage
+import com.ubirch.protocol.codec.MsgPackProtocolEncoder
 import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.key.PubKeyVerificationService
+import com.ubirch.services.pm.ProtocolMessageService
 import org.apache.commons.codec.binary.Hex
 import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{ Failure, Success, Try }
+import scala.util.Try
 
 object ProtocolHelpers extends LazyLogging {
 
   implicit val formats = new JsonFormatsProvider get ()
   val jsonConverter = new JsonConverterService()
+  val pmService = new ProtocolMessageService()
+  val verification = new PubKeyVerificationService(jsonConverter, pmService)
 
   def main(args: Array[String]): Unit = {
     val re = for {
-      random <- packRandom(PublicKeyUtil.EDDSA)
+      random <- packRandomPublicKeyInfo(PublicKeyUtil.EDDSA)
       (bytes, _) = random
-      res <- unpack[PublicKey](Hex.encodeHexString(bytes)).toEither
-      verifier <- Try(protocolVerifier(res.t.pubKeyInfo.pubKey, PublicKeyUtil.associateCurve(res.t.pubKeyInfo.algorithm))).toEither
+      res <- pmService.unpackFromString[PublicKeyInfo](Hex.encodeHexString(bytes)).toEither
+      verification <- Try(verification.validate(res.payload, res.pm)).toEither
     } yield {
 
-      val os = new BufferedWriter(new FileWriter("hola.pack"))
+      val os = new BufferedWriter(new FileWriter("src/main/scala/com/ubirch/curl/data.mpack"))
       os.write(Hex.encodeHexString(bytes))
       os.close()
 
-      verifier.verify(res.pm.getUUID, res.pm.getSigned, 0, res.pm.getSigned.length, res.pm.getSignature)
+      verification
+
     }
 
     re match {
@@ -46,40 +50,7 @@ object ProtocolHelpers extends LazyLogging {
 
   }
 
-  case class UnPacked[T](t: T, pm: ProtocolMessage, rawBody: String)
-
-  def unpack[T: Manifest](bytesAsString: String) = {
-    (for {
-      bodyString <- Try(bytesAsString)
-      _ <- earlyResponseIf(bodyString.isEmpty)(new Exception("Body can't be empty"))
-      bodyBytes <- Try(Hex.decodeHex(bodyString))
-
-      decoder = MsgPackProtocolDecoder.getDecoder
-      pm <- Try(decoder.decode(bodyBytes))
-
-      payloadJValue <- Try(fromJsonNode(pm.getPayload))
-      _ = logger.info("protocol_message_payload {}", payloadJValue.toString)
-      pt <- Try(payloadJValue.extract[T])
-    } yield {
-      UnPacked(pt, pm, bodyString)
-    }).recover {
-      case p: ProtocolException =>
-        logger.error(s"Error exception={} message={}", p.getCause.getClass.getCanonicalName, p.getCause.getMessage)
-        throw p
-    }
-  }
-
-  private def earlyResponseIf(condition: Boolean)(response: Exception) =
-    if (condition) Failure(response) else Success(())
-
-  def protocolVerifier(pubKeyAsString: String, curve: Curve) = new DefaultProtocolVerifier((_: UUID) => {
-    val decoder = Base64.getDecoder
-    import decoder._
-    val key = GeneratorKeyFactory.getPubKey(decode(pubKeyAsString), curve)
-    List(key)
-  })
-
-  def packRandom(curve: String) = {
+  def packRandomPublicKey(curve: String) = {
     val created = DateUtil.nowUTC
     val validNotAfter = Some(created.plusMonths(6))
     val validNotBefore = created
@@ -92,6 +63,27 @@ object ProtocolHelpers extends LazyLogging {
       uuid = UUID.fromString(pk.pubKeyInfo.hwDeviceId)
       publicKeyAsJValue <- jsonConverter.toJValue[PublicKey](pk)
       pm = new ProtocolMessage(ProtocolMessage.SIGNED, uuid, 1, asJsonNode(publicKeyAsJValue))
+      protocolSigner = new DefaultProtocolSigner(_ => Some(privKey))
+      bytes <- Try(protocolEncoder.encode(pm, protocolSigner)).toEither
+    } yield {
+      (bytes, pkAsString)
+    }
+
+  }
+
+  def packRandomPublicKeyInfo(curve: String) = {
+    val created = DateUtil.nowUTC
+    val validNotAfter = Some(created.plusMonths(6))
+    val validNotBefore = created
+
+    for {
+      protocolEncoder <- Try(MsgPackProtocolEncoder.getEncoder).toEither
+      pkData <- getPublicKey(curve, created, validNotAfter, validNotBefore)
+      (pk, pkAsString, _, _, privKey) = pkData
+      _ = logger.info(pk.pubKeyInfo.hwDeviceId)
+      uuid = UUID.fromString(pk.pubKeyInfo.hwDeviceId)
+      publicKeyInfoAsJValue <- jsonConverter.toJValue[PublicKeyInfo](pk.pubKeyInfo)
+      pm = new ProtocolMessage(ProtocolMessage.SIGNED, uuid, 1, asJsonNode(publicKeyInfoAsJValue))
       protocolSigner = new DefaultProtocolSigner(_ => Some(privKey))
       bytes <- Try(protocolEncoder.encode(pm, protocolSigner)).toEither
     } yield {

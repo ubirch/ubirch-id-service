@@ -1,27 +1,25 @@
 package com.ubirch.controllers
 
-import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.controllers.concerns.RequestHelpers
-import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, Simple }
+import com.ubirch.controllers.concerns.ControllerBase
+import com.ubirch.models._
 import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
+import com.ubirch.services.pm.ProtocolMessageService
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._
-import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport }
+import org.scalatra.swagger.Swagger
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeyService: PubKeyService)(implicit val executor: ExecutionContext)
-  extends ScalatraServlet
-  with FutureSupport
-  with NativeJsonSupport
-  with SwaggerSupport
-  with CorsSupport
-  with RequestHelpers
-  with LazyLogging {
+class KeyController @Inject() (
+    val swagger: Swagger,
+    jFormats: Formats,
+    pubKeyService: PubKeyService,
+    pmService: ProtocolMessageService
+)(implicit val executor: ExecutionContext)
+  extends ControllerBase(pmService) {
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -66,11 +64,9 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
   }
 
   post("/v1/pubkey/mpack") {
-    ReadBody.readMsgPack[PublicKey]
-      .map { unpacked =>
-        unpacked.t.copy(raw = Some(unpacked.rawBody))
-      }.async { pk =>
-        pubKeyService.create(pk)
+    ReadBody.readMsgPack[PublicKeyInfo]
+      .async { up =>
+        pubKeyService.create(up.payload, up.pm, up.rawProtocolMessage)
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>

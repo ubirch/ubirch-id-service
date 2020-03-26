@@ -6,6 +6,7 @@ import com.ubirch.TestBase
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.key.PubKeyVerificationService
+import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import org.joda.time.format.ISODateTimeFormat
 
@@ -17,7 +18,8 @@ class PublicKeySpec extends TestBase {
 
   implicit val formats = new JsonFormatsProvider {} get ()
   val jsonConverter = new JsonConverterService()
-  val verification = new PubKeyVerificationService(jsonConverter)
+  val pmService = new ProtocolMessageService()
+  val verification = new PubKeyVerificationService(jsonConverter, pmService)
 
   "PublicKey" must {
     s"be successfully stringified and verified using ${PublicKeyUtil.ECDSA} and ${PublicKeyUtil.EDDSA}" in {

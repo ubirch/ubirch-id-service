@@ -9,5 +9,5 @@ then
   host=$remote_host
 fi
 
-curl -X POST --header "Content-Type:application/octet-stream" -d @PublicKeyInPM.mpack $host/api/keyService/v1/pubkey/mpack | jq .
+curl -v -X POST -H "Content-Type:application/octet-stream" --data-binary @data2.mpack $host/api/keyService/v1/pubkey/mpack
 
