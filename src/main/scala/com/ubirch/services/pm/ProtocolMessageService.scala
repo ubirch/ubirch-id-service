@@ -1,22 +1,22 @@
 package com.ubirch.services.pm
 
-import java.util.{Base64, UUID}
+import java.util.{ Base64, UUID }
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.{ArrayNode, BinaryNode, ContainerNode, ObjectNode, TextNode}
+import com.fasterxml.jackson.databind.node.{ ArrayNode, BinaryNode, ContainerNode, ObjectNode, TextNode }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.client.protocol.DefaultProtocolVerifier
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.protocol.codec.MsgPackProtocolDecoder
-import com.ubirch.protocol.{ProtocolException, ProtocolMessage}
+import com.ubirch.protocol.{ ProtocolException, ProtocolMessage }
 import javax.inject._
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 import org.json4s.jackson.JsonMethods.fromJsonNode
 import scala.collection.JavaConverters._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 @Singleton
 class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyLogging {
@@ -57,7 +57,7 @@ class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyL
         get(key) match {
           case binary: BinaryNode => set(key, new TextNode(binary.asText()))
           case containerNode: ContainerNode[_] => replaceBinaryNodesWithTextNodes(containerNode)
-          case _ => set(key, new TextNode("Holla"))
+          case _ => // do nothing
         }
       }
     }
@@ -67,7 +67,6 @@ class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyL
       case a: ArrayNode => inner[Int]((0 until a.size()).foreach, a.get, a.set)
     }
 
-    tree
   }
 
   def unpackFromBytes[T: Manifest](bytes: Array[Byte]): Try[UnPacked[T]] = {
