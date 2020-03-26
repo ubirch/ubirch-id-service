@@ -58,6 +58,7 @@ class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyL
       pm <- Try(decoder.decode(bytes))
 
       payloadJValue <- Try(fromJsonNode(pm.getPayload))
+      _ = logger.info("protocol_message_payload_json_node {}", pm.getPayload.toString)
       _ = logger.info("protocol_message_payload {}", payloadJValue.toString)
       pt <- Try(payloadJValue.extract[T])
     } yield {
