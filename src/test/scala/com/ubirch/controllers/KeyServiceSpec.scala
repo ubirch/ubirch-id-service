@@ -1,21 +1,27 @@
 package com.ubirch.controllers
 
+import java.nio.file.{ Files, Paths }
 import java.util.{ Base64, UUID }
 
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
-import com.ubirch.util.{ DateUtil, ProtocolHelpers, PublicKeyUtil }
+import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.joda.time.DateTime
 import org.scalatest.Tag
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
+import scala.language.postfixOps
 import scala.util.Try
 
 class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka {
+
+  def loadFixture(resource: String) = {
+    Files.readAllBytes(Paths.get(resource))
+  }
 
   def getPublicKey(
       curveName: String,
@@ -115,22 +121,9 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "create key using the mpack endpoint" taggedAs (Tag("current")) in {
 
-      for {
-        res <- ProtocolHelpers.packRandomPublicKeyInfo(PublicKeyUtil.ECDSA)
-        (bytes, _) = res
-      } yield {
-        post("/v1/pubkey/mpack", body = bytes) {
-          status should equal(200)
-        }
-      }
-
-      for {
-        res <- ProtocolHelpers.packRandomPublicKeyInfo(PublicKeyUtil.EDDSA)
-        (bytes, _) = res
-      } yield {
-        post("/v1/pubkey/mpack", body = bytes) {
-          status should equal(200)
-        }
+      val bytes = loadFixture("src/main/resources/PublicKeyInPM.mpack")
+      post("/v1/pubkey/mpack", body = bytes) {
+        status should equal(200)
       }
 
     }
