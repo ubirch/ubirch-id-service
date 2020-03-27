@@ -13,4 +13,4 @@ echo "=> host: $host"
 
 harwareId="55424952-3c71-bf88-1fa4-3c71bf881fa4"
 
-curl -s -X GET -H "content-type: application/json" $host/api/keyService/v1/pubkey/$harwareId
+curl -s -X GET -H "content-type: application/json" $host/api/keyService/v1/pubkey/$harwareId | jq .

@@ -152,7 +152,7 @@ class DefaultPubKeyService @Inject() (
           case ("hwDeviceId", JString(value)) => ("hwDeviceId", JString(UUIDUtil.bytesToUUID(Base64.getDecoder.decode(value)).toString))
           case ("created", JInt(num)) => ("created", JString(formatter(num.toLong)))
           case ("validNotAfter", JInt(num)) => ("validNotAfter", JString(formatter(num.toLong)))
-          case ("validNotBefore", JInt(num)) => ("validNotAfter", JString(formatter(num.toLong)))
+          case ("validNotBefore", JInt(num)) => ("validNotBefore", JString(formatter(num.toLong)))
           case x => x
         }.extract[PublicKeyInfo]
       }
