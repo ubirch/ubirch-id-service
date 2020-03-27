@@ -109,7 +109,7 @@ class DefaultPubKeyService @Inject() (
       _ = logger.info(s"Found ${pubKeys.size} results for: hardwareId=$hwDeviceId")
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info(s"Valid keys ${pubKeys.size} results for: hardwareId=$hwDeviceId")
+      _ = logger.info(s"Valid keys ${validPubKeys.size} results for: hardwareId=$hwDeviceId")
 
     } yield {
       validPubKeys

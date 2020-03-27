@@ -25,7 +25,7 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, 
     val now = DateTime.now(DateTimeZone.UTC)
     val validNotBefore = new DateTime(publicKey.pubKeyInfo.validNotBefore)
     val validNotAfter = publicKey.pubKeyInfo.validNotAfter.map(x => new DateTime(x))
-    validNotBefore.isBefore(now) && validNotAfter.exists(_.isAfter(now))
+    validNotBefore.isBefore(now) && validNotAfter.forall(_.isAfter(now))
   }
 
   def validate(publicKey: PublicKey): Boolean = {
