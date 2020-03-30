@@ -1,17 +1,29 @@
 package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{ NOK, Simple }
+import com.ubirch.models.{NOK, Simple}
 import javax.inject._
 import org.json4s.Formats
+import org.scalatra.{CorsSupport, NotFound, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.{ NotFound, Ok, ScalatraServlet }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+
 
 @Singleton
-class InfoController @Inject() (jFormats: Formats) extends ScalatraServlet with NativeJsonSupport with LazyLogging {
+class InfoController @Inject() (val swagger: Swagger, jFormats: Formats) extends ScalatraServlet with NativeJsonSupport with LazyLogging with SwaggerSupport with CorsSupport {
   override protected implicit def jsonFormats: Formats = jFormats
 
-  get("/") {
+  protected val applicationDescription = "Device-related requests."
+
+
+  val getSimpleCheck: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("simpleCheck")
+      summary "Welcome / Health"
+      description "Check if the service is up and running"
+      tags ("key-service", "health", "welcome")
+    )
+
+  get("/", operation(getSimpleCheck)) {
     Ok(Simple("Hallo, Hola, Hello, this is the ubirch identity service."))
   }
 
