@@ -31,7 +31,6 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, 
   def validate(publicKey: PublicKey): Boolean = {
     jsonConverter.toString(publicKey.pubKeyInfo) match {
       case Right(publicKeyInfoString) =>
-        logger.info(s"public_key_info= '$publicKeyInfoString'")
         val curve = getCurve(publicKey.pubKeyInfo.algorithm)
         validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, publicKeyInfoString.getBytes, curve)
       case Left(e) =>

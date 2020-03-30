@@ -48,8 +48,8 @@ class KeyController @Inject() (
 
   post("/v1/pubkey") {
     ReadBody.readJson[PublicKey]
-      .async { pk =>
-        pubKeyService.create(pk)
+      .async { case (pk, body) =>
+        pubKeyService.create(pk, body)
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>
@@ -93,7 +93,7 @@ class KeyController @Inject() (
 
   private def delete = {
     ReadBody.readJson[PublicKeyDelete]
-      .async { pkd =>
+      .async { case (pkd, _) =>
         pubKeyService.delete(pkd)
           .map { dr =>
             if (dr) Ok(Simple("Key deleted"))

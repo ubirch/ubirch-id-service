@@ -14,6 +14,7 @@ create table if not exists keys(
     valid_not_before timestamp,
     signature         text,
     raw               text,
+    category          text,
     created           timestamp,
     PRIMARY KEY (pub_key, hw_device_id)
 );

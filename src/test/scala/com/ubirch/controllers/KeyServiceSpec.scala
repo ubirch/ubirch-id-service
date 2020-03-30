@@ -208,7 +208,8 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       CqlScript.statements("USE identity_system;"),
       CqlScript.statements("drop table if exists keys;"),
       CqlScript.statements(
-        """create table if not exists keys(
+        """
+          |create table if not exists keys(
           |    pub_key          text,
           |    pub_key_id       text,
           |    hw_device_id     text,
@@ -217,6 +218,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |    valid_not_before timestamp,
           |    signature         text,
           |    raw               text,
+          |    category          text,
           |    created           timestamp,
           |    PRIMARY KEY (pub_key, hw_device_id)
           |);
@@ -229,15 +231,16 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |SELECT *
           |FROM keys
           |WHERE hw_device_id is not null
-          |    and  pub_key          is not null
+          |    and  pub_key         is not null
           |    and pub_key_id       is not null
           |    and hw_device_id     is not null
           |    and algorithm        is not null
           |    and valid_not_after  is not null
           |    and valid_not_before is not null
-          |    and signature         is not null
-          |    and raw               is not null
-          |    and created           is not null
+          |    and signature        is not null
+          |    and raw              is not null
+          |    and category         is not null
+          |    and created          is not null
           |PRIMARY KEY (hw_device_id, pub_key);
           |""".stripMargin
       )
