@@ -54,6 +54,24 @@ class KeyController @Inject() (
       }
   }
 
+  get("/pubkey/current/hardwareId/:hardwareId") {
+
+    val hwDeviceId = params.get("hardwareId")
+      .filter(_.nonEmpty)
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found"))))
+
+    pubKeyService.get(hwDeviceId)
+      .map { pks => Ok(pks) }
+      .recover {
+        case e: PubKeyServiceException =>
+          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+        case e: Exception =>
+          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+      }
+  }
+
   post("/v1/pubkey") {
     ReadBody.readJson[PublicKey]
       .async { case (pk, body) =>
