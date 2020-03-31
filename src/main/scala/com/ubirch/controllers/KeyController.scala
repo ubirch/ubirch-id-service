@@ -8,7 +8,7 @@ import com.ubirch.services.pm.ProtocolMessageService
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._
-import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupportSyntax}
+import org.scalatra.swagger.Swagger
 
 import scala.concurrent.ExecutionContext
 
@@ -28,17 +28,15 @@ class KeyController @Inject() (
     contentType = formats("json")
   }
 
-  val getV1PubKeyHardwareId: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("getV1PubKeyHardwareId")
-      summary "query only the currently valid public keys"
-      description "query the currently valid public keys based on a hardwareId"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
-      parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys").example("coucouc").required
-      responseMessages(ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns an array of currently valid public keys"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response"))
-      )
+  get("/v1/check") {
+    Simple("I survived a check")
+  }
 
-  get("/v1/pubkey/:hardwareId", operation(getV1PubKeyHardwareId)) {
+  get("/v1/deepCheck") {
+    Simple("I am alive after a deepCheck")
+  }
+
+  get("/v1/pubkey/:hardwareId") {
 
     val hwDeviceId = params.get("hardwareId")
       .filter(_.nonEmpty)
@@ -56,20 +54,28 @@ class KeyController @Inject() (
       }
   }
 
-  val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("postV1PubKey")
-      summary "stores new public key"
-      description "stores the given public key with its unique pubKeyID"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
-      parameters bodyParam[String]("pubkey").description("the new public key object with the pubKey that should be stored for the unique pubKeyId - also part of the pub key object - in the key registry to be able to find the public key; pubKeyId may not exist already").required
-      responseMessages(ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns created public key"),
-        ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response", Option(SwaggerElements.ERROR_RESPONSE)))
-      )
+  get("/v1/pubkey/current/hardwareId/:hardwareId") {
 
-  post("/v1/pubkey", operation(postV1PubKey)) {
+    val hwDeviceId = params.get("hardwareId")
+      .filter(_.nonEmpty)
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found"))))
+
+    pubKeyService.get(hwDeviceId)
+      .map { pks => Ok(pks) }
+      .recover {
+        case e: PubKeyServiceException =>
+          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+        case e: Exception =>
+          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+      }
+  }
+
+  post("/v1/pubkey") {
     ReadBody.readJson[PublicKey]
-      .async { pk =>
-        pubKeyService.create(pk)
+      .async { case (pk, body) =>
+        pubKeyService.create(pk, body)
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>
@@ -83,19 +89,7 @@ class KeyController @Inject() (
 
   }
 
-  val postV1PubKeyMsgPack: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("postV1PubKeyMsgPack")
-      summary "stores new public key in msgpack format"
-      description "stores the given public key with its unique pubKeyID"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY, SwaggerElements.TAG_MSG_PACK)
-      consumes "application/octet-stream"
-      produces "application/json"
-      parameters bodyParam[String]("pubkey").description("a mgspack representation of the public key registration. The format follows both the json structure (with binary values instead of encoded) as well as the [ubirch-protocol](https://github.com/ubirch/ubirch-protocol#key-registration) format.").required
-      responseMessages(ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns created public key"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response"))
-      )
-
-  post("/v1/pubkey/mpack", operation(postV1PubKeyMsgPack)) {
+  post("/v1/pubkey/mpack") {
     ReadBody.readMsgPack
       .async { up =>
         pubKeyService.create(up.pm, up.rawProtocolMessage)
@@ -112,21 +106,11 @@ class KeyController @Inject() (
 
   }
 
-
-  val deleteV1PubKey: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("deleteV1PubKey")
-      summary "delete a public key"
-      description "delete a public key"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
-      parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field").example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
-      responseMessages(ResponseMessage(SwaggerElements.OK_CODE_200, "delete was successful or key did not exist"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "signature was invalid"))
-      )
-  delete("/v1/pubkey", operation(deleteV1PubKey)) { delete }
+  delete("/v1/pubkey") { delete }
   /**
     * This has been added since the delete method cannot be tested with a body.
     */
-  patch("/v1/pubkey", operation(deleteV1PubKey)) { delete }
+  patch("/v1/pubkey") { delete }
 
   notFound {
     logger.info("controller=KeyController route_not_found={} query_string={}", requestPath, request.getQueryString)
@@ -135,7 +119,7 @@ class KeyController @Inject() (
 
   private def delete = {
     ReadBody.readJson[PublicKeyDelete]
-      .async { pkd =>
+      .async { case (pkd, _) =>
         pubKeyService.delete(pkd)
           .map { dr =>
             if (dr) Ok(Simple("Key deleted"))
