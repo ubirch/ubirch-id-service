@@ -28,6 +28,10 @@ class KeyController @Inject() (
     contentType = formats("json")
   }
 
+  get("/v1/deepCheck") {
+    Simple("I am alive")
+  }
+
   get("/v1/pubkey/:hardwareId") {
 
     val hwDeviceId = params.get("hardwareId")
