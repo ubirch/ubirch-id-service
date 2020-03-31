@@ -28,8 +28,12 @@ class KeyController @Inject() (
     contentType = formats("json")
   }
 
+  get("/v1/check") {
+    Simple("I survived a check")
+  }
+
   get("/v1/deepCheck") {
-    Simple("I am alive")
+    Simple("I am alive after a deepCheck")
   }
 
   get("/v1/pubkey/:hardwareId") {
