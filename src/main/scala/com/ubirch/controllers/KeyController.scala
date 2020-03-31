@@ -54,7 +54,7 @@ class KeyController @Inject() (
       }
   }
 
-  get("/pubkey/current/hardwareId/:hardwareId") {
+  get("/v1/pubkey/current/hardwareId/:hardwareId") {
 
     val hwDeviceId = params.get("hardwareId")
       .filter(_.nonEmpty)
