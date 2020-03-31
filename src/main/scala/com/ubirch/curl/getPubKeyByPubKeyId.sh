@@ -11,6 +11,6 @@ fi
 
 echo "=> host: $host"
 
-harwareId="55424952-3c71-bf88-1fa4-3c71bf881fa4"
+pubKeyId="VHcuJqKi4JceU1sCoO61cUgUd5blReD/1U1ga4T0JQQ="
 
-curl -s -X GET -H "content-type: application/json" $host/api/keyService/v1/pubkey/$harwareId | jq .
+curl -s -X GET -H "content-type: application/json" $host/api/keyService/v1/pubkey/$pubKeyId | jq .

@@ -35,13 +35,12 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
     val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
     val hardwareDeviceId = UUID.randomUUID()
 
-    val pubKeyUUID = UUID.randomUUID()
     val pubKeyInfo = PublicKeyInfo(
       algorithm = curveName,
       created = created.toDate,
       hwDeviceId = hardwareDeviceId.toString,
       pubKey = newPublicKey,
-      pubKeyId = pubKeyUUID.toString,
+      pubKeyId = newPublicKey,
       validNotAfter = validNotAfter.map(_.toDate),
       validNotBefore = validNotBefore.toDate
     )
@@ -64,7 +63,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   "Key Service" must {
 
-    "get public key object when data exists" in {
+    "get public key object when data exists" taggedAs (Tag("1")) in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
 
@@ -73,24 +72,41 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         body should equal(expectedBody)
       }
 
-      get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5e") {
-        status should equal(200)
-        body should equal("[" + expectedBody + "]")
-      }
-
-    }
-    "get correct answer when data doesn't exist" in {
-
-      val expectedBody = """[]""".stripMargin
-
-      get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5") {
+      get("/v1/pubkey/Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=") {
         status should equal(200)
         body should equal(expectedBody)
       }
 
     }
 
-    "create key using the json endpoint" in {
+    "get public key object when data exists by hardware id " taggedAs (Tag("2")) in {
+
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
+
+      post("/v1/pubkey", body = expectedBody) {
+        status should equal(200)
+        body should equal(expectedBody)
+      }
+
+      get("/v1/pubkey/current/hardwareId/e686b4ba-26b4-4a6d-8b57-f904299d4a5e") {
+        status should equal(200)
+        body should equal("[" + expectedBody + "]")
+      }
+
+    }
+
+    //    "get correct answer when data doesn't exist" in {
+    //
+    //      val expectedBody = """[]""".stripMargin
+    //
+    //      get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5") {
+    //        status should equal(200)
+    //        body should equal(expectedBody)
+    //      }
+    //
+    //    }
+
+    "create key using the json endpoint" taggedAs (Tag("3")) in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -119,7 +135,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the mpack endpoint" taggedAs (Tag("current")) in {
+    "create key using the mpack endpoint" taggedAs (Tag("4")) in {
 
       val bytes = loadFixture("src/main/resources/PublicKeyInPM.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
@@ -128,7 +144,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the json endpoint when no validNotAfter is provided" in {
+    "create key using the json endpoint when no validNotAfter is provided" taggedAs (Tag("5")) in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = None
@@ -157,7 +173,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "delete key" in {
+    "delete key" taggedAs (Tag("6")) in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -168,7 +184,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         (pk, pkAsString, _, _, pkr) = res
         signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
         signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
-        pubDelete = PublicKeyDelete(pk.pubKeyInfo.pubKey, signatureAsString)
+        pubDelete = PublicKeyDelete(pk.pubKeyInfo.pubKeyId, signatureAsString)
         pubDeleteAsString <- jsonConverter.toString[PublicKeyDelete](pubDelete)
 
       } yield {
@@ -220,7 +236,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |    raw               text,
           |    category          text,
           |    created           timestamp,
-          |    PRIMARY KEY (pub_key, hw_device_id)
+          |    PRIMARY KEY (pub_key_id, hw_device_id)
           |);
         """.stripMargin
       ),
@@ -231,8 +247,26 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |SELECT *
           |FROM keys
           |WHERE hw_device_id is not null
-          |    and  pub_key         is not null
+          |    and pub_key         is not null
           |    and pub_key_id       is not null
+          |    and algorithm        is not null
+          |    and valid_not_after  is not null
+          |    and valid_not_before is not null
+          |    and signature        is not null
+          |    and raw              is not null
+          |    and category         is not null
+          |    and created          is not null
+          |PRIMARY KEY (hw_device_id, pub_key_id);
+          |""".stripMargin
+      ),
+      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_pub_key_id;"),
+      CqlScript.statements(
+        """
+          |CREATE MATERIALIZED VIEW keys_pub_key_id AS
+          |SELECT *
+          |FROM keys
+          |WHERE pub_key_id is not null
+          |    and pub_key         is not null
           |    and hw_device_id     is not null
           |    and algorithm        is not null
           |    and valid_not_after  is not null
@@ -241,7 +275,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |    and raw              is not null
           |    and category         is not null
           |    and created          is not null
-          |PRIMARY KEY (hw_device_id, pub_key);
+          |PRIMARY KEY (pub_key_id, hw_device_id);
           |""".stripMargin
       )
     )

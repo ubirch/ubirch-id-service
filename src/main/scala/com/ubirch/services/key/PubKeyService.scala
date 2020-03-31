@@ -24,7 +24,8 @@ import scala.util.{ Failure, Success }
 trait PubKeyService {
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey]
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
-  def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
+  def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
+  def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
 }
 
@@ -33,6 +34,7 @@ class DefaultPubKeyService @Inject() (
     config: Config,
     publicKeyDAO: PublicKeyRowDAO,
     publicKeyByHwDeviceIdDao: PublicKeyRowByHwDeviceIdDAO,
+    publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService
 )(implicit scheduler: Scheduler, jsFormats: Formats)
@@ -77,7 +79,7 @@ class DefaultPubKeyService @Inject() (
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
 
     (for {
-      maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.publicKey).headOptionL
+      maybeKey <- publicKeyDAO.byPubKeyId(publicKeyDelete.publicKey).headOptionL
       _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.publicKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.publicKey))
 
@@ -101,7 +103,24 @@ class DefaultPubKeyService @Inject() (
 
   }
 
-  def get(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get") {
+  def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_pub_key") {
+    (for {
+      pubKeys <- publicKeyByPubKeyIdDao
+        .byPubKeyId(pubKeyId)
+        .map(PublicKey.fromPublicKeyRow)
+        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+      _ = logger.info(s"Found ${pubKeys.size} results for: pubKeyId=$pubKeyId")
+
+      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
+      _ = logger.info(s"Valid keys ${validPubKeys.size} results for: pubKeyId=$pubKeyId")
+
+    } yield {
+      validPubKeys
+    }).runToFuture
+
+  }
+
+  def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_hardware_id") {
     (for {
       pubKeys <- publicKeyByHwDeviceIdDao
         .byHwDeviceId(hwDeviceId)
@@ -120,7 +139,7 @@ class DefaultPubKeyService @Inject() (
 
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
     (for {
-      maybeKey <- publicKeyDAO.byPubKey(publicKey.pubKeyInfo.pubKey).headOptionL
+      maybeKey <- publicKeyDAO.byPubKeyId(publicKey.pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
@@ -159,7 +178,7 @@ class DefaultPubKeyService @Inject() (
         }.extract[PublicKeyInfo]
       }
 
-      maybeKey <- publicKeyDAO.byPubKey(pubKeyInfo.pubKey).headOptionL
+      maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey).headOptionL
       _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
 
       publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature)))

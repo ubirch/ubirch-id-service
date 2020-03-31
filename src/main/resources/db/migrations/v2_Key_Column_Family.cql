@@ -16,5 +16,5 @@ create table if not exists keys(
     raw               text,
     category          text,
     created           timestamp,
-    PRIMARY KEY (pub_key, hw_device_id)
+    PRIMARY KEY (pub_key_id, hw_device_id)
 );

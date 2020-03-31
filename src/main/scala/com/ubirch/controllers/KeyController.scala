@@ -36,20 +36,27 @@ class KeyController @Inject() (
     Simple("I am alive after a deepCheck")
   }
 
-  get("/v1/pubkey/:hardwareId") {
+  get("/v1/pubkey/*") {
 
-    val hwDeviceId = params.get("hardwareId")
+    val pubKeyId = multiParams.get("splat")
+      .flatMap(_.headOption)
       .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found"))))
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found"))))
 
-    pubKeyService.get(hwDeviceId)
-      .map { pks => Ok(pks) }
+    pubKeyService.getByPubKeyId(pubKeyId)
+      .map { pks =>
+        pks.toList match {
+          case Nil => NOK.pubKeyError("Key not found")
+          case pk :: _ => Ok(pk)
+        }
+
+      }
       .recover {
         case e: PubKeyServiceException =>
-          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
           InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
         case e: Exception =>
-          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
           InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
       }
   }
@@ -60,14 +67,14 @@ class KeyController @Inject() (
       .filter(_.nonEmpty)
       .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found"))))
 
-    pubKeyService.get(hwDeviceId)
+    pubKeyService.getByHardwareId(hwDeviceId)
       .map { pks => Ok(pks) }
       .recover {
         case e: PubKeyServiceException =>
-          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
           InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
         case e: Exception =>
-          logger.error("Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
           InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
       }
   }

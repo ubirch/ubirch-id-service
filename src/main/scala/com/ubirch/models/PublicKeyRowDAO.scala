@@ -15,9 +15,9 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 
   implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys")
 
-  def byPubKeyQ(pubKey: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
+  def byPubKeyIdQ(pubKeyId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.pubKey == lift(pubKey))
+      .filter(x => x.pubKeyInfoRow.pubKeyId == lift(pubKeyId))
       .map(x => x)
   }
 
@@ -31,8 +31,8 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
     query[PublicKeyRow].insert(lift(PublicKeyRow))
   }
 
-  def deleteQ(pubKey: String): db.Quoted[db.Delete[PublicKeyRow]] = quote {
-    query[PublicKeyRow].filter(_.pubKeyInfoRow.pubKey == lift(pubKey)).delete
+  def deleteQ(pubKeyId: String): db.Quoted[db.Delete[PublicKeyRow]] = quote {
+    query[PublicKeyRow].filter(_.pubKeyInfoRow.pubKeyId == lift(pubKeyId)).delete
   }
 
 }
@@ -43,12 +43,12 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService)(impli
 
   import db._
 
-  def byPubKey(pubKey: String): Observable[PublicKeyRow] = run(byPubKeyQ(pubKey))
+  def byPubKeyId(pubKeyId: String): Observable[PublicKeyRow] = run(byPubKeyIdQ(pubKeyId))
 
   def insert(PublicKeyRow: PublicKeyRow): Observable[Unit] = run(insertQ(PublicKeyRow))
 
   def byHwDeviceId(hwDeviceId: String): Observable[PublicKeyRow] = run(byHwDeviceIdQ(hwDeviceId))
 
-  def delete(pubKey: String): Observable[Unit] = run(deleteQ(pubKey))
+  def delete(pubKeyId: String): Observable[Unit] = run(deleteQ(pubKeyId))
 
 }
