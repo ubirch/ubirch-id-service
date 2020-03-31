@@ -35,4 +35,4 @@ object PublicKey {
   )
 }
 
-case class PublicKeyDelete(pubKey: String, signature: String)
+case class PublicKeyDelete(publicKey: String, signature: String)

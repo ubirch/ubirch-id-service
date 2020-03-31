@@ -77,18 +77,18 @@ class DefaultPubKeyService @Inject() (
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
 
     (for {
-      maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.pubKey).headOptionL
-      _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.pubKey)
-      _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.pubKey))
+      maybeKey <- publicKeyDAO.byPubKey(publicKeyDelete.publicKey).headOptionL
+      _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.publicKey)
+      _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.publicKey))
 
       key = maybeKey.get
       pubKeyInfo = key.pubKeyInfoRow
       curve = verification.getCurve(pubKeyInfo.algorithm)
-      verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.pubKey, publicKeyDelete.signature, curve))
+      verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.publicKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("Unable to delete public key with invalid signature: " + publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidVerification(PublicKey.fromPublicKeyRow(key)))
 
-      deletion <- publicKeyDAO.delete(publicKeyDelete.pubKey).headOptionL
+      deletion <- publicKeyDAO.delete(publicKeyDelete.publicKey).headOptionL
       _ = if (deletion.isEmpty) logger.error("Deletion seems to have failed...for " + publicKeyDelete.toString)
       _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone("Delete"))
 

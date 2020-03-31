@@ -11,6 +11,6 @@ fi
 
 echo "=> host: $host"
 
-harwareId="d947fc53656ddb845435a7b922a5faad1e2067530a656d95f183eb1cca1fcec46137b501a47380a63dfc583268c5e82449519907afc5a917105a36b1242967db"
+harwareId="55424952-3c71-bf88-1fa4-3c71bf881fa4"
 
 curl -s -X GET -H "content-type: application/json" $host/api/keyService/v1/pubkey/current/hardwareId/$harwareId | jq .
