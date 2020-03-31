@@ -9,8 +9,5 @@ object SwaggerElements {
   val TAG_KEY_REGISTRY = "key registry"
   val TAG_MSG_PACK = "MessagePack"
 
-  val ERROR_RESPONSE = """      version: '1.0'
-                         |      status: NOK
-                         |      errorType: FindTrustedError
-                         |      message: failed to query trusted keys"""
+  val ERROR_RESPONSE: String = "version: '1.0' status: NOK\n" + "errorType: FindTrustedError\n" + "message: failed to query trusted keys"
 }
