@@ -63,7 +63,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   "Key Service" must {
 
-    "get public key object when data exists" taggedAs (Tag("1")) in {
+    "get public key object when data exists" taggedAs Tag("1") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
 
@@ -79,7 +79,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "get public key object when data exists by hardware id " taggedAs (Tag("2")) in {
+    "get public key object when data exists by hardware id " taggedAs Tag("2") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
 
@@ -95,18 +95,18 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    //    "get correct answer when data doesn't exist" in {
-    //
-    //      val expectedBody = """[]""".stripMargin
-    //
-    //      get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5") {
-    //        status should equal(200)
-    //        body should equal(expectedBody)
-    //      }
-    //
-    //    }
+    "get correct answer when data doesn't exist" taggedAs Tag("3") in {
 
-    "create key using the json endpoint" taggedAs (Tag("3")) in {
+      val expectedBody = """{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Key not found"}""".stripMargin
+
+      get("/v1/pubkey/e686b4ba-26b4-4a6d-8b57-f904299d4a5") {
+        status should equal(404)
+        body should equal(expectedBody)
+      }
+
+    }
+
+    "create key using the json endpoint" taggedAs Tag("4") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -135,7 +135,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the mpack endpoint" taggedAs (Tag("4")) in {
+    "create key using the mpack endpoint" taggedAs Tag("5") in {
 
       val bytes = loadFixture("src/main/resources/PublicKeyInPM.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
@@ -144,7 +144,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the json endpoint when no validNotAfter is provided" taggedAs (Tag("5")) in {
+    "create key using the json endpoint when no validNotAfter is provided" taggedAs Tag("6") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = None
@@ -173,7 +173,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "delete key" taggedAs (Tag("6")) in {
+    "delete key" taggedAs Tag("7") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))

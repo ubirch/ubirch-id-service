@@ -46,7 +46,7 @@ class KeyController @Inject() (
     pubKeyService.getByPubKeyId(pubKeyId)
       .map { pks =>
         pks.toList match {
-          case Nil => NOK.pubKeyError("Key not found")
+          case Nil => NotFound(NOK.pubKeyError("Key not found"))
           case pk :: _ => Ok(pk)
         }
 
