@@ -92,7 +92,7 @@ class DefaultPubKeyService @Inject() (
 
       deletion <- publicKeyDAO.delete(publicKeyDelete.publicKey).headOptionL
       _ = if (deletion.isEmpty) logger.error("failed_key_deletion={}", publicKeyDelete.toString)
-      _ = if (deletion.isDefined) logger.error("key_deletion_succeeded={}", publicKeyDelete.toString)
+      _ = if (deletion.isDefined) logger.info("key_deletion_succeeded={}", publicKeyDelete.toString)
       _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone("Delete"))
 
     } yield true).onErrorRecover {
