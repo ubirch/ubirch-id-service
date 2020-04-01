@@ -79,6 +79,7 @@ class DefaultPubKeyService @Inject() (
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
 
     (for {
+      _ <- Task.delay(logger.info("incoming_payload={}", publicKeyDelete.toString))
       maybeKey <- publicKeyDAO.byPubKeyId(publicKeyDelete.publicKey).headOptionL
       _ = if (maybeKey.isEmpty) logger.error("key_not_found={}", publicKeyDelete.publicKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.publicKey))
