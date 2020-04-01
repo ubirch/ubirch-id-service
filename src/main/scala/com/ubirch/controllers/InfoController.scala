@@ -12,7 +12,7 @@ class InfoController @Inject() (jFormats: Formats) extends ScalatraServlet with 
   override protected implicit def jsonFormats: Formats = jFormats
 
   get("/") {
-    Ok(Simple("Hallo, Hola, Hello, this is the ubirch identity service."))
+    Ok(Simple("Hallo, Hola, Hello, Salut, Hej, this is the Ubirch Identity Service."))
   }
 
   before() {

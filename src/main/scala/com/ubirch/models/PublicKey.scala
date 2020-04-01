@@ -13,6 +13,13 @@ case class PublicKeyInfo(
 )
 
 object PublicKeyInfo {
+
+  final val ALGORITHM = "algorithm"
+  final val HW_DEVICE_ID = "hwDeviceId"
+  final val CREATED = "created"
+  final val VALID_NOT_AFTER = "validNotAfter"
+  final val VALID_NOT_BEFORE = "validNotBefore"
+
   def fromPublicKeyInfoRow(publicKeyInfoRow: PublicKeyInfoRow): PublicKeyInfo = {
     PublicKeyInfo(
       publicKeyInfoRow.algorithm,

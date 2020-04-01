@@ -80,18 +80,19 @@ class DefaultPubKeyService @Inject() (
 
     (for {
       maybeKey <- publicKeyDAO.byPubKeyId(publicKeyDelete.publicKey).headOptionL
-      _ = if (maybeKey.isEmpty) logger.error("No key found with public key: " + publicKeyDelete.publicKey)
+      _ = if (maybeKey.isEmpty) logger.error("key_not_found={}", publicKeyDelete.publicKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.publicKey))
 
       key = maybeKey.get
       pubKeyInfo = key.pubKeyInfoRow
       curve = verification.getCurve(pubKeyInfo.algorithm)
       verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.publicKey, publicKeyDelete.signature, curve))
-      _ = if (!verification) logger.error("Unable to delete public key with invalid signature: " + publicKeyDelete)
+      _ = if (!verification) logger.error("invalid_signature_on_key_deletion={}", publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidVerification(PublicKey.fromPublicKeyRow(key)))
 
       deletion <- publicKeyDAO.delete(publicKeyDelete.publicKey).headOptionL
-      _ = if (deletion.isEmpty) logger.error("Deletion seems to have failed...for " + publicKeyDelete.toString)
+      _ = if (deletion.isEmpty) logger.error("failed_key_deletion={}", publicKeyDelete.toString)
+      _ = if (deletion.isDefined) logger.error("key_deletion_succeeded={}", publicKeyDelete.toString)
       _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone("Delete"))
 
     } yield true).onErrorRecover {
@@ -109,10 +110,10 @@ class DefaultPubKeyService @Inject() (
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info(s"Found ${pubKeys.size} results for: pubKeyId=$pubKeyId")
+      _ = logger.info("keys_found={} pub_key_Id={}", pubKeys.size, pubKeyId)
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info(s"Valid keys ${validPubKeys.size} results for: pubKeyId=$pubKeyId")
+      _ = logger.info("valid_keys_found={} pub_key_Id={}", validPubKeys.size, pubKeyId)
 
     } yield {
       validPubKeys
@@ -126,10 +127,10 @@ class DefaultPubKeyService @Inject() (
         .byHwDeviceId(hwDeviceId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info(s"Found ${pubKeys.size} results for: hardwareId=$hwDeviceId")
+      _ = logger.info("keys_found={} hardware_id={}", pubKeys.size, hwDeviceId)
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info(s"Valid keys ${validPubKeys.size} results for: hardwareId=$hwDeviceId")
+      _ = logger.info("valid_keys_found={} hardware_id={}", validPubKeys.size, hwDeviceId)
 
     } yield {
       validPubKeys
@@ -140,17 +141,18 @@ class DefaultPubKeyService @Inject() (
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
     (for {
       maybeKey <- publicKeyDAO.byPubKeyId(publicKey.pubKeyInfo.pubKey).headOptionL
-      _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
+      _ = if (maybeKey.isDefined) logger.info("key_found={}", maybeKey.toString)
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
-      _ = if (!verification) logger.error("Verification failed " + maybeKey)
+      _ = if (!verification) logger.error("failed_verification={}", maybeKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, rawMessage))
       res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("Creation seems to have failed...for " + publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Insert"))
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Json_Insert"))
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e
@@ -158,40 +160,41 @@ class DefaultPubKeyService @Inject() (
 
   }
 
-  def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msgpack") {
+  def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msg_pack") {
     (for {
 
       text <- Task(pm.getPayload.toString)
       payloadJValue <- Task.fromTry {
         jsonConverterService.toJValue(text).toTry
       }
-      _ = logger.info("protocol_message_payload {}", payloadJValue.toString)
+      _ = logger.info("protocol_message_payload={}", payloadJValue.toString)
       pubKeyInfo <- Task(payloadJValue).map { jv =>
         def formatter(time: Long) = DateUtil.ISOFormatter.print(time.toLong * 1000)
         jv.mapField {
-          case ("algorithm", JString(value)) => ("algorithm", JString(new String(Base64.getDecoder.decode(value))))
-          case ("hwDeviceId", JString(value)) => ("hwDeviceId", JString(UUIDUtil.bytesToUUID(Base64.getDecoder.decode(value)).toString))
-          case ("created", JInt(num)) => ("created", JString(formatter(num.toLong)))
-          case ("validNotAfter", JInt(num)) => ("validNotAfter", JString(formatter(num.toLong)))
-          case ("validNotBefore", JInt(num)) => ("validNotBefore", JString(formatter(num.toLong)))
+          case (x @ PublicKeyInfo.ALGORITHM, JString(value)) => (x, JString(new String(Base64.getDecoder.decode(value))))
+          case (x @ PublicKeyInfo.HW_DEVICE_ID, JString(value)) => (x, JString(UUIDUtil.bytesToUUID(Base64.getDecoder.decode(value)).toString))
+          case (x @ PublicKeyInfo.CREATED, JInt(num)) => (x, JString(formatter(num.toLong)))
+          case (x @ PublicKeyInfo.VALID_NOT_AFTER, JInt(num)) => (x, JString(formatter(num.toLong)))
+          case (x @ PublicKeyInfo.VALID_NOT_BEFORE, JInt(num)) => (x, JString(formatter(num.toLong)))
           case x => x
         }.extract[PublicKeyInfo]
       }
 
       maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey).headOptionL
-      _ = if (maybeKey.isDefined) logger.info("Key found is " + maybeKey)
+      _ = if (maybeKey.isDefined) logger.info("key_found={} ", maybeKey)
 
       publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature)))
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
-      _ = if (!verification) logger.error("Verification failed " + maybeKey)
+      _ = if (!verification) logger.error("failed_verification={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsgPack))
       res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("Creation seems to have failed...for " + publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Insert"))
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Msg_Pack_Insert"))
 
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey

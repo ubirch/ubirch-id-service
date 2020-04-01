@@ -41,7 +41,7 @@ class KeyController @Inject() (
     val pubKeyId = multiParams.get("splat")
       .flatMap(_.headOption)
       .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found"))))
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
 
     pubKeyService.getByPubKeyId(pubKeyId)
       .map { pks =>
@@ -61,11 +61,12 @@ class KeyController @Inject() (
       }
   }
 
-  get("/v1/pubkey/current/hardwareId/:hardwareId") {
+  get("/v1/pubkey/current/hardwareId/*") {
 
-    val hwDeviceId = params.get("hardwareId")
+    val hwDeviceId = multiParams.get("splat")
+      .flatMap(_.headOption)
       .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found"))))
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
 
     pubKeyService.getByHardwareId(hwDeviceId)
       .map { pks => Ok(pks) }
