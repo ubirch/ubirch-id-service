@@ -26,7 +26,11 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
   private def asyncResult(body: () => Future[_]): AsyncResult = {
     new AsyncResult() {
-      override val is = body()
+      override val is = body().recover {
+        case e =>
+          logger.error(s"Error 0. exception={} message={}", e.getClass.getCanonicalName, e.getCause.getMessage)
+          InternalServerError(NOK.serverError("Sorry, something happened"))
+      }
     }
   }
 
