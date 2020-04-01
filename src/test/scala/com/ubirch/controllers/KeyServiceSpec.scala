@@ -27,13 +27,13 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       curveName: String,
       created: DateTime,
       validNotAfter: Option[DateTime],
-      validNotBefore: DateTime
+      validNotBefore: DateTime,
+      hardwareDeviceId: UUID = UUID.randomUUID()
   ) = {
 
     val curve = PublicKeyUtil.associateCurve(curveName)
     val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
     val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-    val hardwareDeviceId = UUID.randomUUID()
 
     val pubKeyInfo = PublicKeyInfo(
       algorithm = curveName,
@@ -63,7 +63,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   "Key Service" must {
 
-    "get public key object when data exists" taggedAs Tag("1") in {
+    "get public key object when data exists" taggedAs Tag("mango") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
 
@@ -79,7 +79,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "get public key object when data exists by hardware id " taggedAs Tag("2") in {
+    "get public key object when data exists by hardware id " taggedAs Tag("cherry") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin
 
@@ -95,7 +95,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "get correct answer when data doesn't exist" taggedAs Tag("3") in {
+    "get correct answer when data doesn't exist" taggedAs Tag("banana") in {
 
       val expectedBody = """{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Key not found"}""".stripMargin
 
@@ -106,7 +106,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the json endpoint" taggedAs Tag("4") in {
+    "create key using the json endpoint" taggedAs Tag("orange") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -135,7 +135,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the mpack endpoint" taggedAs Tag("5") in {
+    "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
       val bytes = loadFixture("src/main/resources/PublicKeyInPM.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
@@ -144,7 +144,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the json endpoint when no validNotAfter is provided" taggedAs Tag("6") in {
+    "create key using the json endpoint when no validNotAfter is provided" taggedAs Tag("watermelon") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = None
@@ -173,7 +173,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "delete key" taggedAs Tag("7") in {
+    "delete key" taggedAs Tag("pineapple") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -198,6 +198,71 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           status should equal(200)
           body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
         }
+      }).getOrElse(fail())
+
+    }
+
+    "delete key when multiple" taggedAs Tag("coconut") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareDeviceId: UUID = UUID.randomUUID()
+
+      (for {
+        res1 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk1, pkAsString1, _, _, pkr1) = res1
+        signature1 <- Try(pkr1.sign(pkr1.getRawPublicKey)).toEither
+        signatureAsString1 <- Try(Base64.getEncoder.encodeToString(signature1)).toEither
+        pubDelete1 = PublicKeyDelete(pk1.pubKeyInfo.pubKeyId, signatureAsString1)
+        pubDeleteAsString1 <- jsonConverter.toString[PublicKeyDelete](pubDelete1)
+
+        res2 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk2, pkAsString2, _, _, pkr2) = res2
+        signature2 <- Try(pkr2.sign(pkr2.getRawPublicKey)).toEither
+        signatureAsString2 <- Try(Base64.getEncoder.encodeToString(signature2)).toEither
+        pubDelete2 = PublicKeyDelete(pk2.pubKeyInfo.pubKeyId, signatureAsString2)
+        pubDeleteAsString2 <- jsonConverter.toString[PublicKeyDelete](pubDelete2)
+
+        res3 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk3, pkAsString3, _, _, pkr3) = res3
+        signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
+        signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
+        pubDelete3 = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
+        pubDeleteAsString3 <- jsonConverter.toString[PublicKeyDelete](pubDelete3)
+
+      } yield {
+
+        post("/v1/pubkey", body = pkAsString1) {
+          status should equal(200)
+          body should equal(pkAsString1)
+        }
+
+        post("/v1/pubkey", body = pkAsString2) {
+          status should equal(200)
+          body should equal(pkAsString2)
+        }
+
+        post("/v1/pubkey", body = pkAsString3) {
+          status should equal(200)
+          body should equal(pkAsString3)
+        }
+
+        patch("/v1/pubkey", body = pubDeleteAsString1) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
+        }
+
+        patch("/v1/pubkey", body = pubDeleteAsString2) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
+        }
+
+        get("/v1/pubkey/current/hardwareId/" + hardwareDeviceId) {
+          status should equal(200)
+          body should equal(s"[$pkAsString3]")
+        }
+
       }).getOrElse(fail())
 
     }
