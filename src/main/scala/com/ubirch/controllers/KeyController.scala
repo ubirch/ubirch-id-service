@@ -62,7 +62,8 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
       parameters pathParam[String]("pubkey").description("public key for which to search for currently valid public keys").required
       responseMessages (
       ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns the current valid public key"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response")
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No pubKeyId parameter found in path"),
+      ResponseMessage(SwaggerElements.NOT_FOUND_CODE_404, "Key not found")
     ))
 
   /**
@@ -87,7 +88,6 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
   }
 
   def handleV1PubKey(pubKeyId: String) = {
-
     pubKeyService.getByPubKeyId(pubKeyId)
       .map { pks =>
         pks.toList match {
@@ -115,7 +115,8 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
       parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys").required
       responseMessages (
       ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns an array of currently valid public keys"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response")
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No hardwareId parameter found in path"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
     ))
 
   get("/v1/pubkey/current/hardwareId/*") {
@@ -155,7 +156,8 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
       parameters bodyParam[String]("pubkey").description("the new public key object with the pubKey that should be stored for the unique pubKeyId - also part of the pub key object - in the key registry to be able to find the public key; pubKeyId may not exist already").required
       responseMessages (
       ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns created public key"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response", Option(SwaggerElements.ERROR_RESPONSE))
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error creating pub key"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
     ))
 
   post("/v1/pubkey", operation(postV1PubKey)) {
@@ -185,7 +187,8 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
       parameters bodyParam[String]("pubkey").description("a mgspack representation of the public key registration. The format follows both the json structure (with binary values instead of encoded) as well as the [ubirch-protocol](https://github.com/ubirch/ubirch-protocol#key-registration) format.").required
       responseMessages (
       ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns created public key"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No successful response")
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error creating pub key"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
     ))
 
   post("/v1/pubkey/mpack", operation(postV1PubKeyMsgPack)) {
@@ -212,8 +215,9 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
       tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
       parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field").example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
       responseMessages (
-      ResponseMessage(SwaggerElements.OK_CODE_200, "delete was successful or key did not exist"),
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "signature was invalid")
+      ResponseMessage(SwaggerElements.OK_CODE_200, "Key deleted"),
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
     ))
 
   delete("/v1/pubkey", operation(deleteV1PubKey)) { delete }
