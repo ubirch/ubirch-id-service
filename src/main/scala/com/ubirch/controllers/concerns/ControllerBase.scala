@@ -49,6 +49,12 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
     }
   }
 
+  def logRequestInfo(implicit request: HttpServletRequest) = {
+    val path = request.getPathInfo
+    val headers = request.headers.names.toList.map { n => n + ":" + request.headers.get(n).getOrElse("-") }.mkString(",")
+    logger.info("Path:{} {}", path, headers)
+  }
+
   case class ReadBody[T] private (body: Try[T], rawBody: String, mg: Option[Future[_]]) {
 
     def map[B](f: T => B): ReadBody[B] = copy(body = body.map(f))
@@ -81,8 +87,6 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
   object ReadBody {
 
-    def apply[T](body: Try[T], rawBody: String): ReadBody[T] = new ReadBody[T](body, rawBody, None)
-
     def store(bytes: Array[Byte]) = {
       val date = new Date()
       val os = new FileOutputStream(s"src/main/scala/com/ubirch/curl/data_${date.getTime}.mpack")
@@ -102,6 +106,8 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
       ReadBody(body, rawBody.getOrElse("No Body Found"))
     }
+
+    def apply[T](body: Try[T], rawBody: String): ReadBody[T] = new ReadBody[T](body, rawBody, None)
 
     def readMsgPack(implicit request: HttpServletRequest): ReadBody[UnPacked] = {
 

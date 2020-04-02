@@ -41,6 +41,9 @@ class KeyController @Inject() (
     asyncResult { implicit request =>
 
       for {
+
+        _ <- Future(logRequestInfo)
+
         pubKeyId <- Future(multiParams.get("splat")
           .flatMap(_.headOption)
           .filter(_.nonEmpty)
@@ -74,6 +77,8 @@ class KeyController @Inject() (
     asyncResult { implicit request =>
 
       for {
+        _ <- Future(logRequestInfo)
+
         hwDeviceId <- Future(multiParams.get("splat")
           .flatMap(_.headOption)
           .filter(_.nonEmpty)
@@ -98,6 +103,8 @@ class KeyController @Inject() (
 
   post("/v1/pubkey") {
 
+    logRequestInfo
+
     ReadBody.readJson[PublicKey]
       .async { case (pk, body) =>
         pubKeyService.create(pk, body)
@@ -115,6 +122,8 @@ class KeyController @Inject() (
   }
 
   post("/v1/pubkey/mpack") {
+
+    logRequestInfo
 
     ReadBody.readMsgPack
       .async { up =>
@@ -144,6 +153,9 @@ class KeyController @Inject() (
   }
 
   private def delete = {
+
+    logRequestInfo
+
     ReadBody.readJson[PublicKeyDelete]
       .async { case (pkd, _) =>
         pubKeyService.delete(pkd)
