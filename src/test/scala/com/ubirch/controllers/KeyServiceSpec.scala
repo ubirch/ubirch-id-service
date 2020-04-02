@@ -164,7 +164,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
-      val bytes = loadFixture("src/main/resources/PublicKeyInPM.mpack")
+      val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
         status should equal(200)
       }
@@ -173,7 +173,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "create key using the mpack endpoint from trackle message" taggedAs Tag("PassionFruit") in {
 
-      val bytes = loadFixture("src/main/resources/MsgPackKeyService.mpack")
+      val bytes = loadFixture("src/main/resources/fixtures/6_MsgPackKeyService.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
         status should equal(200)
       }

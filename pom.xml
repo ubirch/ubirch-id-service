@@ -80,12 +80,11 @@
         <logstash-logback-encoder.version>5.3</logstash-logback-encoder.version>
 
         <!-- Scalatra -->
-        <scalatra.version>2.7.0</scalatra.version>
+        <scalatra.version>2.6.5</scalatra.version>
         <scalatra-scalatest.version>2.6.5</scalatra-scalatest.version>
         <scalactic.version>3.0.5</scalactic.version>
-        <scalatraSwagger.version>2.7.0</scalatraSwagger.version>
+        <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
         <javaxServlet.version>3.1.0</javaxServlet.version>
-        <jetty-servlets.version>9.4.19.v20190610</jetty-servlets.version>
 
         <!-- plugins -->
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
@@ -255,27 +254,27 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-            <version>9.4.19.v20190610</version>
+            <version>9.4.27.v20200227</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
-            <version>9.4.19.v20190610</version>
+            <version>9.4.27.v20200227</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-webapp -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-webapp</artifactId>
-            <version>9.4.19.v20190610</version>
+            <version>9.4.27.v20200227</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-servlets -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlets</artifactId>
-            <version>9.4.19.v20190610</version>
+            <version>9.4.27.v20200227</version>
         </dependency>
 
 
