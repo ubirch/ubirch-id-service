@@ -8,6 +8,7 @@ import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
 import javax.inject._
+import monix.execution.CancelableFuture
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupportSyntax}
@@ -87,7 +88,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     handleV1PubKey(pubKeyId)
   }
 
-  def handleV1PubKey(pubKeyId: String) = {
+  def handleV1PubKey(pubKeyId: String): CancelableFuture[ActionResult] = {
     pubKeyService.getByPubKeyId(pubKeyId)
       .map { pks =>
         pks.toList match {
@@ -127,7 +128,7 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     handleV1PubkeyCurrentHardwarId(hwDeviceId)
   }
 
-  get("/v1/pubkey/current/hardwareId/:hardwareId") {
+  get("/v1/pubkey/current/hardwareId/:hardwareId", operation(getV1CurrentHardwareId)) {
     val hwDeviceId = params.get("hardwareId") match {
       case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
       case None => halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))
