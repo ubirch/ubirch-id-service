@@ -10,7 +10,6 @@ import com.ubirch.services.pm.ProtocolMessageService.UnPacked
 import javax.servlet.http.HttpServletRequest
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
-import org.json4s.jackson
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
@@ -25,41 +24,55 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
   with CorsSupport
   with LazyLogging {
 
-  private def asyncResult(body: () => Future[_]): AsyncResult = {
+  def asyncResult(body: HttpServletRequest => Future[_])(implicit request: HttpServletRequest): AsyncResult = {
     new AsyncResult() {
-      override val is = body().recover {
-        case e =>
-          logger.error(s"Error 0. exception={} message={}", e.getClass.getCanonicalName, e.getCause.getMessage)
-          InternalServerError(NOK.serverError("Sorry, something happened"))
+      override val is = {
+        val _body = try {
+          body(request)
+        } catch {
+          case e: Exception =>
+            val name = e.getClass.getCanonicalName
+            val cause = Try(e.getCause.getMessage).getOrElse(e.getMessage)
+            logger.error("Error 0.1 ", e)
+            logger.error(s"Error 0.1 exception={} message={}", name, cause)
+            Future(InternalServerError(NOK.serverError("Sorry, something happened")))
+        }
+        _body.recover {
+          case e: Exception =>
+            val name = e.getClass.getCanonicalName
+            val cause = Try(e.getCause.getMessage).getOrElse(e.getMessage)
+            logger.error("Error 0.2 ", e)
+            logger.error(s"Error 0.2 exception={} message={}", name, cause)
+            InternalServerError(NOK.serverError("Sorry, something happened"))
+        }
       }
     }
   }
 
-  case class ReadBody[T] private (body: Try[T], rawBody: String, mg: Option[() => Future[_]]) {
+  case class ReadBody[T] private (body: Try[T], rawBody: String, mg: Option[Future[_]]) {
 
     def map[B](f: T => B): ReadBody[B] = copy(body = body.map(f))
 
     def async(action: T => Future[_])(implicit request: HttpServletRequest): ReadBody[T] = {
       val res = body match {
-        case Success(t) => () => action(t)
+        case Success(t) => action(t)
         case Failure(e) =>
-          () =>
-            Future {
-              val msg = s"Couldn't parse [$rawBody] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
-              logger.error(msg)
-              BadRequest(NOK.parsingError(msg))
-            }
+          Future {
+            val msg = s"Couldn't parse [$rawBody] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
+            logger.error(msg)
+            BadRequest(NOK.parsingError(msg))
+          }
       }
 
       copy(mg = Some(res))
 
     }
 
-    def run: AsyncResult = {
+    def run(implicit request: HttpServletRequest): AsyncResult = {
       mg.map { g =>
-        asyncResult(g)
+        asyncResult(_ => g)
       }.getOrElse {
-        asyncResult(() => Future.successful(InternalServerError(NOK.serverError("No body to run"))))
+        asyncResult(_ => Future.successful(InternalServerError(NOK.serverError("No action body to run"))))
       }
 
     }
@@ -106,6 +119,7 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
       } yield unpacked
 
       ReadBody[UnPacked](body, rawBody.map { _._2 }.getOrElse("No Body Found"))
+
     }
 
   }

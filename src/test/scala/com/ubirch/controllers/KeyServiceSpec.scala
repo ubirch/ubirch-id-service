@@ -115,6 +115,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       }
 
       get("/v1/pubkey/current/hardwareId/e686b4ba-26b4-4a6d-8b57-f904299d4a5e") {
+        println(body)
         status should equal(200)
         body should equal("[" + expectedBody + "]")
       }

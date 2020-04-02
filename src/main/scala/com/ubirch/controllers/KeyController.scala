@@ -10,7 +10,7 @@ import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.Swagger
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class KeyController @Inject() (
@@ -38,49 +38,66 @@ class KeyController @Inject() (
 
   get("/v1/pubkey/*") {
 
-    val pubKeyId = multiParams.get("splat")
-      .flatMap(_.headOption)
-      .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
+    asyncResult { implicit request =>
 
-    pubKeyService.getByPubKeyId(pubKeyId)
-      .map { pks =>
-        pks.toList match {
-          case Nil => NotFound(NOK.pubKeyError("Key not found"))
-          case pk :: _ => Ok(pk)
-        }
+      for {
+        pubKeyId <- Future(multiParams.get("splat")
+          .flatMap(_.headOption)
+          .filter(_.nonEmpty)
+          .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path")))))
 
-      }
-      .recover {
-        case e: PubKeyServiceException =>
-          logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
-        case e: Exception =>
-          logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
-      }
+        res <- pubKeyService.getByPubKeyId(pubKeyId)
+          .map { pks =>
+            pks.toList match {
+              case Nil => NotFound(NOK.pubKeyError("Key not found"))
+              case pk :: _ => Ok(pk)
+            }
+
+          }
+          .recover {
+            case e: PubKeyServiceException =>
+              logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+            case e: Exception =>
+              logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+          }
+
+      } yield res
+
+    }
+
   }
 
   get("/v1/pubkey/current/hardwareId/*") {
 
-    val hwDeviceId = multiParams.get("splat")
-      .flatMap(_.headOption)
-      .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
+    asyncResult { implicit request =>
 
-    pubKeyService.getByHardwareId(hwDeviceId)
-      .map { pks => Ok(pks) }
-      .recover {
-        case e: PubKeyServiceException =>
-          logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
-        case e: Exception =>
-          logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
-      }
+      for {
+        hwDeviceId <- Future(multiParams.get("splat")
+          .flatMap(_.headOption)
+          .filter(_.nonEmpty)
+          .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))))
+
+        res <- pubKeyService.getByHardwareId(hwDeviceId)
+          .map { pks => Ok(pks) }
+          .recover {
+            case e: PubKeyServiceException =>
+              logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+            case e: Exception =>
+              logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
+          }
+
+      } yield res
+
+    }
+
   }
 
   post("/v1/pubkey") {
+
     ReadBody.readJson[PublicKey]
       .async { case (pk, body) =>
         pubKeyService.create(pk, body)
