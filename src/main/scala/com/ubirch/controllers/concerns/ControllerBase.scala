@@ -8,6 +8,7 @@ import com.ubirch.models.NOK
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.services.pm.ProtocolMessageService.UnPacked
 import javax.servlet.http.HttpServletRequest
+import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
 import org.json4s.jackson
 import org.scalatra._
@@ -34,26 +35,40 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
     }
   }
 
-  case class ReadBody[T](body: Try[T]) {
+  case class ReadBody[T] private (body: Try[T], rawBody: String, mg: Option[() => Future[_]]) {
 
     def map[B](f: T => B): ReadBody[B] = copy(body = body.map(f))
 
-    def async(action: T => Future[_]): AsyncResult = {
+    def async(action: T => Future[_])(implicit request: HttpServletRequest): ReadBody[T] = {
       val res = body match {
         case Success(t) => () => action(t)
         case Failure(e) =>
           () =>
-            val bodyAsString = Try(jackson.compactJson(parsedBody)).getOrElse(parsedBody.toString)
-            val msg = s"Couldn't parse [$bodyAsString] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
-            logger.error(msg)
-            Future.successful(BadRequest(NOK.parsingError(msg)))
+            Future {
+              val msg = s"Couldn't parse [$rawBody] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
+              logger.error(msg)
+              BadRequest(NOK.parsingError(msg))
+            }
       }
-      asyncResult(res)
+
+      copy(mg = Some(res))
+
+    }
+
+    def run: AsyncResult = {
+      mg.map { g =>
+        asyncResult(g)
+      }.getOrElse {
+        asyncResult(() => Future.successful(InternalServerError(NOK.serverError("No body to run"))))
+      }
+
     }
 
   }
 
   object ReadBody {
+
+    def apply[T](body: Try[T], rawBody: String): ReadBody[T] = new ReadBody[T](body, rawBody, None)
 
     def store(bytes: Array[Byte]) = {
       val date = new Date()
@@ -62,17 +77,36 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
       os.close()
     }
 
-    def readJson[T: Manifest](implicit request: HttpServletRequest): ReadBody[(T, String)] = ReadBody(for {
-      body <- Try(request.body)
-      b <- Try(parsedBody.extract[T])
-    } yield (b, body))
+    def readJson[T: Manifest](implicit request: HttpServletRequest): ReadBody[(T, String)] = {
 
-    def readMsgPack(implicit request: HttpServletRequest): ReadBody[UnPacked] =
-      ReadBody[UnPacked](for {
+      val rawBody = Try(request.body)
+
+      val body = for {
+        body <- rawBody
+        _ = logger.info("body={}", body)
+        b <- Try(parsedBody.extract[T])
+      } yield (b, body)
+
+      ReadBody(body, rawBody.getOrElse("No Body Found"))
+    }
+
+    def readMsgPack(implicit request: HttpServletRequest): ReadBody[UnPacked] = {
+
+      val rawBody = for {
         bytes <- Try(IOUtils.toByteArray(request.getInputStream))
+        bytesAsString <- Try(Hex.encodeHexString(bytes))
+      } yield (bytes, bytesAsString)
+
+      val body = for {
+        _body <- rawBody
+        (bytes, bytesAsString) = _body
+        _ = logger.info("body={}", bytesAsString)
         // _ <- Try(store(bytes))
         unpacked <- pmService.unpackFromBytes(bytes)
-      } yield unpacked)
+      } yield unpacked
+
+      ReadBody[UnPacked](body, rawBody.map { _._2 }.getOrElse("No Body Found"))
+    }
 
   }
 

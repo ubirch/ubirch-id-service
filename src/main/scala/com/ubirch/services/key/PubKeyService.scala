@@ -111,10 +111,9 @@ class DefaultPubKeyService @Inject() (
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info("keys_found={} pub_key_Id={}", pubKeys.size, pubKeyId)
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info("valid_keys_found={} pub_key_Id={}", validPubKeys.size, pubKeyId)
+      _ = logger.info("keys_found={} valid_keys_found={} pub_key_id={}", pubKeys.size, validPubKeys.size, pubKeyId)
 
     } yield {
       validPubKeys
@@ -128,10 +127,9 @@ class DefaultPubKeyService @Inject() (
         .byHwDeviceId(hwDeviceId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info("keys_found={} hardware_id={}", pubKeys.size, hwDeviceId)
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info("valid_keys_found={} hardware_id={}", validPubKeys.size, hwDeviceId)
+      _ = logger.info("keys_found={} valid_keys_found={} hardware_id={}", pubKeys.size, validPubKeys.size, hwDeviceId)
 
     } yield {
       validPubKeys

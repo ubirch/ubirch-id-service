@@ -57,7 +57,7 @@ class KeyController @Inject() (
           InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
         case e: Exception =>
           logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+          InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
       }
   }
 
@@ -76,7 +76,7 @@ class KeyController @Inject() (
           InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
         case e: Exception =>
           logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+          InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
       }
   }
 
@@ -87,30 +87,31 @@ class KeyController @Inject() (
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              logger.error("1.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+              logger.error("1.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
           }
-      }
+      }.run
 
   }
 
   post("/v1/pubkey/mpack") {
+
     ReadBody.readMsgPack
       .async { up =>
         pubKeyService.create(up.pm, up.rawProtocolMessage)
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              logger.error("2.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+              logger.error("2.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
           }
-      }
+      }.run
 
   }
 
@@ -135,10 +136,11 @@ class KeyController @Inject() (
           }
           .recover {
             case e: Exception =>
-              logger.error("Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+              logger.error("1.1 Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.1 Sorry, something went wrong on our end"))
           }
       }
+      .run
   }
 
 }

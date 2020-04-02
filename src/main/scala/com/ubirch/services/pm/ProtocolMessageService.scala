@@ -31,7 +31,7 @@ class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyL
 
       _ <- earlyResponseIf(bytes.isEmpty)(new Exception("Body can't be empty"))
       bytesAsString <- Try(Hex.encodeHexString(bytes))
-      _ = logger.info("body_from_bytes={}", bytesAsString)
+      _ = logger.info("body_as_hex={}", bytesAsString)
 
       decoder = KeyMsgPackProtocolDecoder.getDecoder
       pm <- Try(decoder.decode(bytes))
