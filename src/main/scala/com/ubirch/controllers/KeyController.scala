@@ -106,7 +106,7 @@ class KeyController @Inject() (
 
     logRequestInfo
 
-    ReadBody.readJson[PublicKey]
+    ReadBody.readJson[PublicKey](PublicKeyInfo.checkPubKeyId)
       .async { case (pk, body) =>
         pubKeyService.create(pk, body)
           .map { key => Ok(key) }
@@ -183,7 +183,7 @@ class KeyController @Inject() (
 
     logRequestInfo
 
-    ReadBody.readJson[PublicKeyDelete]
+    ReadBody.readJson[PublicKeyDelete](x => x)
       .async { case (pkd, _) =>
         pubKeyService.delete(pkd)
           .map { dr =>

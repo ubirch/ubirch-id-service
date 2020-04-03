@@ -11,5 +11,5 @@ fi
 
 echo "=> host: $host"
 
-curl -s -X POST -H "Content-Type:application/octet-stream" --data-binary @PublicKeyInPM.mpack $host/api/keyService/v1/pubkey/mpack | jq .
+curl -s -X POST --data-binary @packet3.mpack $host/api/keyService/v1/pubkey/mpack
 
