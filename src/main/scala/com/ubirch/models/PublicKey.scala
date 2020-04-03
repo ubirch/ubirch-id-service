@@ -1,6 +1,11 @@
 package com.ubirch.models
 
-import java.util.Date
+import java.util.{ Base64, Date }
+
+import com.ubirch.protocol.codec.UUIDUtil
+import com.ubirch.util.DateUtil
+import org.json4s.JValue
+import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
 
 case class PublicKeyInfo(
     algorithm: String,
@@ -17,8 +22,41 @@ object PublicKeyInfo {
   final val ALGORITHM = "algorithm"
   final val HW_DEVICE_ID = "hwDeviceId"
   final val CREATED = "created"
+  final val PUB_KEY = "pubKey"
+  final val PUB_KEY_ID = "pubKeyId"
   final val VALID_NOT_AFTER = "validNotAfter"
   final val VALID_NOT_BEFORE = "validNotBefore"
+
+  def fixValuesFomMsgPack(jv: JValue) = {
+    def formatter(time: Long) = DateUtil.ISOFormatter.print(time.toLong * 1000)
+    jv.mapField {
+      case (x @ PublicKeyInfo.ALGORITHM, JString(value)) => (x, JString(new String(Base64.getDecoder.decode(value))))
+      case (x @ PublicKeyInfo.HW_DEVICE_ID, JString(value)) => (x, JString(UUIDUtil.bytesToUUID(Base64.getDecoder.decode(value)).toString))
+      case (x @ PublicKeyInfo.CREATED, JInt(num)) => (x, JString(formatter(num.toLong)))
+      case (x @ PublicKeyInfo.VALID_NOT_AFTER, JInt(num)) => (x, JString(formatter(num.toLong)))
+      case (x @ PublicKeyInfo.VALID_NOT_BEFORE, JInt(num)) => (x, JString(formatter(num.toLong)))
+      case x => x
+    }
+  }
+
+  def checkPubKeyId(jv: JValue) = {
+    val pk = jv.findField {
+      case (PublicKeyInfo.PUB_KEY, _) => true
+      case _ => false
+    }
+
+    val pkId = jv.findField {
+      case (PublicKeyInfo.PUB_KEY_ID, _) => true
+      case _ => false
+    }
+
+    if (pkId.isEmpty && pk.isDefined) {
+      val fields = (PublicKeyInfo.PUB_KEY_ID, pk.get._2) +: jv.foldField(List.empty[(String, JValue)])((a, b) => b +: a)
+      JObject(fields)
+    } else {
+      jv
+    }
+  }
 
   def fromPublicKeyInfoRow(publicKeyInfoRow: PublicKeyInfoRow): PublicKeyInfo = {
     PublicKeyInfo(

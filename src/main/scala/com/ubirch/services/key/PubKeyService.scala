@@ -15,8 +15,8 @@ import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
-import org.json4s.Formats
-import org.json4s.JsonAST.{ JInt, JString }
+import org.json4s.JsonAST.{ JInt, JObject, JString }
+import org.json4s.{ Formats, JValue }
 
 import scala.util.control.NoStackTrace
 import scala.util.{ Failure, Success }
@@ -168,15 +168,9 @@ class DefaultPubKeyService @Inject() (
       }
       _ = logger.info("protocol_message_payload={}", payloadJValue.toString)
       pubKeyInfo <- Task(payloadJValue).map { jv =>
-        def formatter(time: Long) = DateUtil.ISOFormatter.print(time.toLong * 1000)
-        jv.mapField {
-          case (x @ PublicKeyInfo.ALGORITHM, JString(value)) => (x, JString(new String(Base64.getDecoder.decode(value))))
-          case (x @ PublicKeyInfo.HW_DEVICE_ID, JString(value)) => (x, JString(UUIDUtil.bytesToUUID(Base64.getDecoder.decode(value)).toString))
-          case (x @ PublicKeyInfo.CREATED, JInt(num)) => (x, JString(formatter(num.toLong)))
-          case (x @ PublicKeyInfo.VALID_NOT_AFTER, JInt(num)) => (x, JString(formatter(num.toLong)))
-          case (x @ PublicKeyInfo.VALID_NOT_BEFORE, JInt(num)) => (x, JString(formatter(num.toLong)))
-          case x => x
-        }.extract[PublicKeyInfo]
+        PublicKeyInfo
+          .checkPubKeyId(PublicKeyInfo.fixValuesFomMsgPack(jv))
+          .extract[PublicKeyInfo]
       }.onErrorRecover {
         case e: Exception => throw ParsingError(e.getMessage)
       }

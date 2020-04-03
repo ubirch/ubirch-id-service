@@ -162,6 +162,19 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
+    "create key using the json endpoint when pubKeyId is missing" taggedAs Tag("apricots") in {
+
+      val pkAsString = """{"pubKeyInfo": {"algorithm": "ECC_ED25519", "created": "2020-04-03T12:45:32.000Z", "hwDeviceId": "3efabf03-3191-51ce-a074-d7680686ad95", "pubKey": "9eiyvS3i/beL8evwXLfUKRnELg/rqnibSnX1N/rxoLg=", "pubKeyId": "9eiyvS3i/beL8evwXLfUKRnELg/rqnibSnX1N/rxoLg=", "validNotAfter": "2021-04-03T12:45:32.000Z", "validNotBefore": "2020-04-03T12:45:32.000Z"}, "signature": "1BDdQDax/QQ0fCwSCwpI/a2MXEu8oTpWP2DtzE4NN1fzk4FTnoWKkPFBb8sIZcQpi5h7YNGLo9cy4LX/zPcHCQ=="}"""
+
+      val expected = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-04-03T12:45:32.000Z","hwDeviceId":"3efabf03-3191-51ce-a074-d7680686ad95","pubKey":"9eiyvS3i/beL8evwXLfUKRnELg/rqnibSnX1N/rxoLg=","pubKeyId":"9eiyvS3i/beL8evwXLfUKRnELg/rqnibSnX1N/rxoLg=","validNotAfter":"2021-04-03T12:45:32.000Z","validNotBefore":"2020-04-03T12:45:32.000Z"},"signature":"1BDdQDax/QQ0fCwSCwpI/a2MXEu8oTpWP2DtzE4NN1fzk4FTnoWKkPFBb8sIZcQpi5h7YNGLo9cy4LX/zPcHCQ=="}""".stripMargin
+
+      post("/v1/pubkey", body = pkAsString) {
+        status should equal(200)
+        body should equal(expected)
+      }
+
+    }
+
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
       val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
@@ -175,6 +188,36 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
       val bytes = loadFixture("src/main/resources/fixtures/6_MsgPackKeyService.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
+        status should equal(200)
+      }
+
+    }
+
+    "create key using the mpack endpoint from trackle messages" taggedAs Tag("Pear") in {
+
+      val bytes1 = loadFixture("src/main/resources/fixtures/1_MsgPackKeyService.mpack")
+      val bytes2 = loadFixture("src/main/resources/fixtures/2_MsgPackKeyService.mpack")
+      val bytes3 = loadFixture("src/main/resources/fixtures/3_MsgPackKeyService.mpack")
+      val bytes4 = loadFixture("src/main/resources/fixtures/4_MsgPackKeyService.mpack")
+      val bytes5 = loadFixture("src/main/resources/fixtures/5_MsgPackKeyService.mpack")
+
+      post("/v1/pubkey/mpack", body = bytes1) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes2) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes3) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes4) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes5) {
         status should equal(200)
       }
 
@@ -265,7 +308,6 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
         signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
         pubDelete3 = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
-        pubDeleteAsString3 <- jsonConverter.toString[PublicKeyDelete](pubDelete3)
 
       } yield {
 

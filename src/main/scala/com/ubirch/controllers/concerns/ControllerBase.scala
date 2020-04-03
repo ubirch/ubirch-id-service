@@ -11,6 +11,7 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpS
 import javax.servlet.{ ReadListener, ServletInputStream }
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
+import org.json4s.JsonAST.JValue
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
@@ -125,14 +126,14 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
       os.close()
     }
 
-    def readJson[T: Manifest](implicit request: HttpServletRequest): ReadBody[(T, String)] = {
+    def readJson[T: Manifest](transformF: JValue => JValue)(implicit request: HttpServletRequest): ReadBody[(T, String)] = {
 
       val rawBody = Try(request.body)
 
       val body = for {
         body <- rawBody
         _ = logger.info("body={}", body)
-        b <- Try(parsedBody.extract[T])
+        b <- Try(transformF(parsedBody).extract[T])
       } yield (b, body)
 
       ReadBody(body, rawBody.getOrElse("No Body Found"))
