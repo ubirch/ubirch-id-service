@@ -6,6 +6,7 @@ import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
 import javax.inject._
+import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.Swagger
@@ -150,6 +151,24 @@ class KeyController @Inject() (
   notFound {
     logger.info("controller=KeyController route_not_found={} query_string={}", requestPath, request.getQueryString)
     NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+  }
+
+  error {
+    case e: BadMessageException =>
+      logger.error("bad_message={}", e)
+      contentType = formats("json")
+      logRequestInfo
+      val path = request.getPathInfo
+      if (path == "/v1/pubkey/mpack" && request.header("Content-Type").getOrElse("") != "application/octet-stream") {
+        halt(BadRequest(NOK.parsingError("Bad message")))
+      } else {
+        halt(BadRequest(NOK.serverError("Bad message")))
+      }
+    case e =>
+      logger.error("error={}", e)
+      contentType = formats("json")
+      logRequestInfo
+      halt(BadRequest(NOK.serverError("There was an error. Please try again.")))
   }
 
   private def delete = {

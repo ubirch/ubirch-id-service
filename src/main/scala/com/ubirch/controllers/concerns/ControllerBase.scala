@@ -51,7 +51,7 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
   def logRequestInfo(implicit request: HttpServletRequest) = {
     val path = request.getPathInfo
-    val headers = request.headers.names.toList.map { n => n + ":" + request.headers.get(n).getOrElse("-") }.mkString(",")
+    val headers = request.headers.toList.map { case (k, v) => k + ":" + v }.mkString(",")
     logger.info("Path:{} {}", path, headers)
   }
 

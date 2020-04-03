@@ -177,6 +177,8 @@ class DefaultPubKeyService @Inject() (
           case (x @ PublicKeyInfo.VALID_NOT_BEFORE, JInt(num)) => (x, JString(formatter(num.toLong)))
           case x => x
         }.extract[PublicKeyInfo]
+      }.onErrorRecover {
+        case e: Exception => throw ParsingError(e.getMessage)
       }
 
       maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey).headOptionL
@@ -210,6 +212,8 @@ class DefaultPubKeyService @Inject() (
 object DefaultPubKeyService {
 
   abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
+
+  case class ParsingError(message: String) extends PubKeyServiceException(message)
 
   case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
 
