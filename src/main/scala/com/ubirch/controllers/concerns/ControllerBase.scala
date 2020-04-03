@@ -1,13 +1,14 @@
 package com.ubirch.controllers.concerns
 
-import java.io.FileOutputStream
+import java.io.{ ByteArrayInputStream, FileOutputStream }
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.services.pm.ProtocolMessageService.UnPacked
-import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
+import javax.servlet.{ ReadListener, ServletInputStream }
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
 import org.scalatra._
@@ -17,7 +18,37 @@ import org.scalatra.swagger.SwaggerSupport
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
+class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStream) extends ServletInputStream {
+
+  private val cachedInputStream = new ByteArrayInputStream(cachedBody)
+
+  override def isFinished: Boolean = cachedInputStream.available() == 0
+  override def isReady: Boolean = true
+  override def setReadListener(readListener: ReadListener): Unit = raw.setReadListener(readListener)
+
+  override def read(): Int = cachedInputStream.read()
+  override def read(b: Array[Byte]): Int = read(b, 0, b.length)
+  override def read(b: Array[Byte], off: Int, len: Int) = cachedInputStream.read(b, off, len)
+
+}
+
+class IdentityRequest(httpServletRequest: HttpServletRequest) extends HttpServletRequestWrapper(httpServletRequest) {
+
+  val cachedBody = IOUtils.toByteArray(httpServletRequest.getInputStream)
+
+  override def getInputStream: ServletInputStream = {
+    new CachedBodyServletInputStream(cachedBody, httpServletRequest.getInputStream)
+  }
+}
+
+trait RequestEnricher extends Handler {
+  abstract override def handle(request: HttpServletRequest, res: HttpServletResponse): Unit = {
+    super.handle(new IdentityRequest(request), res)
+  }
+}
+
 abstract class ControllerBase(pmService: ProtocolMessageService) extends ScalatraServlet
+  with RequestEnricher
   with FutureSupport
   with NativeJsonSupport
   with SwaggerSupport
