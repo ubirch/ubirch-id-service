@@ -154,12 +154,15 @@ class KeyController @Inject() (
   }
 
   error {
-    case _: BadMessageException =>
+    case e: BadMessageException =>
+      logger.error("bad_message={}", e)
       contentType = formats("json")
       logRequestInfo
       val path = request.getPathInfo
       if (path == "/v1/pubkey/mpack" && request.header("Content-Type").getOrElse("") != "application/octet-stream") {
         halt(BadRequest(NOK.parsingError("Bad message")))
+      } else {
+        halt(BadRequest(NOK.serverError("Bad message")))
       }
     case e =>
       logger.error("error={}", e)
