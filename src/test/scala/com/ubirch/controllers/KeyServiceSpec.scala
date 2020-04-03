@@ -180,6 +180,36 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
+    "create key using the mpack endpoint from trackle messages" taggedAs Tag("Pear") in {
+
+      val bytes1 = loadFixture("src/main/resources/fixtures/1_MsgPackKeyService.mpack")
+      val bytes2 = loadFixture("src/main/resources/fixtures/2_MsgPackKeyService.mpack")
+      val bytes3 = loadFixture("src/main/resources/fixtures/3_MsgPackKeyService.mpack")
+      val bytes4 = loadFixture("src/main/resources/fixtures/4_MsgPackKeyService.mpack")
+      val bytes5 = loadFixture("src/main/resources/fixtures/5_MsgPackKeyService.mpack")
+
+      post("/v1/pubkey/mpack", body = bytes1) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes2) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes3) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes4) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes5) {
+        status should equal(200)
+      }
+
+    }
+
     "create key using the json endpoint when no validNotAfter is provided" taggedAs Tag("watermelon") in {
 
       val created = DateUtil.nowUTC
@@ -265,7 +295,6 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
         signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
         pubDelete3 = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
-        pubDeleteAsString3 <- jsonConverter.toString[PublicKeyDelete](pubDelete3)
 
       } yield {
 
