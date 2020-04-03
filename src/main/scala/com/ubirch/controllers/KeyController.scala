@@ -160,6 +160,7 @@ class KeyController @Inject() (
       logRequestInfo
       val path = request.getPathInfo
       if (path == "/v1/pubkey/mpack" && request.header("Content-Type").getOrElse("") != "application/octet-stream") {
+        logger.error(ReadBody.readMsgPack.toString)
         halt(BadRequest(NOK.parsingError("Bad message")))
       } else {
         halt(BadRequest(NOK.serverError("Bad message")))
