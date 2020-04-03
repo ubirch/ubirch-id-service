@@ -79,6 +79,7 @@ class DefaultPubKeyService @Inject() (
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
 
     (for {
+      _ <- Task.delay(logger.info("incoming_payload={}", publicKeyDelete.toString))
       maybeKey <- publicKeyDAO.byPubKeyId(publicKeyDelete.publicKey).headOptionL
       _ = if (maybeKey.isEmpty) logger.error("key_not_found={}", publicKeyDelete.publicKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.publicKey))
@@ -110,10 +111,9 @@ class DefaultPubKeyService @Inject() (
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info("keys_found={} pub_key_Id={}", pubKeys.size, pubKeyId)
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info("valid_keys_found={} pub_key_Id={}", validPubKeys.size, pubKeyId)
+      _ = logger.info("keys_found={} valid_keys_found={} pub_key_id={}", pubKeys.size, validPubKeys.size, pubKeyId)
 
     } yield {
       validPubKeys
@@ -127,10 +127,9 @@ class DefaultPubKeyService @Inject() (
         .byHwDeviceId(hwDeviceId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
-      _ = logger.info("keys_found={} hardware_id={}", pubKeys.size, hwDeviceId)
 
       validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
-      _ = logger.info("valid_keys_found={} hardware_id={}", validPubKeys.size, hwDeviceId)
+      _ = logger.info("keys_found={} valid_keys_found={} hardware_id={}", pubKeys.size, validPubKeys.size, hwDeviceId)
 
     } yield {
       validPubKeys
@@ -178,6 +177,8 @@ class DefaultPubKeyService @Inject() (
           case (x @ PublicKeyInfo.VALID_NOT_BEFORE, JInt(num)) => (x, JString(formatter(num.toLong)))
           case x => x
         }.extract[PublicKeyInfo]
+      }.onErrorRecover {
+        case e: Exception => throw ParsingError(e.getMessage)
       }
 
       maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey).headOptionL
@@ -211,6 +212,8 @@ class DefaultPubKeyService @Inject() (
 object DefaultPubKeyService {
 
   abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
+
+  case class ParsingError(message: String) extends PubKeyServiceException(message)
 
   case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
 

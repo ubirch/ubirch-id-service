@@ -9,14 +9,20 @@ import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
 import javax.inject._
 import monix.execution.CancelableFuture
+import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupportSyntax}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
-class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeyService: PubKeyService, pmService: ProtocolMessageService)(implicit val executor: ExecutionContext)
+class KeyController @Inject() (
+    val swagger: Swagger,
+    jFormats: Formats,
+    pubKeyService: PubKeyService,
+    pmService: ProtocolMessageService
+)(implicit val executor: ExecutionContext)
   extends ControllerBase(pmService) {
 
   override protected val applicationDescription: String = "Key Controller"
@@ -73,39 +79,61 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     * because swagger doesn't support splat parameters.
     */
   get("/v1/pubkey/*") {
-    val pubKeyId: String = multiParams.get("splat")
-      .flatMap(_.headOption)
-      .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
-    handleV1PubKey(pubKeyId)
+    handlePubKeyId(getPubKeyIdStar)
   }
 
   get("/v1/pubkey/:pubkey", operation(getV1PubKeyPubKey)) {
+    handleV1PubKey(getPubKeyIdNormal)
+  }
+
+  def handlePubKeyId(f: U => String) = {
+    asyncResult { implicit request =>
+
+      for {
+
+        _ <- Future(logRequestInfo)
+
+        pubKeyId <- f()
+
+        res <- pubKeyService.getByPubKeyId(pubKeyId)
+          .map { pks =>
+            pks.toList match {
+              case Nil => NotFound(NOK.pubKeyError("Key not found"))
+              case pk :: _ => Ok(pk)
+            }
+
+          }
+          .recover {
+            case e: PubKeyServiceException =>
+              logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+            case e: Exception =>
+              logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+          }
+
+      } yield res
+
+    }
+
+  }
+
+
+  def getPubKeyIdStar() = {
+    pubKeyId: String = Future(multiParams.get("splat")
+      .flatMap(_.headOption)
+      .filter(_.nonEmpty)
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path")))))
+  }
+
+  def getPubKeyIdNormal() = {
     val pubKeyId: String = params.get("pubkey") match {
       case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
       case None => halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path")))
     }
-    handleV1PubKey(pubKeyId)
   }
 
-  def handleV1PubKey(pubKeyId: String): CancelableFuture[ActionResult] = {
-    pubKeyService.getByPubKeyId(pubKeyId)
-      .map { pks =>
-        pks.toList match {
-          case Nil => NotFound(NOK.pubKeyError("Key not found"))
-          case pk :: _ => Ok(pk)
-        }
 
-      }
-      .recover {
-        case e: PubKeyServiceException =>
-          logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
-        case e: Exception =>
-          logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
-      }
-  }
 
 
   val getV1CurrentHardwareId: SwaggerSupportSyntax.OperationBuilder =
@@ -121,32 +149,50 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     ))
 
   get("/v1/pubkey/current/hardwareId/*") {
-    val hwDeviceId = multiParams.get("splat")
-      .flatMap(_.headOption)
-      .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
-    handleV1PubkeyCurrentHardwarId(hwDeviceId)
+    handlePubKeyCurrentHardwareId(getHwDeviceIdStar)
   }
 
   get("/v1/pubkey/current/hardwareId/:hardwareId", operation(getV1CurrentHardwareId)) {
-    val hwDeviceId = params.get("hardwareId") match {
+    handlePubKeyCurrentHardwareId(getHwDeviceIdNormal)
+  }
+
+  def handlePubKeyCurrentHardwareId(f: U => String) = {
+    asyncResult { implicit request =>
+
+      for {
+        _ <- Future(logRequestInfo)
+
+        hwDeviceId <- f()
+
+        res <- pubKeyService.getByHardwareId(hwDeviceId)
+          .map { pks => Ok(pks) }
+          .recover {
+            case e: PubKeyServiceException =>
+              logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+            case e: Exception =>
+              logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
+          }
+
+      } yield res
+
+    }
+
+  }
+
+  def getHwDeviceIdStar() = {
+    Future(multiParams.get("splat")
+      .flatMap(_.headOption)
+      .filter(_.nonEmpty)
+      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))))
+  }
+
+  def getHwDeviceIdNormal() = {
+    params.get("hardwareId") match {
       case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
       case None => halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))
     }
-    handleV1PubkeyCurrentHardwarId(hwDeviceId)
-  }
-
-  def handleV1PubkeyCurrentHardwarId(hwDeviceId: String) = {
-    pubKeyService.getByHardwareId(hwDeviceId)
-      .map { pks => Ok(pks) }
-      .recover {
-        case e: PubKeyServiceException =>
-          logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
-        case e: Exception =>
-          logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-          InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
-      }
   }
 
   val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
@@ -162,19 +208,20 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     ))
 
   post("/v1/pubkey", operation(postV1PubKey)) {
+    logRequestInfo
     ReadBody.readJson[PublicKey]
       .async { case (pk, body) =>
         pubKeyService.create(pk, body)
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              logger.error("1.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+              logger.error("1.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
           }
-      }
+      }.run
 
   }
 
@@ -199,13 +246,13 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
           .map { key => Ok(key) }
           .recover {
             case e: PubKeyServiceException =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              logger.error("2.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
-              logger.error("Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+              logger.error("2.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
           }
-      }
+      }.run
 
   }
 
@@ -232,7 +279,36 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
     NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
   }
 
+  error {
+    case e: BadMessageException =>
+      logger.error("bad_message :=", e)
+      contentType = formats("json")
+      logRequestInfo
+      val path = request.getPathInfo
+
+      val octet = "application/octet-stream"
+
+      if (path == "/v1/pubkey/mpack" && (
+        request.header("Content-Type").getOrElse("") != octet ||
+        request.header("content-type").getOrElse("") != octet
+      )) {
+
+        logger.error(ReadBody.readMsgPack.toString)
+        halt(BadRequest(NOK.parsingError("Bad Content Type. I am expecting =" + octet)))
+      } else {
+        halt(BadRequest(NOK.serverError("Bad message")))
+      }
+    case e =>
+      logger.error("error :=", e)
+      contentType = formats("json")
+      logRequestInfo
+      halt(BadRequest(NOK.serverError("There was an error. Please try again.")))
+  }
+
   private def delete = {
+
+    logRequestInfo
+
     ReadBody.readJson[PublicKeyDelete]
       .async { case (pkd, _) =>
         pubKeyService.delete(pkd)
@@ -242,10 +318,11 @@ class KeyController @Inject() (val swagger: Swagger, jFormats: Formats, pubKeySe
           }
           .recover {
             case e: Exception =>
-              logger.error("Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("Sorry, something went wrong on our end"))
+              logger.error("1.1 Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.1 Sorry, something went wrong on our end"))
           }
       }
+      .run
   }
 
 }

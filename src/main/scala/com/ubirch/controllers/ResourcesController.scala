@@ -11,6 +11,7 @@ object RestApiInfo extends ApiInfo(
   "Identity Service",
   "These are the available endpoints for querying the Identity Service",
   "https://ubirch.de",
-  ContactInfo("Carlos Sanchez", "ubirch.com", "carlos.sanchez@ubirch.com"),
-  LicenseInfo("Apache License, Version 2.0", "https://www.apache.org/licenses/LICENSE-2.0")
+  "carlos.sanchez@ubirch.com",
+  "Apache License, Version 2.0",
+  "https://www.apache.org/licenses/LICENSE-2.0"
 )
