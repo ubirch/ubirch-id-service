@@ -16,7 +16,9 @@ class InfoController @Inject() (val swagger: Swagger, jFormats: Formats) extends
 
   val getSimpleCheck: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("simpleCheck")
-      summary "Welcome / Health")
+      summary "Welcome / Health /"
+      description "Check if service is up and running"
+      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY, SwaggerElements.TAG_WELCOME, SwaggerElements.TAG_HEALTH))
 
   get("/", operation(getSimpleCheck)) {
     Ok(Simple("Hallo, Hola, Hello, Salut, Hej, this is the Ubirch Identity Service."))
