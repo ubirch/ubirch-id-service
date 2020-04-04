@@ -1,22 +1,17 @@
 package com.ubirch.services.key
 
-import java.util.Base64
-
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
-import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.services.formats.JsonConverterService
-import com.ubirch.util.DateUtil
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
-import org.json4s.JsonAST.{ JInt, JObject, JString }
-import org.json4s.{ Formats, JValue }
+import org.json4s.Formats
 
 import scala.util.control.NoStackTrace
 import scala.util.{ Failure, Success }

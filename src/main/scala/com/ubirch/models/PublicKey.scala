@@ -4,7 +4,6 @@ import java.util.{ Base64, Date }
 
 import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.util.DateUtil
-import org.json4s.JValue
 import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
 
 case class PublicKeyInfo(
