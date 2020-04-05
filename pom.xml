@@ -69,6 +69,7 @@
         <ubirch-kafka-express.version>1.2.10-SNAPSHOT</ubirch-kafka-express.version>
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <quill.cassandra.version>3.4.1</quill.cassandra.version>
+        <embedded-kafka>2.3.0</embedded-kafka>
         <embedded-cassandra-test>1.2.9</embedded-cassandra-test>
 
         <guice.version>4.1.0</guice.version>
@@ -290,6 +291,12 @@
             <groupId>com.github.nosan</groupId>
             <artifactId>embedded-cassandra-test</artifactId>
             <version>${embedded-cassandra-test}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.embeddedkafka</groupId>
+            <artifactId>embedded-kafka_${scala.compat.version}</artifactId>
+            <version>${embedded-kafka}</version>
         </dependency>
 
 

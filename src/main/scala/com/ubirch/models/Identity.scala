@@ -30,6 +30,8 @@ trait IdentityByIdQueries extends TablePointer[Identity] {
     query[Identity].insert(lift(identity))
   }
 
+  def selectAllQ: db.Quoted[db.EntityQuery[Identity]] = quote(query[Identity])
+
 }
 
 class IdentitiesDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends IdentityByIdQueries {
@@ -39,6 +41,8 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService)(implici
 
   def byIdAndCat(id: String, category: String): Observable[Identity] = run(byIdAndCatQ(id, category))
   def insert(identity: Identity): Observable[Unit] = run(insertQ(identity))
+
+  def selectAll: Observable[Identity] = run(selectAllQ)
 
 }
 

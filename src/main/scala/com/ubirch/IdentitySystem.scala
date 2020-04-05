@@ -13,8 +13,8 @@ class IdentitySystem @Inject() (tiger: Tiger, restService: RestService) extends 
   def start = {
 
     restService.start
-
     tiger.start()
+
     val cd = new CountDownLatch(1)
     cd.await()
   }
