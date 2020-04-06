@@ -16,6 +16,11 @@ import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.util.Try
 
+/**
+  * Represents a Public Key Verification tool
+  * @param jsonConverter Represents a json converter convenience
+  * @param pmService Represents the Protocol Message Component
+  */
 @Singleton
 class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, pmService: ProtocolMessageService) extends LazyLogging {
 

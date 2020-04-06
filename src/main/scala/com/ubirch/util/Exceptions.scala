@@ -42,6 +42,11 @@ object Exceptions {
     */
   case class InvalidContactPointsException(message: String) extends IdServiceException(message)
 
+  /**
+    * Represents an Exception that is thrown when Storing
+    * @param message Represents the error message.
+    * @param reason Represents the cause of the message
+    */
   case class StoringException(message: String, reason: String) extends IdServiceException(message)
 
 }

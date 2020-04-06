@@ -16,27 +16,40 @@ import org.scalatra.swagger.Swagger
 
 import scala.concurrent.ExecutionContext
 
+/**
+  * Represents the default binder for the system components
+  */
 class Binder
   extends AbstractModule {
 
+  def Config = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
+  def ExecutionContext = bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
+  def Scheduler = bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
+  def Swagger = bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
+  def Formats = bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
+  def Lifecycle = bind(classOf[Lifecycle]).to(classOf[DefaultLifecycle])
+  def JVMHook = bind(classOf[JVMHook]).to(classOf[DefaultJVMHook])
+  def PubKeyService = bind(classOf[PubKeyService]).to(classOf[DefaultPubKeyService])
+  def ClusterService = bind(classOf[ClusterService]).to(classOf[DefaultClusterService])
+  def ConnectionService = bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
+  def Tiger = bind(classOf[Tiger]).to(classOf[DefaultTiger])
+
   def configure(): Unit = {
-
-    bind(classOf[Config]).toProvider(classOf[ConfigProvider])
-    bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
-    bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
-    bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
-    bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
-    bind(classOf[Lifecycle]).to(classOf[DefaultLifecycle])
-    bind(classOf[JVMHook]).to(classOf[DefaultJVMHook])
-    bind(classOf[PubKeyService]).to(classOf[DefaultPubKeyService])
-    bind(classOf[ClusterService]).to(classOf[DefaultClusterService])
-    bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
-    bind(classOf[Tiger]).to(classOf[DefaultTiger])
-
+    Config
+    ExecutionContext
+    Scheduler
+    Swagger
+    Formats
+    Lifecycle
+    JVMHook
+    PubKeyService
+    ClusterService
+    ConnectionService
+    Tiger
   }
 
 }
 
 object Binder {
-  val modules: List[Module] = List(new Binder)
+  def modules: List[Module] = List(new Binder)
 }

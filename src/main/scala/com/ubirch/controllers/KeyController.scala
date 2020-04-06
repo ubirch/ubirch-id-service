@@ -15,6 +15,16 @@ import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupportSyntax }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+/**
+  * Represents a controller for managing the http requests for pub key management
+  * @param swagger Represents the Swagger Engine.
+  * @param jFormats Represents the json formats for the system.
+  * @param pubKeyService Represents the internal service/component that knows how to work with keys.
+  * @param pmService Represents teh Protocol Message Service that knows how to decode bodies into
+  *                  Protocol Messages.
+  * @param executor Represents the execution context for async processes.
+  */
+
 @Singleton
 class KeyController @Inject() (
     val swagger: Swagger,

@@ -17,6 +17,9 @@ import org.scalatra.test.scalatest.ScalatraWordSpec
 import scala.language.postfixOps
 import scala.util.Try
 
+/**
+  * Test for the Key Controller
+  */
 class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka {
 
   def loadFixture(resource: String) = {

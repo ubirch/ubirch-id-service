@@ -8,6 +8,12 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 import org.scalatra.{ CorsSupport, NotFound, Ok, ScalatraServlet }
 
+/**
+  * Represents a simple controller for the base path "/"
+  * @param swagger Represents the Swagger Engine.
+  * @param jFormats Represents the json formats for the system.
+  */
+
 @Singleton
 class InfoController @Inject() (val swagger: Swagger, jFormats: Formats) extends ScalatraServlet with NativeJsonSupport with LazyLogging with SwaggerSupport with CorsSupport {
   override protected implicit def jsonFormats: Formats = jFormats

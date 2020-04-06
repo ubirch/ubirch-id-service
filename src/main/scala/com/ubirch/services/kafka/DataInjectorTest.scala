@@ -14,6 +14,9 @@ import org.json4s.{ DefaultFormats, Formats }
 
 import scala.util.{ Failure, Random, Success }
 
+/**
+  * Represents a simple tool to inject Identities for testing.
+  */
 object DataInjectorTest {
 
   implicit lazy val scheduler: Scheduler = monix.execution.Scheduler(scala.concurrent.ExecutionContext.Implicits.global)

@@ -16,6 +16,9 @@ import org.json4s.jackson.JsonMethods._
 
 import scala.util.Try
 
+/**
+  * A tool for creating keys for testing
+  */
 object ProtocolHelpers extends LazyLogging {
 
   implicit val formats = new JsonFormatsProvider get ()

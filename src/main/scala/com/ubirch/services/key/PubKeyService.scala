@@ -1,26 +1,24 @@
 package com.ubirch.services.key
 
-import java.util.Base64
-
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
-import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.services.formats.JsonConverterService
-import com.ubirch.util.DateUtil
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
-import org.json4s.JsonAST.{ JInt, JObject, JString }
-import org.json4s.{ Formats, JValue }
+import org.json4s.Formats
 
 import scala.util.control.NoStackTrace
 import scala.util.{ Failure, Success }
 
+/**
+  * Represents a PubKeyService to work with PublicKeys
+  */
 trait PubKeyService {
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey]
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
@@ -29,6 +27,17 @@ trait PubKeyService {
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
 }
 
+/**
+  * Represents a default implementation of the PubKeyService
+  * @param config Represents a configuration object
+  * @param publicKeyDAO Represents the DAO for basic pub key queries
+  * @param publicKeyByHwDeviceIdDao Represents the DAO for publicKeyByHwDeviceId queries
+  * @param publicKeyByPubKeyIdDao Represents the DAO for publicKeyByPubKeyId queries
+  * @param verification Represents the verification component.
+  * @param jsonConverterService Represents a json converter convenience
+  * @param scheduler Represents the scheduler async processes
+  * @param jsFormats Represents the json formats
+  */
 @Singleton
 class DefaultPubKeyService @Inject() (
     config: Config,
@@ -203,6 +212,9 @@ class DefaultPubKeyService @Inject() (
 
 }
 
+/**
+  * Represents the companion object for the DefaultPubKeyService
+  */
 object DefaultPubKeyService {
 
   abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace

@@ -22,6 +22,11 @@ import org.json4s.{ DefaultFormats, Formats }
 
 import scala.concurrent.{ ExecutionContext, Promise }
 
+/**
+  * Represents the Express Kafka basic assembly for processing Identities.
+  * @param config Represents the configuration object.
+  * @param lifecycle Represents the life cycle object for the system.
+  */
 abstract class Tiger(val config: Config, lifecycle: Lifecycle)
   extends ExpressKafka[String, Array[Byte], Unit] with LazyLogging {
 
@@ -43,6 +48,13 @@ abstract class Tiger(val config: Config, lifecycle: Lifecycle)
 
 }
 
+/**
+  * Represents the default implementation of the Tiger abstraction. The processing logic is defined here.
+  * @param identitiesDAO Represents the Data Access Object for the Identities.
+  * @param config Represents the configuration object.
+  * @param lifecycle Represents the life cycle object for the system.
+  * @param ec Represents the execution context for async processes.
+  */
 @Singleton
 class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, lifecycle: Lifecycle)(implicit val ec: ExecutionContext) extends Tiger(config, lifecycle) {
 

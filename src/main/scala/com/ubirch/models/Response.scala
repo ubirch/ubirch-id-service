@@ -1,15 +1,37 @@
 package com.ubirch.models
 
+/**
+  * Represents a simple Response object. Used for HTTP responses.
+  */
 sealed trait Response
 
+/**
+  * Represents an OK Response object
+  * @param version the version of the response
+  * @param status the status of the response. OK
+  * @param message the messages of the response
+  */
 case class Simple(version: String, status: Symbol, message: String) extends Response
 
+/**
+  * Companion object for the Simple response
+  */
 object Simple {
   def apply(message: String): Simple = new Simple("1.0", 'OK, message)
 }
 
+/**
+  *  Represents an Error Response.
+  * @param version the version of the response
+  * @param status the status of the response. NOK
+  * @param errorType the error type
+  * @param errorMessage the message for the response
+  */
 case class NOK(version: String, status: Symbol, errorType: Symbol, errorMessage: String) extends Response
 
+/**
+  * Companion object for the NOK response
+  */
 object NOK {
 
   final val SERVER_ERROR = 'ServerError

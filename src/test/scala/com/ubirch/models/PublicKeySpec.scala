@@ -12,6 +12,9 @@ import org.joda.time.format.ISODateTimeFormat
 
 import scala.util.Try
 
+/**
+  * Tests for the creating and verifying keys
+  */
 class PublicKeySpec extends TestBase {
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()

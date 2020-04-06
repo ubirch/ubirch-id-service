@@ -7,10 +7,19 @@ import monix.reactive.Observable
 
 import scala.concurrent.ExecutionContext
 
+/**
+  * Represents an Identity
+  * @param id Represents a unique identifier
+  * @param category Represents the category for the identity
+  * @param cert Represents the raw certificate X.509. It is usually sent as Hex or Base64
+  */
 case class Identity(id: String, category: String, cert: String) {
   def validate = id.nonEmpty && category.nonEmpty && cert.nonEmpty
 }
 
+/**
+  * Represents the queries for the Identity Column Family.
+  */
 trait IdentityByIdQueries extends TablePointer[Identity] {
 
   import db._
@@ -30,8 +39,15 @@ trait IdentityByIdQueries extends TablePointer[Identity] {
     query[Identity].insert(lift(identity))
   }
 
+  def selectAllQ: db.Quoted[db.EntityQuery[Identity]] = quote(query[Identity])
+
 }
 
+/**
+  * Represents the Data Access Object for the Identity Queries
+  * @param connectionService Represents the Connection to Cassandra
+  * @param ec Represents the execution context for async processes.
+  */
 class IdentitiesDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends IdentityByIdQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
@@ -39,6 +55,8 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService)(implici
 
   def byIdAndCat(id: String, category: String): Observable[Identity] = run(byIdAndCatQ(id, category))
   def insert(identity: Identity): Observable[Unit] = run(insertQ(identity))
+
+  def selectAll: Observable[Identity] = run(selectAllQ)
 
 }
 

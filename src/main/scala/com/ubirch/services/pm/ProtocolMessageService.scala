@@ -14,6 +14,10 @@ import org.json4s.Formats
 
 import scala.util.{ Failure, Success, Try }
 
+/**
+  * Represents a component for managing Protocol Messages
+  * @param formats Represents the json formats for the system
+  */
 @Singleton
 class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyLogging {
 
