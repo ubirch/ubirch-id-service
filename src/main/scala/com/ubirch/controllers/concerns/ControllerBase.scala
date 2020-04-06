@@ -19,6 +19,12 @@ import org.scalatra.swagger.SwaggerSupport
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
+/**
+  * Represents a customized ServletInputStream that allows to cache the body of a request.
+  * This trait is very important to be able to re-consume the body in case of need.
+  * @param cachedBody Represents the InputStream as bytes.
+  * @param raw Represents the raw ServletInputStream
+  */
 class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStream) extends ServletInputStream {
 
   private val cachedInputStream = new ByteArrayInputStream(cachedBody)
@@ -33,6 +39,12 @@ class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStr
 
 }
 
+/***
+ * Represents a customized HttpServletRequest that allows us to decorate the original object with extra info
+ * or extra functionality.
+ * Initially, it supports the re-consumption of the body stream
+ * @param httpServletRequest Represents the original Request
+ */
 class IdentityRequest(httpServletRequest: HttpServletRequest) extends HttpServletRequestWrapper(httpServletRequest) {
 
   val cachedBody = IOUtils.toByteArray(httpServletRequest.getInputStream)
@@ -42,12 +54,22 @@ class IdentityRequest(httpServletRequest: HttpServletRequest) extends HttpServle
   }
 }
 
+/**
+  * Represents a Handler that creates the customized request.
+  * It should be mixed it with the corresponding ScalatraServlet.
+  */
 trait RequestEnricher extends Handler {
   abstract override def handle(request: HttpServletRequest, res: HttpServletResponse): Unit = {
     super.handle(new IdentityRequest(request), res)
   }
 }
 
+/**
+  * Represents the base for a controllers that supports the IdentityRequest
+  * and adds helpers to handle async responses and body parsing and extraction.
+  * @param pmService Represents teh Protocol Message Service that knows how to decode bodies into
+  *                  Protocol Messages.
+  */
 abstract class ControllerBase(pmService: ProtocolMessageService) extends ScalatraServlet
   with RequestEnricher
   with FutureSupport

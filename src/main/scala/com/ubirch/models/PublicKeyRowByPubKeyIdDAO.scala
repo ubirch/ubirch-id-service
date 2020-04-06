@@ -7,6 +7,9 @@ import monix.reactive.Observable
 
 import scala.concurrent.ExecutionContext
 
+/**
+  * Represents the queries for the keys_pub_key_id materialized view.
+  */
 trait PublicKeyRowByPubKeyIdQueries extends TablePointer[PublicKeyRow] {
 
   import db._
@@ -23,6 +26,11 @@ trait PublicKeyRowByPubKeyIdQueries extends TablePointer[PublicKeyRow] {
 
 }
 
+/**
+  * Represents the Data Access Object for the PublicKeyRowByPubKeyId Queries
+  * @param connectionService Represents the Connection to Cassandra
+  * @param ec Represents the execution context for async processes.
+  */
 @Singleton
 class PublicKeyRowByPubKeyIdDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends PublicKeyRowByPubKeyIdQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context

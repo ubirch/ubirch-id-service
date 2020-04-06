@@ -3,6 +3,9 @@ import com.ubirch.controllers.{ InfoController, KeyController, ResourcesControll
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
+/**
+  * Represents the configuration of controllers
+  */
 class ScalatraBootstrap extends LifeCycle {
 
   lazy val infoController: InfoController = Service.get[InfoController]

@@ -5,6 +5,10 @@ import org.json4s.native.JsonMethods.{ compact, render }
 import org.json4s.native.Serialization.{ read, write }
 import org.json4s.{ Formats, JValue }
 
+/**
+  * Represents an internal service or component for managing Json.
+  * @param formats Represents the json formats used for parsing.
+  */
 @Singleton
 class JsonConverterService @Inject() (implicit formats: Formats) {
 

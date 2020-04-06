@@ -7,14 +7,12 @@ import com.ubirch.services.metrics.PrometheusMetrics
 import scala.reflect._
 import scala.util.Try
 
-case class InjectionException(message: String) extends Exception(message)
-
-case class InjectorCreationException(message: String) extends Exception(message)
-
 /**
   * Helper to manage Guice Injection.
   */
 abstract class InjectorHelper(val modules: List[Module]) extends LazyLogging {
+
+  import InjectorHelper._
 
   private val injector: Injector = {
     try {
@@ -44,6 +42,20 @@ abstract class InjectorHelper(val modules: List[Module]) extends LazyLogging {
 
 }
 
+object InjectorHelper {
+  /**
+    * Represents an Exception for when injecting a component
+    * @param message Represents the error message
+    */
+  case class InjectionException(message: String) extends Exception(message)
+
+  /**
+    * Represents an Exception for when creating an injector a component
+    * @param message Represents the error message
+    */
+  case class InjectorCreationException(message: String) extends Exception(message)
+}
+
 /**
   * Util that integrates an elegant way to add shut down hooks to the JVM.
   */
@@ -55,6 +67,10 @@ trait WithPrometheusMetrics {
 
 }
 
+/**
+  * Represents an assembly for the boot process
+  * @param modules
+  */
 abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithPrometheusMetrics {
   def *[T](block: => T): Unit =
     try { block } catch {
@@ -63,8 +79,4 @@ abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with 
         Thread.sleep(5000)
         sys.exit(1)
     }
-}
-
-object Boot {
-  type Factory = Boot
 }

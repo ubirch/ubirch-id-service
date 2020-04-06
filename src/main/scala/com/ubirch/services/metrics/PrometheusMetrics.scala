@@ -10,6 +10,11 @@ import javax.inject._
 
 import scala.concurrent.Future
 
+/**
+  * Represents a component for starting the Prometheus Server
+  * @param config the configuration object
+  * @param lifecycle the life cycle tool
+  */
 @Singleton
 class PrometheusMetrics @Inject() (config: Config, lifecycle: Lifecycle) extends PrometheusConfPaths with LazyLogging {
 

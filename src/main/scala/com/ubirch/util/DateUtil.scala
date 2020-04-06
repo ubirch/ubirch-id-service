@@ -3,6 +3,9 @@ package com.ubirch.util
 import org.joda.time.format.{ DateTimeFormatter, ISODateTimeFormat }
 import org.joda.time.{ DateTime, DateTimeZone, LocalTime, Period }
 
+/**
+  * Convenience for Dates
+  */
 object DateUtil {
 
   def nowUTC: DateTime = DateTime.now(DateTimeZone.UTC)

@@ -17,6 +17,9 @@ import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+/**
+  * Test for the Tiger Engine
+  */
 class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
   def FakeInjector(bootstrapServers: String, consumerTopic: String) = new InjectorHelper(List(new Binder {

@@ -4,6 +4,9 @@ import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.google.inject.Guice
 import com.ubirch.{ Binder, EmbeddedCassandra, TestBase }
 
+/**
+  * Test for the cassandra cluster
+  */
 class ClusterSpec extends TestBase with EmbeddedCassandra {
 
   lazy val serviceInjector = Guice.createInjector(new Binder())

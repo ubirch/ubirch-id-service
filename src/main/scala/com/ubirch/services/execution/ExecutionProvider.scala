@@ -20,6 +20,7 @@ trait Execution {
   * Represents the Execution Context provider.
   * Whenever someone injects an ExecutionContext, this provider defines what will
   * be returned.
+  * @param config Represents the configuration object
   */
 @Singleton
 class ExecutionProvider @Inject() (config: Config) extends Provider[ExecutionContext] with Execution with ExecutionContextConfPaths {
@@ -32,10 +33,17 @@ class ExecutionProvider @Inject() (config: Config) extends Provider[ExecutionCon
 
 }
 
+/**
+  * Represents a Scheduler used in the system
+  */
 trait SchedulerBase {
   implicit val scheduler: Scheduler
 }
 
+/**
+  * Represents the Scheduler Provider
+  * @param ec Represents the execution context for async processes.
+  */
 @Singleton
 class SchedulerProvider @Inject() (ec: ExecutionContext) extends Provider[Scheduler] with SchedulerBase {
 

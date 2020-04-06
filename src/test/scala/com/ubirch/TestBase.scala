@@ -10,6 +10,9 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, Word
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
 
+/**
+  * Represents base for a convenient test
+  */
 trait TestBase
   extends WordSpec
   with ScalaFutures

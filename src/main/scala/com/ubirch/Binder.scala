@@ -16,6 +16,9 @@ import org.scalatra.swagger.Swagger
 
 import scala.concurrent.ExecutionContext
 
+/**
+  * Represents the default binder for the system components
+  */
 class Binder
   extends AbstractModule {
 
