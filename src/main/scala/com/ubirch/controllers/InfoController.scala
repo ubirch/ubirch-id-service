@@ -1,7 +1,7 @@
 package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{ NOK, Simple }
+import com.ubirch.models.{ NOK, Simple, SwaggerElements }
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra.json.NativeJsonSupport
