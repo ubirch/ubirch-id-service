@@ -22,6 +22,7 @@ import scala.util.{ Failure, Success }
 trait PubKeyService {
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey]
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
+  def getSome(take: Int = 1): CancelableFuture[Seq[PublicKey]]
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
@@ -111,6 +112,19 @@ class DefaultPubKeyService @Inject() (
       case OperationReturnsNone(_) => false
       case e: Throwable => throw e
     }.runToFuture
+
+  }
+
+  def getSome(take: Int): CancelableFuture[Seq[PublicKey]] = count("get_some") {
+    (for {
+      pubKeys <- publicKeyDAO
+        .getSome(take)
+        .map(PublicKey.fromPublicKeyRow)
+        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+
+    } yield {
+      pubKeys
+    }).runToFuture
 
   }
 

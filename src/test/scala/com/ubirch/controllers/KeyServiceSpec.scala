@@ -66,6 +66,19 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   "Key Service" must {
 
+    "get checks" taggedAs Tag("avocado") in {
+
+      get("/v1/check") {
+        status should equal(200)
+        val expectedBody = """{"version":"1.0","status":"OK","message":"I survived a check"}"""
+        body should equal(expectedBody)
+      }
+
+      get("/v1/deepCheck") {
+        status should equal(200)
+      }
+    }
+
     "get public key object when data exists" taggedAs Tag("mango") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2020-03-13T17:13:42.790Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","pubKeyId":"Bx3Y7OtVGisrbwdxm0OsdI2CYxI0P/1BHe2TKdl7t+0=","validNotAfter":"2021-03-13T23:13:42.790Z","validNotBefore":"2020-03-13T17:13:42.790Z"},"signature":"6m+hOG6bKGhOqCdBXVhnpJst+FpPcFUdn+JTpG7x6h0Ps5IlMIsX/kgXQjPWxXxN6T+eUSosZ9mkAZnfr8K3DA=="}""".stripMargin

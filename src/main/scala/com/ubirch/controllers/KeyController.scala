@@ -5,6 +5,7 @@ import com.ubirch.models._
 import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
+import com.ubirch.util.DateUtil
 import javax.inject._
 import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
@@ -44,7 +45,19 @@ class KeyController @Inject() (
   }
 
   get("/v1/deepCheck") {
-    Simple("I am alive after a deepCheck")
+
+    asyncResult { implicit request =>
+
+      pubKeyService.getSome()
+        .map(_ => Simple("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+        .recover {
+          case e: Exception =>
+            logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+        }
+
+    }
+
   }
 
   get("/v1/pubkey/*") {
