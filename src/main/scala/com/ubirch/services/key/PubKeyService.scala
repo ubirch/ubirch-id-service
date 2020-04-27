@@ -22,6 +22,7 @@ import scala.util.{ Failure, Success }
 trait PubKeyService {
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey]
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
+  def getSome(take: Int = 1): CancelableFuture[Seq[PublicKey]]
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
@@ -114,6 +115,19 @@ class DefaultPubKeyService @Inject() (
 
   }
 
+  def getSome(take: Int): CancelableFuture[Seq[PublicKey]] = count("get_some") {
+    (for {
+      pubKeys <- publicKeyDAO
+        .getSome(take)
+        .map(PublicKey.fromPublicKeyRow)
+        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+
+    } yield {
+      pubKeys
+    }).runToFuture
+
+  }
+
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_pub_key") {
     (for {
       pubKeys <- publicKeyByPubKeyIdDao
@@ -153,7 +167,7 @@ class DefaultPubKeyService @Inject() (
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
-      _ = if (!verification) logger.error("failed_verification={}", maybeKey.toString)
+      _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, rawMessage))
@@ -191,7 +205,7 @@ class DefaultPubKeyService @Inject() (
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
-      _ = if (!verification) logger.error("failed_verification={}", publicKey.toString)
+      _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsgPack))

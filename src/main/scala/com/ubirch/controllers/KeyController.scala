@@ -7,6 +7,7 @@ import com.ubirch.models._
 import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
+import com.ubirch.util.DateUtil
 import javax.inject._
 import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
@@ -60,7 +61,19 @@ class KeyController @Inject() (
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "something is not fine"))
 
   get("/v1/deepCheck", operation(getV1DeepCheck)) {
-    Simple("I am alive after a deepCheck")
+
+    asyncResult { implicit request =>
+
+      pubKeyService.getSome()
+        .map(_ => Simple("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+        .recover {
+          case e: Exception =>
+            logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+        }
+
+    }
+
   }
 
   val getV1PubKeyPubKey: SwaggerSupportSyntax.OperationBuilder =
@@ -115,7 +128,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+              BadRequest(NOK.pubKeyError("Error retrieving pub key"))
             case e: Exception =>
               logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
@@ -168,7 +181,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+              BadRequest(NOK.pubKeyError("Error retrieving pub key"))
             case e: Exception =>
               logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
@@ -192,6 +205,7 @@ class KeyController @Inject() (
       ))
 
   post("/v1/pubkey", operation(postV1PubKey)) {
+
     logRequestInfo
 
     ReadBody.readJson[PublicKey](PublicKeyInfo.checkPubKeyId)
@@ -201,7 +215,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("1.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error creating pub key"))
+              BadRequest(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
               logger.error("1.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
@@ -224,6 +238,9 @@ class KeyController @Inject() (
       ))
 
   post("/v1/pubkey/mpack", operation(postV1PubKeyMsgPack)) {
+
+    logRequestInfo
+
     ReadBody.readMsgPack
       .async { up =>
         pubKeyService.create(up.pm, up.rawProtocolMessage)
@@ -231,7 +248,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("2.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error creating pub key"))
+              BadRequest(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
               logger.error("2.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
