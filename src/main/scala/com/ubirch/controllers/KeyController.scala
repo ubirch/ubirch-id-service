@@ -84,7 +84,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+              BadRequest(NOK.pubKeyError("Error retrieving pub key"))
             case e: Exception =>
               logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
@@ -113,7 +113,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error retrieving pub key"))
+              BadRequest(NOK.pubKeyError("Error retrieving pub key"))
             case e: Exception =>
               logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
@@ -136,7 +136,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("1.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error creating pub key"))
+              BadRequest(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
               logger.error("1.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
@@ -156,7 +156,7 @@ class KeyController @Inject() (
           .recover {
             case e: PubKeyServiceException =>
               logger.error("2.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.pubKeyError("Error creating pub key"))
+              BadRequest(NOK.pubKeyError("Error creating pub key"))
             case e: Exception =>
               logger.error("2.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))

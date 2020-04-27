@@ -167,7 +167,7 @@ class DefaultPubKeyService @Inject() (
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
-      _ = if (!verification) logger.error("failed_verification={}", maybeKey.toString)
+      _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, rawMessage))
@@ -205,7 +205,7 @@ class DefaultPubKeyService @Inject() (
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
-      _ = if (!verification) logger.error("failed_verification={}", publicKey.toString)
+      _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsgPack))
