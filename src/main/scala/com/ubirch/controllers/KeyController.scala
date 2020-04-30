@@ -1,6 +1,6 @@
 package com.ubirch.controllers
 
-import java.net.URLDecoder
+import java.net.{URLDecoder, URLEncoder}
 
 import com.ubirch.controllers.concerns.ControllerBase
 import com.ubirch.models._
@@ -12,9 +12,9 @@ import javax.inject._
 import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
 import org.scalatra._
-import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupportSyntax }
+import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupportSyntax}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Represents a controller for managing the http requests for pub key management
@@ -90,32 +90,24 @@ class KeyController @Inject() (
   /**
     * This route is defined to handle the case that a pubkey contains a "/" and is not URL encoded
     * The  get("/v1/pubkey/:pubkey") road is still kept to be able to have the swagger documentation available
-    * because swagger doesn't support splat parameters.
+    * because swagger doesn't support splat parameters. With a Scalatra update to 2.7.0 this might become removed.
     */
   get("/v1/pubkey/*") {
-    val pubkey = Future(multiParams.get("splat")
-      .flatMap(_.headOption)
-      .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path")))))
-    handlePubKeyId(pubkey)
+    redirect(s"/api/keyService/v1/pubkey/%s".format(URLEncoder.encode(params("splat"), "UTF-8")))
   }
 
   get("/v1/pubkey/:pubkey", operation(getV1PubKeyPubKey)) {
     val pubkey = Future(params.get("pubkey") match {
       case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
       case None => halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path")))
-    })
-    handlePubKeyId(pubkey)
+    }).map(handlePubKeyId)
   }
 
-  def handlePubKeyId(f: Future[String]): AsyncResult = {
+  def handlePubKeyId(pubKeyId: String): AsyncResult = {
     asyncResult { implicit request =>
 
       for {
-
         _ <- Future(logRequestInfo)
-
-        pubKeyId <- f
 
         res <- pubKeyService.getByPubKeyId(pubKeyId)
           .map { pks =>
@@ -123,7 +115,6 @@ class KeyController @Inject() (
               case Nil => NotFound(NOK.pubKeyError("Key not found"))
               case pk :: _ => Ok(pk)
             }
-
           }
           .recover {
             case e: PubKeyServiceException =>
@@ -133,11 +124,8 @@ class KeyController @Inject() (
               logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
           }
-
       } yield res
-
     }
-
   }
 
   val getV1CurrentHardwareId: SwaggerSupportSyntax.OperationBuilder =
@@ -146,35 +134,32 @@ class KeyController @Inject() (
       description "query the currently valid public keys based on a hardwareId"
       tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
       parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys")
-      responseMessages (
-        ResponseMessage(SwaggerElements.OK_CODE_200, "Successful response; returns an array of currently valid public keys"),
-        ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No hardwareId parameter found in path"),
-        ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
-      ))
+      responseMessages(
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No hardwareId parameter found in path"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
+    ))
 
-  get("/v1/pubkey/current/hardwareId/:hardwareId") { //}, operation(getV1CurrentHardwareId)) {
-    val hwDeviceId = Future(params.get("hardwareId") match {
+  get("/v1/pubkey/current/hardwareId/:hardwareId", operation(getV1CurrentHardwareId)) {
+    Future(params.get("hardwareId") match {
       case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
       case None => halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))
-    })
-    handlePubKeyCurrentHardwareId(hwDeviceId)
+    }).map(handlePubKeyCurrentHardwareId)
   }
 
+  /**
+    * This route is defined to handle the case that a pubkey contains a "/" and is not URL encoded
+    * The  get("/v1/pubkey/current/hardwareId/:hardwareId") road is still kept to be able to have the swagger documentation available
+    * because swagger doesn't support splat parameters. With a Scalatra update to 2.7.0 this might become removed.
+    */
   get("/v1/pubkey/current/hardwareId/*") {
-    val hwDeviceId = Future(multiParams.get("splat")
-      .flatMap(_.headOption)
-      .filter(_.nonEmpty)
-      .getOrElse(halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))))
-    handlePubKeyCurrentHardwareId(hwDeviceId)
+    redirect("/api/keyService/v1/pubkey/current/hardwareId/%s".format(URLEncoder.encode(params("splat"), "UTF-8")))
   }
 
-  def handlePubKeyCurrentHardwareId(f: Future[String]): AsyncResult = {
-    asyncResult { implicit request =>
+  def handlePubKeyCurrentHardwareId(hwDeviceId: String): AsyncResult = {
 
+    asyncResult { implicit request =>
       for {
         _ <- Future(logRequestInfo)
-
-        hwDeviceId <- f
 
         res <- pubKeyService.getByHardwareId(hwDeviceId)
           .map { pks => Ok(pks) }
@@ -188,9 +173,7 @@ class KeyController @Inject() (
           }
 
       } yield res
-
     }
-
   }
 
   val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
