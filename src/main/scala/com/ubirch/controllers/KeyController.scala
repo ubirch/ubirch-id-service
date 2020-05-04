@@ -1,7 +1,5 @@
 package com.ubirch.controllers
 
-import java.net.{URLDecoder, URLEncoder}
-
 import com.ubirch.controllers.concerns.ControllerBase
 import com.ubirch.models._
 import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
@@ -9,6 +7,7 @@ import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.DateUtil
 import javax.inject._
+import javax.servlet.http.HttpServletRequest
 import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
 import org.scalatra._
@@ -18,12 +17,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Represents a controller for managing the http requests for pub key management
-  * @param swagger Represents the Swagger Engine.
-  * @param jFormats Represents the json formats for the system.
+  *
+  * @param swagger       Represents the Swagger Engine.
+  * @param jFormats      Represents the json formats for the system.
   * @param pubKeyService Represents the internal service/component that knows how to work with keys.
-  * @param pmService Represents teh Protocol Message Service that knows how to decode bodies into
-  *                  Protocol Messages.
-  * @param executor Represents the execution context for async processes.
+  * @param pmService     Represents teh Protocol Message Service that knows how to decode bodies into
+  *                      Protocol Messages.
+  * @param executor      Represents the execution context for async processes.
   */
 
 @Singleton
@@ -71,15 +71,13 @@ class KeyController @Inject() (
             logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
             InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
         }
-
     }
-
   }
 
   val getV1PubKeyPubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1PubKeyPubKey")
-      summary "updates public key"
-      description "updates the given public key found by pubKeyID in the key registry with the given data; the public key must exist already"
+      summary "retrieves public key"
+      description "retrieves the given public key found by pubKeyID in the key registry with the given data; the public key must exist already"
       tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
       parameters pathParam[String]("pubkey").description("public key for which to search for currently valid public keys").required
       responseMessages (
@@ -93,58 +91,53 @@ class KeyController @Inject() (
     * because swagger doesn't support splat parameters. With a Scalatra update to 2.7.0 this might become removed.
     */
   get("/v1/pubkey/*") {
-    redirect(s"/api/keyService/v1/pubkey/%s".format(URLEncoder.encode(params("splat"), "UTF-8")))
+    asyncResult { implicit request =>
+      val pubKey = params.getOrElse("splat", halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
+      handlePubKeyId(pubKey)
+    }
   }
 
   get("/v1/pubkey/:pubkey", operation(getV1PubKeyPubKey)) {
-    val pubkey = Future(params.get("pubkey") match {
-      case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
-      case None => halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path")))
-    }).map(handlePubKeyId)
+    asyncResult { implicit request =>
+      val pubkey = params.getOrElse("pubkey", halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
+      handlePubKeyId(pubkey)
+    }
   }
 
-  def handlePubKeyId(pubKeyId: String): AsyncResult = {
-    asyncResult { implicit request =>
+  def handlePubKeyId(pubKeyId: String)(implicit request: HttpServletRequest): Future[ActionResult] = {
+    for {
+      _ <- Future(logRequestInfo)
 
-      for {
-        _ <- Future(logRequestInfo)
-
-        res <- pubKeyService.getByPubKeyId(pubKeyId)
-          .map { pks =>
-            pks.toList match {
-              case Nil => NotFound(NOK.pubKeyError("Key not found"))
-              case pk :: _ => Ok(pk)
-            }
+      res <- pubKeyService.getByPubKeyId(pubKeyId)
+        .map { pks =>
+          pks.toList match {
+            case Nil => NotFound(NOK.pubKeyError("Key not found"))
+            case pk :: _ => Ok(pk)
           }
-          .recover {
-            case e: PubKeyServiceException =>
-              logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              BadRequest(NOK.pubKeyError("Error retrieving pub key"))
-            case e: Exception =>
-              logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
-          }
-      } yield res
+        }
+        .recover {
+          case e: PubKeyServiceException =>
+            logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            BadRequest(NOK.pubKeyError("Error retrieving pub key"))
+          case e: Exception =>
+            logger.error("1.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+        }
+    } yield {
+      res
     }
   }
 
   val getV1CurrentHardwareId: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1CurrentHardwareId")
-      summary "query only the currently valid public keys"
-      description "query the currently valid public keys based on a hardwareId"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
+      summary "queries all currently valid public keys for this hardwareId"
+      description "queries all currently valid public keys based on the hardwareId"
+      tags(SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
       parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys")
       responseMessages(
       ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No hardwareId parameter found in path"),
       ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
     ))
-
-  get("/v1/pubkey/current/hardwareId/:hardwareId", operation(getV1CurrentHardwareId)) {
-    Future(params.get("hardwareId") match {
-      case Some(pubKey) => URLDecoder.decode(pubKey, "utf-8")
-      case None => halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path")))
-    }).map(handlePubKeyCurrentHardwareId)
-  }
 
   /**
     * This route is defined to handle the case that a pubkey contains a "/" and is not URL encoded
@@ -152,28 +145,36 @@ class KeyController @Inject() (
     * because swagger doesn't support splat parameters. With a Scalatra update to 2.7.0 this might become removed.
     */
   get("/v1/pubkey/current/hardwareId/*") {
-    redirect("/api/keyService/v1/pubkey/current/hardwareId/%s".format(URLEncoder.encode(params("splat"), "UTF-8")))
+    asyncResult { implicit request =>
+      val hardwareId = params.getOrElse("splat", halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
+      handlePubKeyCurrentHardwareId(hardwareId)
+    }
   }
 
-  def handlePubKeyCurrentHardwareId(hwDeviceId: String): AsyncResult = {
-
+  get("/v1/pubkey/current/hardwareId/:hardwareId", operation(getV1CurrentHardwareId)) {
     asyncResult { implicit request =>
-      for {
-        _ <- Future(logRequestInfo)
-
-        res <- pubKeyService.getByHardwareId(hwDeviceId)
-          .map { pks => Ok(pks) }
-          .recover {
-            case e: PubKeyServiceException =>
-              logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              BadRequest(NOK.pubKeyError("Error retrieving pub key"))
-            case e: Exception =>
-              logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
-          }
-
-      } yield res
+      val hardwareId = params.getOrElse("hardwareId", halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
+      handlePubKeyCurrentHardwareId(hardwareId)
     }
+  }
+
+  def handlePubKeyCurrentHardwareId(hwDeviceId: String)(implicit request: HttpServletRequest): Future[ActionResult] = {
+
+    for {
+      _ <- Future(logRequestInfo)
+
+      res <- pubKeyService.getByHardwareId(hwDeviceId)
+        .map { pks => Ok(pks) }
+        .recover {
+          case e: PubKeyServiceException =>
+            logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            BadRequest(NOK.pubKeyError("Error retrieving pub key"))
+          case e: Exception =>
+            logger.error("2.2 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
+        }
+
+    } yield res
   }
 
   val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
@@ -209,7 +210,7 @@ class KeyController @Inject() (
 
   val postV1PubKeyMsgPack: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("postV1PubKeyMsgPack")
-      summary "stores new public key in msgpack format"
+      summary "stores new public key received as msgpack format"
       description "stores the given public key with its unique pubKeyID"
       tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY, SwaggerElements.TAG_MSG_PACK)
       consumes "application/octet-stream"
@@ -244,18 +245,22 @@ class KeyController @Inject() (
     (apiOperation[String]("deleteV1PubKey")
       summary "delete a public key"
       description "delete a public key"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
+      tags(SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_KEY_REGISTRY)
       parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
-      responseMessages (
-        ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
-        ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
-      ))
+      responseMessages(
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
+    ))
 
-  delete("/v1/pubkey", operation(deleteV1PubKey)) { delete }
+  delete("/v1/pubkey", operation(deleteV1PubKey)) {
+    delete
+  }
   /**
     * This has been added since the delete method cannot be tested with a body.
     */
-  patch("/v1/pubkey") { delete }
+  patch("/v1/pubkey") {
+    delete
+  }
 
   notFound {
     logger.info("controller=KeyController route_not_found={} query_string={}", requestPath, request.getQueryString)
