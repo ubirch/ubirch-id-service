@@ -41,6 +41,7 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - 2181:2181
+    tmpfs: "/datalog"
     logging:
       driver: none
 
