@@ -6,6 +6,7 @@ import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.services.kafka.KeyAnchoring
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -46,7 +47,8 @@ class DefaultPubKeyService @Inject() (
     publicKeyByHwDeviceIdDao: PublicKeyRowByHwDeviceIdDAO,
     publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
-    jsonConverterService: JsonConverterService
+    jsonConverterService: JsonConverterService,
+    keyAnchoring: KeyAnchoring
 )(implicit scheduler: Scheduler, jsFormats: Formats)
   extends PubKeyService with LazyLogging {
 
@@ -175,6 +177,10 @@ class DefaultPubKeyService @Inject() (
       _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
       _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Json_Insert"))
+
+      rm <- keyAnchoring.anchorKey(row)
+      _ = logger.info("anchor_publish_done_to_topic={}", rm.topic())
+
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e
@@ -213,6 +219,9 @@ class DefaultPubKeyService @Inject() (
       _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
       _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Msg_Pack_Insert"))
+
+      rm <- keyAnchoring.anchorKey(row)
+      _ = logger.info("anchor_publish_done_to_topic={}", rm.topic())
 
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey

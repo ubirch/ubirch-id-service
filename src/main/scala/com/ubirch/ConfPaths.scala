@@ -46,14 +46,13 @@ object ConfPaths {
     final val LINGER_MS = "identitySystem.tiger.kafkaProducer.lingerMS"
     final val BOOTSTRAP_SERVERS = "identitySystem.tiger.kafkaProducer.bootstrapServers"
     final val ERROR_TOPIC_PATH = "identitySystem.tiger.kafkaProducer.errorTopic"
-    final val TOPIC_PATH = "identitySystem.tiger.kafkaProducer.topic"
   }
 
   trait AnchoringProducerConfPaths {
     final val LINGER_MS = "identitySystem.wolf.kafkaProducer.lingerMS"
     final val BOOTSTRAP_SERVERS = "identitySystem.wolf.kafkaProducer.bootstrapServers"
-    final val ERROR_TOPIC_PATH = "identitySystem.wolf.kafkaProducer.errorTopic"
     final val TOPIC_PATH = "identitySystem.wolf.kafkaProducer.topic"
+    final val ERROR_TOPIC_PATH = "identitySystem.wolf.kafkaProducer.errorTopic"
   }
 
   trait PrometheusConfPaths {
