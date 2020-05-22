@@ -5,11 +5,12 @@ import java.util.{ Base64, UUID }
 
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
+import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
-import net.manub.embeddedkafka.EmbeddedKafka
+import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.joda.time.DateTime
 import org.scalatest.Tag
 import org.scalatra.test.scalatest.ScalatraWordSpec
@@ -370,6 +371,8 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
   }
 
   protected override def beforeAll(): Unit = {
+
+    implicit val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = 9092, zooKeeperPort = 6001)
 
     EmbeddedKafka.start()
     cassandra.start()
