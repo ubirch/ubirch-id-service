@@ -6,8 +6,10 @@ import java.util.concurrent.ExecutionException
 import com.datastax.driver.core.exceptions.{ InvalidQueryException, NoHostAvailableException }
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.{ ConsumerConfPaths, ProducerConfPaths }
+import com.ubirch.ConfPaths.{ ConsumerConfPaths, TigerProducerConfPaths }
+import com.ubirch.kafka.consumer.WithConsumerShutdownHook
 import com.ubirch.kafka.express.ExpressKafka
+import com.ubirch.kafka.producer.WithProducerShutdownHook
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import com.ubirch.models.{ IdentitiesDAO, Identity }
 import com.ubirch.services.lifeCycle.Lifecycle
@@ -28,7 +30,10 @@ import scala.concurrent.{ ExecutionContext, Promise }
   * @param lifecycle Represents the life cycle object for the system.
   */
 abstract class Tiger(val config: Config, lifecycle: Lifecycle)
-  extends ExpressKafka[String, Array[Byte], Unit] with LazyLogging {
+  extends ExpressKafka[String, Array[Byte], Unit]
+  with WithConsumerShutdownHook
+  with WithProducerShutdownHook
+  with LazyLogging {
 
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
   override val valueDeserializer: Deserializer[Array[Byte]] = new ByteArrayDeserializer
@@ -43,8 +48,10 @@ abstract class Tiger(val config: Config, lifecycle: Lifecycle)
   override val consumerReconnectBackoffMsConfig: Long = config.getLong(ConsumerConfPaths.RECONNECT_BACKOFF_MS_CONFIG)
   override val consumerReconnectBackoffMaxMsConfig: Long = config.getLong(ConsumerConfPaths.RECONNECT_BACKOFF_MAX_MS_CONFIG)
   override val maxTimeAggregationSeconds: Long = 120
-  override val producerBootstrapServers: String = config.getString(ProducerConfPaths.BOOTSTRAP_SERVERS)
-  override val lingerMs: Int = config.getInt(ProducerConfPaths.LINGER_MS)
+  override val producerBootstrapServers: String = config.getString(TigerProducerConfPaths.BOOTSTRAP_SERVERS)
+  override val lingerMs: Int = config.getInt(TigerProducerConfPaths.LINGER_MS)
+
+  lifecycle.addStopHooks(hookFunc(consumerGracefulTimeout, consumption), hookFunc(production))
 
 }
 

@@ -30,23 +30,30 @@ object ConfPaths {
   }
 
   trait ConsumerConfPaths {
-    final val BOOTSTRAP_SERVERS = "identitySystem.kafkaConsumer.bootstrapServers"
-    final val TOPICS_PATH = "identitySystem.kafkaConsumer.topics"
-    final val MAX_POLL_RECORDS = "identitySystem.kafkaConsumer.maxPollRecords"
-    final val GROUP_ID_PATH = "identitySystem.kafkaConsumer.groupId"
-    final val GRACEFUL_TIMEOUT_PATH = "identitySystem.kafkaConsumer.gracefulTimeout"
-    final val METRICS_SUB_NAMESPACE = "identitySystem.kafkaConsumer.metricsSubNamespace"
-    final val FETCH_MAX_BYTES_CONFIG = "identitySystem.kafkaConsumer.fetchMaxBytesConfig"
-    final val MAX_PARTITION_FETCH_BYTES_CONFIG = "identitySystem.kafkaConsumer.maxPartitionFetchBytesConfig"
-    final val RECONNECT_BACKOFF_MS_CONFIG = "identitySystem.kafkaConsumer.reconnectBackoffMsConfig"
-    final val RECONNECT_BACKOFF_MAX_MS_CONFIG = "identitySystem.kafkaConsumer.reconnectBackoffMaxMsConfig"
+    final val BOOTSTRAP_SERVERS = "identitySystem.tiger.kafkaConsumer.bootstrapServers"
+    final val TOPICS_PATH = "identitySystem.tiger.kafkaConsumer.topics"
+    final val MAX_POLL_RECORDS = "identitySystem.tiger.kafkaConsumer.maxPollRecords"
+    final val GROUP_ID_PATH = "identitySystem.tiger.kafkaConsumer.groupId"
+    final val GRACEFUL_TIMEOUT_PATH = "identitySystem.tiger.kafkaConsumer.gracefulTimeout"
+    final val METRICS_SUB_NAMESPACE = "identitySystem.tiger.kafkaConsumer.metricsSubNamespace"
+    final val FETCH_MAX_BYTES_CONFIG = "identitySystem.tiger.kafkaConsumer.fetchMaxBytesConfig"
+    final val MAX_PARTITION_FETCH_BYTES_CONFIG = "identitySystem.tiger.kafkaConsumer.maxPartitionFetchBytesConfig"
+    final val RECONNECT_BACKOFF_MS_CONFIG = "identitySystem.tiger.kafkaConsumer.reconnectBackoffMsConfig"
+    final val RECONNECT_BACKOFF_MAX_MS_CONFIG = "identitySystem.tiger.kafkaConsumer.reconnectBackoffMaxMsConfig"
   }
 
-  trait ProducerConfPaths {
-    final val LINGER_MS = "identitySystem.kafkaProducer.lingerMS"
-    final val BOOTSTRAP_SERVERS = "identitySystem.kafkaProducer.bootstrapServers"
-    final val ERROR_TOPIC_PATH = "identitySystem.kafkaProducer.errorTopic"
-    final val TOPIC_PATH = "identitySystem.kafkaProducer.topic"
+  trait TigerProducerConfPaths {
+    final val LINGER_MS = "identitySystem.tiger.kafkaProducer.lingerMS"
+    final val BOOTSTRAP_SERVERS = "identitySystem.tiger.kafkaProducer.bootstrapServers"
+    final val ERROR_TOPIC_PATH = "identitySystem.tiger.kafkaProducer.errorTopic"
+    final val TOPIC_PATH = "identitySystem.tiger.kafkaProducer.topic"
+  }
+
+  trait AnchoringProducerConfPaths {
+    final val LINGER_MS = "identitySystem.wolf.kafkaProducer.lingerMS"
+    final val BOOTSTRAP_SERVERS = "identitySystem.wolf.kafkaProducer.bootstrapServers"
+    final val ERROR_TOPIC_PATH = "identitySystem.wolf.kafkaProducer.errorTopic"
+    final val TOPIC_PATH = "identitySystem.wolf.kafkaProducer.topic"
   }
 
   trait PrometheusConfPaths {
@@ -56,6 +63,7 @@ object ConfPaths {
   object GenericConfPaths extends GenericConfPaths
   object HttpServerConfPaths extends HttpServerConfPaths
   object ConsumerConfPaths extends ConsumerConfPaths
-  object ProducerConfPaths extends ProducerConfPaths
+  object TigerProducerConfPaths extends TigerProducerConfPaths
+  object AnchoringProducerConfPaths extends AnchoringProducerConfPaths
 
 }

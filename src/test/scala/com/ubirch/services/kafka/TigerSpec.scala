@@ -5,7 +5,7 @@ import java.util.UUID
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
-import com.ubirch.ConfPaths.{ ConsumerConfPaths, ProducerConfPaths }
+import com.ubirch.ConfPaths.{ ConsumerConfPaths, TigerProducerConfPaths }
 import com.ubirch._
 import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ IdentitiesDAO, Identity }
@@ -28,7 +28,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
         ConsumerConfPaths.BOOTSTRAP_SERVERS,
         ConfigValueFactory.fromAnyRef(bootstrapServers)
       ).withValue(
-          ProducerConfPaths.BOOTSTRAP_SERVERS,
+          TigerProducerConfPaths.BOOTSTRAP_SERVERS,
           ConfigValueFactory.fromAnyRef(bootstrapServers)
         ).withValue(
             ConsumerConfPaths.TOPICS_PATH,
