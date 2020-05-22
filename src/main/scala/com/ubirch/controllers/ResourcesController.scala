@@ -13,7 +13,7 @@ class ResourcesController @Inject() (val swagger: Swagger) extends ScalatraServl
 
 object RestApiInfo extends ApiInfo(
   "Identity Service",
-  "These are the available endpoints for querying the Identity Service",
+  "These are the available endpoints for querying the Identity Service. For more information drop me an email at carlos.sanchez at ubirch.com",
   "https://ubirch.de",
   "carlos.sanchez@ubirch.com",
   "Apache License, Version 2.0",

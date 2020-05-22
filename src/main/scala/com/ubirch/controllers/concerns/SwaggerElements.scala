@@ -1,4 +1,4 @@
-package com.ubirch.models
+package com.ubirch.controllers.concerns
 
 object SwaggerElements {
   val NOT_AUTHORIZED_CODE_401 = 401
@@ -7,9 +7,7 @@ object SwaggerElements {
   val NOT_FOUND_CODE_404 = 404
   val INTERNAL_ERROR_CODE_500 = 500
 
-  val TAG_KEY_SERVICE = "key-service"
-  val TAG_KEY_REGISTRY = "key registry"
-  val TAG_MSG_PACK = "MessagePack"
+  val TAG_KEY_SERVICE = "Key Service"
   val TAG_WELCOME = "Welcome"
   val TAG_HEALTH = "Health"
 
