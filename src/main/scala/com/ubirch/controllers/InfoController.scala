@@ -1,6 +1,7 @@
 package com.ubirch.controllers
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.controllers.concerns.SwaggerElements
 import com.ubirch.models.{ NOK, Simple }
 import javax.inject._
 import org.json4s.Formats
@@ -22,7 +23,46 @@ class InfoController @Inject() (val swagger: Swagger, jFormats: Formats) extends
 
   val getSimpleCheck: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("simpleCheck")
-      summary "Welcome / Health")
+      summary "Welcome / Health /"
+      description "Check if service is up and running"
+      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_WELCOME, SwaggerElements.TAG_HEALTH))
+
+  get("/hello", operation(getSimpleCheck)) {
+    contentType = formats("txt")
+    val data =
+      """
+        |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'~~~     ~~~`@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@@@@@@@'                     `@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@@@@'                           `@@@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@@'                               `@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@'                                   `@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@'                                     `@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@'                                       `@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@                                         @@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@'                                         `@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@                                           @@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@                                           @@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@                       n,                  @@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@                     _/ | _                @@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@                    /'  `'/                @@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@a                 <~    .'                a@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@                 .'    |                 @@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@a              _/      |                a@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@a           _/      `.`.              a@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@a     ____/ '   \__ | |______       a@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@@a__/___/      /__\ \ \     \___.a@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@@/  (___.'\_______)\_|_|        \@@@@@@@@@@@@@@@@@@@@@@@@
+        |@@@@@@@@@@@@@@@@@@|\________                       ~~~~~\@@@@@@@@@@@@@@@@@@
+        |~~~\@@@@@@@@@@@@@@||       |\___________________________/|@/~~~~~~~~~~~\@@@
+        |    |~~~~\@@@@@@@/ |  |    | | by: S.C.E.S.W.          | ||\____________|@@
+        |
+        |------------------------------------------------
+        |This ASCII pic can be found at
+        |https://asciiart.website/index.php?art=animals/wolves
+        |""".stripMargin
+    Ok(data)
+  }
 
   get("/", operation(getSimpleCheck)) {
     Ok(Simple("Hallo, Hola, Hello, Salut, Hej, this is the Ubirch Identity Service."))
