@@ -38,5 +38,6 @@ ENTRYPOINT [ \
 
 # Add Maven dependencies (not shaded into the artifact; Docker-cached)
 COPY ${JAR_LIBS} /usr/share/service/lib
+COPY src/main/scala/com/ubirch/resources/swagger-ui /usr/share/service/swagger
 # Add the service itself
 COPY ${JAR_FILE} /usr/share/service/main.jar

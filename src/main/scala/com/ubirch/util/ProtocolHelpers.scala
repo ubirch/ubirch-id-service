@@ -55,14 +55,37 @@ object ProtocolHelpers extends LazyLogging {
 
   }
 
-  def packRandomPublicKey(curve: String) = {
+  def randomPublicKey(
+      curve: String,
+      hardwareDeviceId: String = UUID.randomUUID().toString,
+      pubKeyId: String = UUID.randomUUID().toString
+  ) = {
+    val created = DateUtil.nowUTC
+    val validNotAfter = Some(created.plusMonths(6))
+    val validNotBefore = created
+
+    for {
+      pkData <- getPublicKey(curve, created, validNotAfter, validNotBefore, hardwareDeviceId, pubKeyId)
+      (pk, pkAsString, _, _, privKey) = pkData
+      _ = logger.info(pk.pubKeyInfo.hwDeviceId)
+    } yield {
+      pkAsString
+    }
+
+  }
+
+  def packRandomPublicKey(
+      curve: String,
+      hardwareDeviceId: UUID = UUID.randomUUID(),
+      pubKeyId: UUID = UUID.randomUUID()
+  ) = {
     val created = DateUtil.nowUTC
     val validNotAfter = Some(created.plusMonths(6))
     val validNotBefore = created
 
     for {
       protocolEncoder <- Try(MsgPackProtocolEncoder.getEncoder).toEither
-      pkData <- getPublicKey(curve, created, validNotAfter, validNotBefore)
+      pkData <- getPublicKey(curve, created, validNotAfter, validNotBefore, hardwareDeviceId.toString, pubKeyId.toString)
       (pk, pkAsString, _, _, privKey) = pkData
       _ = logger.info(pk.pubKeyInfo.hwDeviceId)
       uuid = UUID.fromString(pk.pubKeyInfo.hwDeviceId)
@@ -101,21 +124,21 @@ object ProtocolHelpers extends LazyLogging {
       curveName: String,
       created: DateTime,
       validNotAfter: Option[DateTime],
-      validNotBefore: DateTime
+      validNotBefore: DateTime,
+      hardwareDeviceId: String = UUID.randomUUID().toString,
+      pubKeyId: String = UUID.randomUUID().toString
   ) = {
 
     val curve = PublicKeyUtil.associateCurve(curveName)
     val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
     val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-    val hardwareDeviceId = UUID.randomUUID()
 
-    val pubKeyUUID = UUID.randomUUID()
     val pubKeyInfo = PublicKeyInfo(
       algorithm = curveName,
       created = created.toDate,
-      hwDeviceId = hardwareDeviceId.toString,
+      hwDeviceId = hardwareDeviceId,
       pubKey = newPublicKey,
-      pubKeyId = pubKeyUUID.toString,
+      pubKeyId = pubKeyId,
       validNotAfter = validNotAfter.map(_.toDate),
       validNotBefore = validNotBefore.toDate
     )
