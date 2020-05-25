@@ -3,7 +3,6 @@ ARG JAR_LIBS
 ARG JAR_FILE
 ARG VERSION
 ARG BUILD
-ARG SWAGGER_UI
 ARG SERVICE_NAME
 
 LABEL "com.ubirch.service"="${SERVICE_NAME}"
@@ -39,6 +38,6 @@ ENTRYPOINT [ \
 
 # Add Maven dependencies (not shaded into the artifact; Docker-cached)
 COPY ${JAR_LIBS} /usr/share/service/lib
-COPY ${SWAGGER_UI} /usr/share/service/swagger
+COPY src/main/scala/com/ubirch/resources/swagger-ui /usr/share/service/swagger
 # Add the service itself
 COPY ${JAR_FILE} /usr/share/service/main.jar
