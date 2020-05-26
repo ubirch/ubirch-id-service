@@ -9,7 +9,7 @@ sealed trait Response
   * Represents an OK Response object
   * @param version the version of the response
   * @param status the status of the response. OK
-  * @param message the messages of the response
+  * @param message the message of the response
   */
 case class Simple(version: String, status: Symbol, message: String) extends Response
 
@@ -18,6 +18,24 @@ case class Simple(version: String, status: Symbol, message: String) extends Resp
   */
 object Simple {
   def apply(message: String): Simple = new Simple("1.0", 'OK, message)
+}
+
+/**
+  * Represents an OK Response object.
+  * This is just a convenience object to be compatible with
+  * one client that expects "messages" instead of "message"
+  * @param version the version of the response
+  * @param status the status of the response. OK
+  * @param messages the messages of the response
+  */
+case class ListResponse(version: String, status: Symbol, messages: List[String]) extends Response
+
+/**
+  * Companion object for the Simple response
+  */
+object ListResponse {
+  def apply(messages: List[String]): ListResponse = new ListResponse("1.0", 'OK, messages)
+  def apply(message: String): ListResponse = ListResponse(List(message))
 }
 
 /**

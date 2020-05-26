@@ -50,6 +50,7 @@ class KeyController @Inject() (
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Not successful response"))
 
   get("/v1/check", operation(getV1Check)) {
+    logRequestInfo
     Simple("I survived a check")
   }
 
@@ -63,9 +64,9 @@ class KeyController @Inject() (
   get("/v1/deepCheck", operation(getV1DeepCheck)) {
 
     asyncResult { implicit request =>
-
+      logRequestInfo
       pubKeyService.getSome()
-        .map(_ => Simple("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+        .map(_ => ListResponse("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
         .recover {
           case e: Exception =>
             logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
