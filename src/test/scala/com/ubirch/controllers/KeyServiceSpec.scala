@@ -5,7 +5,6 @@ import java.util.{ Base64, UUID }
 
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
@@ -224,7 +223,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
       }
       getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
-        case Right((pk, pkAsString, _, _, _)) =>
+        case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
             body should equal(pkAsString)
@@ -251,8 +250,11 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
+
       val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
         status should equal(200)
       }
 

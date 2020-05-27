@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.AnchoringProducerConfPaths
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.{ ProducerRunner, WithProducerShutdownHook }
-import com.ubirch.models.PublicKeyRow
+import com.ubirch.models.PublicKey
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.lifeCycle.Lifecycle
 import javax.inject._
@@ -18,7 +18,8 @@ import org.apache.kafka.common.serialization.{ ByteArraySerializer, Serializer, 
 import org.json4s.{ DefaultFormats, Formats }
 
 trait KeyAnchoring {
-  def anchorKey(value: PublicKeyRow): Task[RecordMetadata]
+  def anchorKey(value: PublicKey): Task[RecordMetadata]
+  def anchorKeyAsOpt(value: PublicKey): Task[Option[RecordMetadata]]
 }
 
 abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)(implicit scheduler: Scheduler)
@@ -34,7 +35,7 @@ abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConver
 
   val producerTopic: String = config.getString(AnchoringProducerConfPaths.TOPIC_PATH)
 
-  override def anchorKey(value: PublicKeyRow): Task[RecordMetadata] = Task.defer {
+  override def anchorKey(value: PublicKey): Task[RecordMetadata] = Task.defer {
 
     for {
       kd <- Task.fromTry(jsonConverterService.toString(value).toTry)
@@ -49,6 +50,14 @@ abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConver
     }
 
   }
+
+  override def anchorKeyAsOpt(value: PublicKey): Task[Option[RecordMetadata]] = anchorKey(value)
+    .map(x => Option(x))
+    .onErrorHandle {
+      e =>
+        logger.error("Error publishing pubkey to kafka, pk={} exception={} error_message", value, e.getClass.getName, e.getMessage)
+        None
+    }
 
   lifecycle.addStopHook(hookFunc(production))
 
