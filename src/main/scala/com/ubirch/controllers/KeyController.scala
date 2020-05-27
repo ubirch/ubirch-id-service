@@ -66,7 +66,8 @@ class KeyController @Inject() (
     asyncResult { implicit request =>
       logRequestInfo
       pubKeyService.getSome()
-        .map(_ => ListResponse("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+        //We use a BooleanList Response to keep backwards compatibility with clients
+        .map(_ => BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
         .recover {
           case e: Exception =>
             logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
