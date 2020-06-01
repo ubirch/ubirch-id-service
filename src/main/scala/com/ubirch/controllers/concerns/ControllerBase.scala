@@ -5,12 +5,14 @@ import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
+import com.ubirch.services.key.CertService
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.services.pm.ProtocolMessageService.UnPacked
 import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
 import javax.servlet.{ ReadListener, ServletInputStream }
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.json4s.JsonAST.JValue
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
@@ -70,7 +72,7 @@ trait RequestEnricher extends Handler {
   * @param pmService Represents teh Protocol Message Service that knows how to decode bodies into
   *                  Protocol Messages.
   */
-abstract class ControllerBase(pmService: ProtocolMessageService) extends ScalatraServlet
+abstract class ControllerBase extends ScalatraServlet
   with RequestEnricher
   with FutureSupport
   with NativeJsonSupport
@@ -103,7 +105,7 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
     }
   }
 
-  def logRequestInfo(implicit request: HttpServletRequest) = {
+  def logRequestInfo(implicit request: HttpServletRequest): Unit = {
     val path = request.getPathInfo
     val headers = request.headers.toList.map { case (k, v) => k + ":" + v }.mkString(",")
     logger.info("Path:{} {}", path, headers)
@@ -141,7 +143,12 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
   object ReadBody {
 
-    def store(bytes: Array[Byte]) = {
+    def getBytes(implicit request: HttpServletRequest): Try[(Array[Byte], String)] = for {
+      bytes <- Try(IOUtils.toByteArray(request.getInputStream))
+      bytesAsString <- Try(Hex.encodeHexString(bytes))
+    } yield (bytes, bytesAsString)
+
+    def store(bytes: Array[Byte]): Unit = {
       val date = new Date()
       val os = new FileOutputStream(s"src/main/scala/com/ubirch/curl/data_${date.getTime}.mpack")
       os.write(bytes)
@@ -163,12 +170,9 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
 
     def apply[T](body: Try[T], rawBody: String): ReadBody[T] = new ReadBody[T](body, rawBody, None)
 
-    def readMsgPack(implicit request: HttpServletRequest): ReadBody[UnPacked] = {
+    def readMsgPack(pmService: ProtocolMessageService)(implicit request: HttpServletRequest): ReadBody[UnPacked] = {
 
-      val rawBody = for {
-        bytes <- Try(IOUtils.toByteArray(request.getInputStream))
-        bytesAsString <- Try(Hex.encodeHexString(bytes))
-      } yield (bytes, bytesAsString)
+      val rawBody = getBytes
 
       val body = for {
         _body <- rawBody
@@ -179,6 +183,22 @@ abstract class ControllerBase(pmService: ProtocolMessageService) extends Scalatr
       } yield unpacked
 
       ReadBody[UnPacked](body, rawBody.map { _._2 }.getOrElse("No Body Found"))
+
+    }
+
+    def readCSR(certService: CertService)(implicit request: HttpServletRequest): ReadBody[Option[JcaPKCS10CertificationRequest]] = {
+
+      val rawBody = getBytes
+
+      val body = for {
+        _body <- rawBody
+        (bytes, bytesAsString) = _body
+        _ = logger.info("body={}", bytesAsString)
+        // _ <- Try(store(bytes))
+        maybeCSR <- certService.extractCRS(bytes)
+      } yield maybeCSR
+
+      ReadBody(body, rawBody.map { _._2 }.getOrElse("No Body Found"))
 
     }
 

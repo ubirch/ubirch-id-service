@@ -32,8 +32,7 @@ class KeyController @Inject() (
     jFormats: Formats,
     pubKeyService: PubKeyService,
     pmService: ProtocolMessageService
-)(implicit val executor: ExecutionContext)
-  extends ControllerBase(pmService) {
+)(implicit val executor: ExecutionContext) extends ControllerBase {
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -184,7 +183,7 @@ class KeyController @Inject() (
 
     logRequestInfo
 
-    ReadBody.readMsgPack
+    ReadBody.readMsgPack(pmService)
       .async { up =>
         pubKeyService.create(up.pm, up.rawProtocolMessage)
           .map { key => Ok(key) }
@@ -240,7 +239,7 @@ class KeyController @Inject() (
         request.header("content-type").getOrElse("") != octet
       )) {
 
-        logger.error(ReadBody.readMsgPack.toString)
+        logger.error(ReadBody.readMsgPack(pmService).toString)
         halt(BadRequest(NOK.parsingError("Bad Content Type. I am expecting =" + octet)))
       } else {
         halt(BadRequest(NOK.serverError("Bad message")))
