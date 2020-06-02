@@ -1,7 +1,7 @@
 package com.ubirch.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.crypto.utils.{ Curve, Hash }
+import com.ubirch.crypto.utils.Curve
 
 /**
   * Created by derMicha on 19/05/17.
@@ -23,16 +23,10 @@ object PublicKeyUtil extends LazyLogging {
     }
   }
 
-  /**
-    * Associate a string to a Hash algorithm used by the algorithm
-    * @param curve the string representing the curve
-    * @return the associated curve
-    */
-  def associateHash(curve: String): Hash = {
-    curve match {
-      case ECDSA => Hash.SHA256
-      case _ => Hash.SHA512
-    }
+  def curveFromString(algorithm: String): Option[Curve] = algorithm match {
+    case "ECC_ED25519" | "Ed25519" => Some(Curve.Ed25519)
+    case "ECC_ECDSA" | "ecdsa-p256v1" | "ECDSA" | "SHA256withECDSA" => Some(Curve.PRIME256V1)
+    case _ => None
   }
 
 }

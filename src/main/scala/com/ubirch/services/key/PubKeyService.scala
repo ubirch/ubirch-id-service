@@ -3,6 +3,8 @@ package com.ubirch.services.key
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
+import com.ubirch.crypto.utils.Curve
+import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
@@ -14,7 +16,7 @@ import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
 import scala.util.control.NoStackTrace
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Represents a PubKeyService to work with PublicKeys
@@ -26,6 +28,7 @@ trait PubKeyService {
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
+  def materializePublicKey(publicKey: Array[Byte], curve: Curve): Try[PubKey]
 }
 
 /**
@@ -220,6 +223,8 @@ class DefaultPubKeyService @Inject() (
     }.runToFuture
 
   }
+
+  def materializePublicKey(publicKey: Array[Byte], curve: Curve): Try[PubKey] = Try(GeneratorKeyFactory.getPubKey(publicKey, curve))
 
   private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
     if (condition) Task.raiseError(response) else Task.unit

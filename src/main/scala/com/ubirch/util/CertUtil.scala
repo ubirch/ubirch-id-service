@@ -5,10 +5,14 @@ import java.util.UUID
 
 import org.bouncycastle.asn1.x500.style.{ BCStyle, IETFUtils }
 import org.bouncycastle.asn1.x500.{ RDN, X500Name }
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.operator.DefaultAlgorithmNameFinder
 
 import scala.util.Try
 
 object CertUtil {
+
+  def CNAsUUID: X500Name => Try[UUID] = getCN _ andThen rdnToString andThen buildUUID
 
   def getCN(x500Name: X500Name): RDN = x500Name.getRDNs(BCStyle.CN)(0)
 
@@ -24,6 +28,11 @@ object CertUtil {
           new BigInteger(uuid.substring(UUID_MIDDLE), UUID_RADIX).longValue()
         )
     }
+  }
+
+  def algorithmName(algorithmIdentifier: AlgorithmIdentifier): Try[String] = Try {
+    val nameFinder = new DefaultAlgorithmNameFinder()
+    nameFinder.getAlgorithmName(algorithmIdentifier)
   }
 
 }

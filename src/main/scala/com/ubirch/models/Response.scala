@@ -44,6 +44,7 @@ object NOK {
   final val PARSING_ERROR = 'ParsingError
   final val NO_ROUTE_FOUND_ERROR = 'NoRouteFound
   final val PUBKEY_ERROR = 'PubkeyError
+  final val CRS_ERROR = 'CertRequestError
   final val DELETE_ERROR = 'DeleteError
 
   def apply(errorType: Symbol, errorMessage: String): NOK = new NOK(Response.version, 'NOK, errorType, errorMessage)
@@ -52,6 +53,7 @@ object NOK {
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)
   def noRouteFound(errorMessage: String): NOK = NOK(NO_ROUTE_FOUND_ERROR, errorMessage)
   def pubKeyError(errorMessage: String): NOK = NOK(PUBKEY_ERROR, errorMessage)
+  def crsError(errorMessage: String): NOK = NOK(CRS_ERROR, errorMessage)
   def deleteKeyError(errorMessage: String): NOK = NOK(DELETE_ERROR, errorMessage)
 
 }
