@@ -1,25 +1,20 @@
 package com.ubirch.controllers
 
-import java.util.Date
-
 import com.ubirch.controllers.concerns.ControllerBase
 import com.ubirch.models._
-import com.ubirch.services.key.{ CertService, PubKeyService }
-import com.ubirch.util.{ CertUtil, PublicKeyUtil }
+import com.ubirch.services.key.CertService
+import com.ubirch.services.key.DefaultCertService.CertServiceException
 import javax.inject._
-import org.bouncycastle.util.encoders.Base64
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.Swagger
 
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class CertController @Inject() (
     val swagger: Swagger,
     jFormats: Formats,
-    pubKeyService: PubKeyService,
     certService: CertService
 )(implicit val executor: ExecutionContext) extends ControllerBase {
 
@@ -34,31 +29,18 @@ class CertController @Inject() (
 
     logRequestInfo
 
-    ReadBody.readCSR(certService).async { mcsr =>
+    ReadBody.readCSR(certService).async { csr =>
 
-      val res = mcsr match {
-        case Some(csr) =>
-
-          (for {
-            uuid <- CertUtil.CNAsUUID(csr.getSubject)
-            algo <- CertUtil.algorithmName(csr.getSignatureAlgorithm)
-            curve <- PublicKeyUtil.associateCurve(algo)
-            pubKey <- pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve)
-            pubKeyAsBase64 <- Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded))
-            sigAsBase64 <- Try(Base64.toBase64String(csr.getSignature))
-          } yield {
-            Ok(PublicKeyInfo(algo, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date()))
-          }).recover {
-            case e =>
-              e.printStackTrace()
-              logger.error(e.getMessage)
-              BadRequest(NOK.crsError("No common name as uuid a found."))
-          }.get
-
-        case None => BadRequest(NOK.crsError("The certificate request is invalid."))
-      }
-
-      Future.successful(res)
+      certService.processCSR(csr)
+        .map(x => Ok(x))
+        .recover {
+          case e: CertServiceException =>
+            logger.error("1.1 Error registering CSR: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            BadRequest(NOK.crsError("Error registering csr"))
+          case e: Exception =>
+            logger.error("1.2 Error registering CSR: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+        }
 
     }.run
 

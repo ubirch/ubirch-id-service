@@ -8,6 +8,7 @@ import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.TaskHelpers
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -51,7 +52,7 @@ class DefaultPubKeyService @Inject() (
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService
 )(implicit scheduler: Scheduler, jsFormats: Formats)
-  extends PubKeyService with LazyLogging {
+  extends PubKeyService with TaskHelpers with LazyLogging {
 
   import DefaultPubKeyService._
 
@@ -240,9 +241,6 @@ class DefaultPubKeyService @Inject() (
     }
 
   }
-
-  private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
-    if (condition) Task.raiseError(response) else Task.unit
 
 }
 

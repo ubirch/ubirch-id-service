@@ -12,7 +12,7 @@ import scala.util.Try
 
 object CertUtil {
 
-  def CNAsUUID: X500Name => Try[UUID] = getCN _ andThen rdnToString andThen buildUUID
+  //def CNAsUUID: X500Name => Try[UUID] = getCN _ andThen rdnToString andThen buildUUID
 
   def getCN(x500Name: X500Name): RDN = x500Name.getRDNs(BCStyle.CN)(0)
 

@@ -1,6 +1,5 @@
 package com.ubirch.controllers
 
-import java.nio.file.{ Files, Paths }
 import java.util.{ Base64, UUID }
 
 import com.github.nosan.embedded.cassandra.cql.CqlScript
@@ -8,10 +7,11 @@ import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
-import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
+import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, WithFixtures }
+import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.joda.time.DateTime
-import org.scalatest.Tag
+import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.language.postfixOps
@@ -20,11 +20,7 @@ import scala.util.Try
 /**
   * Test for the Key Controller
   */
-class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka {
-
-  def loadFixture(resource: String) = {
-    Files.readAllBytes(Paths.get(resource))
-  }
+class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach {
 
   def getPublicKey(
       curveName: String,
@@ -416,6 +412,10 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
   protected override def afterAll(): Unit = {

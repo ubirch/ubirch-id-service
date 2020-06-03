@@ -67,11 +67,9 @@ trait RequestEnricher extends Handler {
 }
 
 /**
-  * Represents the base for a controllers that supports the IdentityRequest
-  * and adds helpers to handle async responses and body parsing and extraction.
-  * @param pmService Represents teh Protocol Message Service that knows how to decode bodies into
-  *                  Protocol Messages.
-  */
+ * Represents the base for a controllers that supports the IdentityRequest
+ * and adds helpers to handle async responses and body parsing and extraction.
+ */
 abstract class ControllerBase extends ScalatraServlet
   with RequestEnricher
   with FutureSupport
@@ -186,7 +184,7 @@ abstract class ControllerBase extends ScalatraServlet
 
     }
 
-    def readCSR(certService: CertService)(implicit request: HttpServletRequest): ReadBody[Option[JcaPKCS10CertificationRequest]] = {
+    def readCSR(certService: CertService)(implicit request: HttpServletRequest): ReadBody[JcaPKCS10CertificationRequest] = {
 
       val rawBody = getBytes
 
