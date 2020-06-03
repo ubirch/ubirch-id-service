@@ -38,7 +38,8 @@ class DefaultCertService @Inject() (pubKeyService: PubKeyService)(implicit sched
       cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
       uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))
 
-      algo <- liftTry(CertUtil.algorithmName(csr.getSignatureAlgorithm))(UnknownSignatureAlgorithm("Unknown Algo"))
+      algo <- lift(CertUtil.algorithmName(csr.getSignatureAlgorithm)
+        .getOrElse(csr.getPublicKey.getAlgorithm))(UnknownSignatureAlgorithm("Unknown Algorithm"))
       curve <- liftTry(PublicKeyUtil.associateCurve(algo))(UnknownCurve("Unknown curve for " + algo))
 
       pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))

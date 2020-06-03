@@ -22,8 +22,16 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   "CSR Service" must {
 
-    "register CSR" taggedAs Tag("feijoa") in {
+    "register CSR with ECDSA" taggedAs Tag("feijoa") in {
       val bytes = loadFixture("src/main/resources/fixtures/1_CSR.der")
+      post("/v1/csr/register", body = bytes) {
+        assert(jsonConverter.as[PublicKeyInfo](body).isRight)
+        status should equal(200)
+      }
+    }
+
+    "register CSR with Ed25519" taggedAs Tag("durian") in {
+      val bytes = loadFixture("src/main/resources/fixtures/3_CSR_Ed25519.der")
       post("/v1/csr/register", body = bytes) {
         assert(jsonConverter.as[PublicKeyInfo](body).isRight)
         status should equal(200)

@@ -12,8 +12,6 @@ import scala.util.Try
 
 object CertUtil {
 
-  //def CNAsUUID: X500Name => Try[UUID] = getCN _ andThen rdnToString andThen buildUUID
-
   def getCN(x500Name: X500Name): RDN = x500Name.getRDNs(BCStyle.CN)(0)
 
   def rdnToString(rdn: RDN): String = IETFUtils.valueToString(rdn.getFirst.getValue)
@@ -32,7 +30,10 @@ object CertUtil {
 
   def algorithmName(algorithmIdentifier: AlgorithmIdentifier): Try[String] = Try {
     val nameFinder = new DefaultAlgorithmNameFinder()
-    nameFinder.getAlgorithmName(algorithmIdentifier)
+    val found = nameFinder.getAlgorithmName(algorithmIdentifier)
+    //We do this to be able to recognize that no name was found.
+    if (found == algorithmIdentifier.getAlgorithm.getId) throw new Exception("Didn't find a particular algorithm")
+    else found
   }
 
   def algorithmIdentifier(name: String): Try[AlgorithmIdentifier] = Try {
