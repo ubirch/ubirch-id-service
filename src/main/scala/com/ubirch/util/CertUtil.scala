@@ -6,7 +6,7 @@ import java.util.UUID
 import org.bouncycastle.asn1.x500.style.{ BCStyle, IETFUtils }
 import org.bouncycastle.asn1.x500.{ RDN, X500Name }
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
-import org.bouncycastle.operator.DefaultAlgorithmNameFinder
+import org.bouncycastle.operator.{ DefaultAlgorithmNameFinder, DefaultSignatureAlgorithmIdentifierFinder }
 
 import scala.util.Try
 
@@ -33,6 +33,11 @@ object CertUtil {
   def algorithmName(algorithmIdentifier: AlgorithmIdentifier): Try[String] = Try {
     val nameFinder = new DefaultAlgorithmNameFinder()
     nameFinder.getAlgorithmName(algorithmIdentifier)
+  }
+
+  def algorithmIdentifier(name: String): Try[AlgorithmIdentifier] = Try {
+    val nameFinder = new DefaultSignatureAlgorithmIdentifierFinder()
+    nameFinder.find(name)
   }
 
 }

@@ -129,21 +129,19 @@ object ProtocolHelpers extends LazyLogging {
       pubKeyId: String = UUID.randomUUID().toString
   ) = {
 
-    val curve = PublicKeyUtil.associateCurve(curveName)
-    val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
-    val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-
-    val pubKeyInfo = PublicKeyInfo(
-      algorithm = curveName,
-      created = created.toDate,
-      hwDeviceId = hardwareDeviceId,
-      pubKey = newPublicKey,
-      pubKeyId = pubKeyId,
-      validNotAfter = validNotAfter.map(_.toDate),
-      validNotBefore = validNotBefore.toDate
-    )
-
     for {
+      curve <- PublicKeyUtil.associateCurve(curveName).toEither
+      newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
+      newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
+      pubKeyInfo = PublicKeyInfo(
+        algorithm = curveName,
+        created = created.toDate,
+        hwDeviceId = hardwareDeviceId,
+        pubKey = newPublicKey,
+        pubKeyId = pubKeyId,
+        validNotAfter = validNotAfter.map(_.toDate),
+        validNotBefore = validNotBefore.toDate
+      )
       publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
       signatureAsBytes <- Try(newPrivKey.sign(publicKeyInfoAsString.getBytes)).toEither
       signature <- Try(Base64.getEncoder.encodeToString(signatureAsBytes)).toEither

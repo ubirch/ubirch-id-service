@@ -1,15 +1,19 @@
 package com.ubirch.controllers
 
+import java.util.Date
+
 import com.ubirch.controllers.concerns.ControllerBase
 import com.ubirch.models._
 import com.ubirch.services.key.{ CertService, PubKeyService }
-import com.ubirch.util.CertUtil
+import com.ubirch.util.{ CertUtil, PublicKeyUtil }
 import javax.inject._
+import org.bouncycastle.util.encoders.Base64
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.Swagger
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @Singleton
 class CertController @Inject() (
@@ -38,11 +42,18 @@ class CertController @Inject() (
           (for {
             uuid <- CertUtil.CNAsUUID(csr.getSubject)
             algo <- CertUtil.algorithmName(csr.getSignatureAlgorithm)
+            curve <- PublicKeyUtil.associateCurve(algo)
+            pubKey <- pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve)
+            pubKeyAsBase64 <- Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded))
+            sigAsBase64 <- Try(Base64.toBase64String(csr.getSignature))
           } yield {
-            Simple(uuid.toString + " with " + algo)
-          }).getOrElse {
-            BadRequest(NOK.crsError("No common name as uuid a found."))
-          }
+            Ok(PublicKeyInfo(algo, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date()))
+          }).recover {
+            case e =>
+              e.printStackTrace()
+              logger.error(e.getMessage)
+              BadRequest(NOK.crsError("No common name as uuid a found."))
+          }.get
 
         case None => BadRequest(NOK.crsError("The certificate request is invalid."))
       }

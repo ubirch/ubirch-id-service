@@ -49,4 +49,6 @@ object Exceptions {
     */
   case class StoringException(message: String, reason: String) extends IdServiceException(message)
 
+  case class NoCurveException(message: String) extends IdServiceException(message)
+
 }

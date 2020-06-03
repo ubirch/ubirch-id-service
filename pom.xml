@@ -80,6 +80,10 @@
         <jcl-over-slf4j.version>1.7.25</jcl-over-slf4j.version>
         <logstash-logback-encoder.version>5.3</logstash-logback-encoder.version>
 
+
+        <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
+        <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
+
         <!-- Scalatra -->
         <scalatra.version>2.6.5</scalatra.version>
         <scalatra-scalatest.version>2.6.5</scalatra-scalatest.version>
@@ -108,6 +112,20 @@
     </repositories>
 
     <dependencies>
+
+
+        <!--BouncyCastle-->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>${bcprov-jdk15on.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>${bcpkix-jdk15on.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.ubirch</groupId>

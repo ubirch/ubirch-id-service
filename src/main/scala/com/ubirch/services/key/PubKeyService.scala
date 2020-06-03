@@ -28,7 +28,7 @@ trait PubKeyService {
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
-  def materializePublicKey(publicKey: Array[Byte], curve: Curve): Try[PubKey]
+  def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
 }
 
 /**
@@ -99,7 +99,7 @@ class DefaultPubKeyService @Inject() (
 
       key = maybeKey.get
       pubKeyInfo = key.pubKeyInfoRow
-      curve = verification.getCurve(pubKeyInfo.algorithm)
+      curve <- Task.fromTry(verification.getCurve(pubKeyInfo.algorithm))
       verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.publicKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("invalid_signature_on_key_deletion={}", publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidVerification(PublicKey.fromPublicKeyRow(key)))
@@ -224,7 +224,22 @@ class DefaultPubKeyService @Inject() (
 
   }
 
-  def materializePublicKey(publicKey: Array[Byte], curve: Curve): Try[PubKey] = Try(GeneratorKeyFactory.getPubKey(publicKey, curve))
+  def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey] = {
+
+    def recreate(bytes: Array[Byte]) = Try(GeneratorKeyFactory.getPubKey(bytes, curve))
+
+    val bytesLength = encoded.length
+    for {
+      bytesToUse <- Try {
+        //We are slicing as only the latest 64 bytes are needed to recreate the key.
+        if (curve == Curve.PRIME256V1) encoded.slice(bytesLength - 64, bytesLength) else encoded
+      }
+      pubKey <- recreate(bytesToUse)
+    } yield {
+      pubKey
+    }
+
+  }
 
   private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
     if (condition) Task.raiseError(response) else Task.unit
