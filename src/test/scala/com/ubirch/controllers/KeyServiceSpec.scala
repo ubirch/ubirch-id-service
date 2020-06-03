@@ -4,7 +4,7 @@ import java.util.{ Base64, UUID }
 
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, WithFixtures }
@@ -374,7 +374,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         (pk3, pkAsString3, _, _, pkr3) = res3
         signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
         signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
-        pubDelete3 = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
+        _ = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
 
       } yield {
 
@@ -410,6 +410,20 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
       }).getOrElse(fail())
 
+    }
+
+    "wrong body as mpack" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey/mpack", body = Array.empty) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body as json" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey", body = "") {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
     }
 
   }

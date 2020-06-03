@@ -6,7 +6,7 @@ import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, WithFixtures }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.language.postfixOps
@@ -22,7 +22,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   "CSR Service" must {
 
-    "register CSR" in {
+    "register CSR" taggedAs Tag("feijoa") in {
       val bytes = loadFixture("src/main/resources/fixtures/1_CSR.der")
       post("/v1/csr/register", body = bytes) {
         assert(jsonConverter.as[PublicKeyInfo](body).isRight)
@@ -30,9 +30,16 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
       }
     }
 
-    "wrong uuid CSR" in {
+    "wrong uuid CSR" taggedAs Tag("carambola") in {
       val bytes = loadFixture("src/main/resources/fixtures/2_CSR_Wrong_UUID.der")
       post("/v1/csr/register", body = bytes) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body" taggedAs Tag("cherimoya") in {
+      post("/v1/csr/register", body = Array.empty) {
         assert(jsonConverter.as[NOK](body).isRight)
         status should equal(400)
       }

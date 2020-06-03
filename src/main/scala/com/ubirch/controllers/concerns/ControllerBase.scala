@@ -67,9 +67,9 @@ trait RequestEnricher extends Handler {
 }
 
 /**
- * Represents the base for a controllers that supports the IdentityRequest
- * and adds helpers to handle async responses and body parsing and extraction.
- */
+  * Represents the base for a controllers that supports the IdentityRequest
+  * and adds helpers to handle async responses and body parsing and extraction.
+  */
 abstract class ControllerBase extends ScalatraServlet
   with RequestEnricher
   with FutureSupport
