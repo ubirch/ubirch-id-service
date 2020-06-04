@@ -82,9 +82,11 @@ class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, life
           }
           .attempt
 
-      }.collect {
+      }
+      .collect {
         case Right(identity) => identity
-      }.flatMap(identity => identitiesDAO.insert(identity))
+      }
+      .flatMap(identity => identitiesDAO.insert(identity))
       .onErrorHandle {
         case e: ExecutionException =>
           e.getCause match {
