@@ -102,7 +102,8 @@ class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, life
           p.failure(StoringException("Error storing data (other)", e.getMessage))
       }
       .doOnComplete(Task(p.success(())))
-      .foreachL(_ => ()).runToFuture(consumption.scheduler)
+      .foreachL(_ => ())
+      .runToFuture(consumption.scheduler)
 
     p
   }
