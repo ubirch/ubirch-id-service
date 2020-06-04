@@ -38,14 +38,14 @@ class DefaultCertService @Inject() (pubKeyService: PubKeyService)(implicit sched
       cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
       uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))
 
-      algo <- lift(CertUtil.algorithmName(csr.getSignatureAlgorithm)
+      alg <- lift(CertUtil.algorithmName(csr.getSignatureAlgorithm)
         .getOrElse(csr.getPublicKey.getAlgorithm))(UnknownSignatureAlgorithm("Unknown Algorithm"))
-      curve <- liftTry(PublicKeyUtil.associateCurve(algo))(UnknownCurve("Unknown curve for " + algo))
+      curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
 
       pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
       pubKeyAsBase64 <- lift(Base64.toBase64String(pubKey.getPublicKey.getEncoded))(EncodingException("Error encoding key into base 64"))
     } yield {
-      PublicKeyInfo(algo, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
+      PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
     }).runToFuture
 
   }
