@@ -252,12 +252,9 @@ object DefaultPubKeyService {
   abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
 
   case class ParsingError(message: String) extends PubKeyServiceException(message)
-
   case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
-
   case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
-
   case class OperationReturnsNone(message: String) extends PubKeyServiceException(message)
-
   case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
+
 }

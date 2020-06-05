@@ -18,11 +18,20 @@ import org.bouncycastle.util.encoders.{ Base64, Hex }
 import scala.util.Try
 import scala.util.control.NoStackTrace
 
+/**
+ * Basic description of what a CertService is
+ */
 trait CertService {
   def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo]
   def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest]
 }
 
+/**
+ * Default implementation of a CertService
+ * @param pubKeyService Service for managing public keys
+ * @param identitiesDAO DAO for the identities
+ * @param scheduler Executor Scheduler.
+ */
 @Singleton
 class DefaultCertService @Inject() (pubKeyService: PubKeyService, identitiesDAO: IdentitiesDAO)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
 
@@ -109,7 +118,11 @@ class DefaultCertService @Inject() (pubKeyService: PubKeyService, identitiesDAO:
 
 }
 
+/**
+ * Convinience object for the Cert Service
+ */
 object DefaultCertService {
+
   abstract class CertServiceException(message: String) extends Exception(message) with NoStackTrace
 
   case class InvalidVerification(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid verification")
