@@ -52,43 +52,23 @@ class DefaultPubKeyService @Inject() (
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService
 )(implicit scheduler: Scheduler, jsFormats: Formats)
-  extends PubKeyService with TaskHelpers with LazyLogging {
+  extends PubKeyService with TaskHelpers with ServiceMetrics with LazyLogging {
 
   import DefaultPubKeyService._
 
   val service: String = config.getString(GenericConfPaths.NAME)
 
-  val successCounter = Counter.build()
+  val successCounter: Counter = Counter.build()
     .name("pubkey_management_success")
     .help("Represents the number of public key management successes")
     .labelNames("service", "method")
     .register()
 
-  val errorCounter = Counter.build()
+  val errorCounter: Counter = Counter.build()
     .name("pubkey_management_failures")
     .help("Represents the number of public key management failures")
     .labelNames("service", "method")
     .register()
-
-  def countWhen[T](method: String)(ft: T => Boolean)(cf: CancelableFuture[T]): CancelableFuture[T] = {
-
-    def s = successCounter.labels(service, method).inc()
-    def f = errorCounter.labels(service, method).inc()
-
-    cf.onComplete {
-      case Success(t) => if (ft(t)) s else f
-      case Failure(_) => f
-    }
-    cf
-  }
-
-  def count[T](method: String)(cf: CancelableFuture[T]): CancelableFuture[T] = {
-    cf.onComplete {
-      case Success(_) => successCounter.labels(service, method).inc()
-      case Failure(_) => errorCounter.labels(service, method).inc()
-    }
-    cf
-  }
 
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
 

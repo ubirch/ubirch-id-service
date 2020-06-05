@@ -4,9 +4,12 @@ import java.io.ByteArrayInputStream
 import java.security.cert.{ CertificateFactory, X509Certificate }
 import java.util.Date
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
 import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
+import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
@@ -37,14 +40,29 @@ trait CertService {
   */
 @Singleton
 class DefaultCertService @Inject() (
+    config: Config,
     pubKeyService: PubKeyService,
     publicKeyDAO: PublicKeyRowDAO,
     identitiesDAO: IdentitiesDAO
-)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
+)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with ServiceMetrics with LazyLogging {
 
   import DefaultCertService._
 
-  override def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo] = {
+  val service: String = config.getString(GenericConfPaths.NAME)
+
+  val successCounter: Counter = Counter.build()
+    .name("cert_management_success")
+    .help("Represents the number of cert key management successes")
+    .labelNames("service", "method")
+    .register()
+
+  val errorCounter: Counter = Counter.build()
+    .name("cert_management_failures")
+    .help("Represents the number of cert management failures")
+    .labelNames("service", "method")
+    .register()
+
+  override def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo] = count("process_csr") {
     (for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
@@ -108,7 +126,7 @@ class DefaultCertService @Inject() (
     }).toEither
   }
 
-  override def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo] = {
+  override def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo] = count("process_cert_x509") {
     (for {
       _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
 
