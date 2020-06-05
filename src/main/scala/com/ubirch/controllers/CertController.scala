@@ -57,10 +57,10 @@ class CertController @Inject() (
         .recover {
           case e: CertServiceException =>
             logger.error("1.1 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            BadRequest(NOK.crsError("Error registering csr"))
+            BadRequest(NOK.certError("Error registering Cert"))
           case e: Exception =>
             logger.error("1.2 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+            InternalServerError(NOK.certError("1.2 Sorry, something went wrong on our end"))
         }
 
     }.run
