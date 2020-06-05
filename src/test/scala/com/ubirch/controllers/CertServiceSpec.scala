@@ -20,6 +20,25 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   val jsonConverter = Injector.get[JsonConverterService]
 
+  "CERT Service" must {
+    "register x509 with ECDSA" taggedAs Tag("Gooseberries") in {
+      val bytes = loadFixture("src/main/resources/fixtures/1_Cert_X509.der")
+
+      var pubKeyRes: PublicKeyInfo = null
+
+      post("/v1/cert/register", body = bytes) {
+        jsonConverter.as[PublicKeyInfo](body) match {
+          case Left(value) => fail(value)
+          case Right(value) =>
+            pubKeyRes = value
+            assert(value.isInstanceOf[PublicKeyInfo])
+        }
+        status should equal(200)
+      }
+
+    }
+  }
+
   "CSR Service" must {
 
     "register CSR with ECDSA" taggedAs Tag("feijoa") in {

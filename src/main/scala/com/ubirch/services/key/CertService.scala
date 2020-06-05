@@ -5,7 +5,7 @@ import java.security.cert.{ CertificateFactory, X509Certificate }
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityRow, PublicKeyInfo }
+import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityRow, PublicKey, PublicKeyInfo, PublicKeyRow, PublicKeyRowDAO }
 import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -36,7 +36,11 @@ trait CertService {
   * @param scheduler Executor Scheduler.
   */
 @Singleton
-class DefaultCertService @Inject() (pubKeyService: PubKeyService, identitiesDAO: IdentitiesDAO)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
+class DefaultCertService @Inject() (
+    pubKeyService: PubKeyService,
+    publicKeyDAO: PublicKeyRowDAO,
+    identitiesDAO: IdentitiesDAO
+)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
 
   import DefaultCertService._
 
@@ -124,9 +128,9 @@ class DefaultCertService @Inject() (pubKeyService: PubKeyService, identitiesDAO:
       pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
 
-      data_id <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data_id"))
+      data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      identity = Identity(uuid.toString, "X509", data_id, "This is a description")
+      identity = Identity(uuid.toString, "X509", data, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byIdAndDataId(identityRow.id, identityRow.data_id).headOptionL
@@ -137,8 +141,17 @@ class DefaultCertService @Inject() (pubKeyService: PubKeyService, identitiesDAO:
       _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
+      pubKeyInfo = PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
+      publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
+
+      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
+      res <- publicKeyDAO.insert(row).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+
     } yield {
-      PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
+      pubKeyInfo
     }).runToFuture
   }
 
