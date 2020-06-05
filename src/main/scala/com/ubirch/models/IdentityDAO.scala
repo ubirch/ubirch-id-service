@@ -21,8 +21,8 @@ trait IdentitiesQueries extends TablePointer[IdentityRow] {
   //keys ((id, data_id), category)
   def byIdAndDataIdQ(id: String, dataId: String): db.Quoted[db.EntityQuery[IdentityRow]] = quote {
     query[IdentityRow]
-      .filter(x => x.id == lift(id))
-      .filter(x => x.data_id == lift(dataId))
+      .filter(x => x.ownerId == lift(id))
+      .filter(x => x.identityId == lift(dataId))
       .map(x => x)
   }
 

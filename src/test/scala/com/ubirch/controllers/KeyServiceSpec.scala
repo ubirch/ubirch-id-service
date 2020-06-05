@@ -2,7 +2,6 @@ package com.ubirch.controllers
 
 import java.util.{ Base64, UUID }
 
-import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
@@ -447,66 +446,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     addServlet(keyController, "/*")
 
-    cassandra.executeScripts(
-      CqlScript.statements("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
-      CqlScript.statements("USE identity_system;"),
-      CqlScript.statements("drop table if exists keys;"),
-      CqlScript.statements(
-        """
-          |create table if not exists keys(
-          |    pub_key          text,
-          |    pub_key_id       text,
-          |    hw_device_id     text,
-          |    algorithm        text,
-          |    valid_not_after  timestamp,
-          |    valid_not_before timestamp,
-          |    signature         text,
-          |    raw               text,
-          |    category          text,
-          |    created           timestamp,
-          |    PRIMARY KEY (pub_key_id, hw_device_id)
-          |);
-        """.stripMargin
-      ),
-      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_hw_device_id;"),
-      CqlScript.statements(
-        """
-          |CREATE MATERIALIZED VIEW keys_hw_device_id AS
-          |SELECT *
-          |FROM keys
-          |WHERE hw_device_id is not null
-          |    and pub_key         is not null
-          |    and pub_key_id       is not null
-          |    and algorithm        is not null
-          |    and valid_not_after  is not null
-          |    and valid_not_before is not null
-          |    and signature        is not null
-          |    and raw              is not null
-          |    and category         is not null
-          |    and created          is not null
-          |PRIMARY KEY (hw_device_id, pub_key_id);
-          |""".stripMargin
-      ),
-      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_pub_key_id;"),
-      CqlScript.statements(
-        """
-          |CREATE MATERIALIZED VIEW keys_pub_key_id AS
-          |SELECT *
-          |FROM keys
-          |WHERE pub_key_id is not null
-          |    and pub_key         is not null
-          |    and hw_device_id     is not null
-          |    and algorithm        is not null
-          |    and valid_not_after  is not null
-          |    and valid_not_before is not null
-          |    and signature        is not null
-          |    and raw              is not null
-          |    and category         is not null
-          |    and created          is not null
-          |PRIMARY KEY (pub_key_id, hw_device_id);
-          |""".stripMargin
-      )
-    )
+    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
 
     super.beforeAll()
   }

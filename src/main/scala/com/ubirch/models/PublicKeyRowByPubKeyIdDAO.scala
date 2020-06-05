@@ -16,7 +16,7 @@ trait PublicKeyRowByPubKeyIdQueries extends TablePointer[PublicKeyRow] {
 
   //These represent query descriptions only
 
-  implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys_pub_key_id")
+  implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys_by_pub_key_id")
 
   def byPubKeyIdQ(pubKeyId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]

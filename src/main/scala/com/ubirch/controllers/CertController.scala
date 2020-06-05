@@ -1,13 +1,13 @@
 package com.ubirch.controllers
 
-import com.ubirch.controllers.concerns.{ControllerBase, SwaggerElements}
+import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import com.ubirch.services.key.DefaultCertService.CertServiceException
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._
-import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupportSyntax }
 
 import scala.concurrent.ExecutionContext
 
@@ -32,9 +32,9 @@ class CertController @Inject() (
       parameters bodyParam[Byte]("csr request").description("The certification request").required
       tags SwaggerElements.TAG_CERT_SERVICE
       responseMessages (
-      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error registering csr"),
-      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "1.2 Sorry, something went wrong on our end")
-    ))
+        ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error registering csr"),
+        ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "1.2 Sorry, something went wrong on our end")
+      ))
 
   post("/v1/csr/register", operation(postCsrRegister)) {
 

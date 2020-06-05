@@ -98,27 +98,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   protected override def beforeAll(): Unit = {
 
     cassandra.start()
-
-    cassandra.executeScripts(
-      CqlScript.statements("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
-      CqlScript.statements("USE identity_system;"),
-      CqlScript.statements("drop table if exists identities;"),
-      CqlScript.statements(
-        """
-          |create table identities
-          |(
-          |	id text,
-          |	data_id text,
-          |	category text,
-          |	created timestamp,
-          |	data text,
-          |	description text,
-          |	primary key ((id, data_id), category)
-          |)
-          |with clustering order by (category desc);
-        """.stripMargin
-      )
-    )
+    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
 
   }
 

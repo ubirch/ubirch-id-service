@@ -47,7 +47,7 @@ trait PubKeyService {
 class DefaultPubKeyService @Inject() (
     config: Config,
     publicKeyDAO: PublicKeyRowDAO,
-    publicKeyByHwDeviceIdDao: PublicKeyRowByHwDeviceIdDAO,
+    publicKeyByHwDeviceIdDao: PublicKeyRowByOwnerIdDAO,
     publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService
@@ -151,7 +151,7 @@ class DefaultPubKeyService @Inject() (
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_hardware_id") {
     (for {
       pubKeys <- publicKeyByHwDeviceIdDao
-        .byHwDeviceId(hwDeviceId)
+        .byOwnerId(hwDeviceId)
         .map(PublicKey.fromPublicKeyRow)
         .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
 

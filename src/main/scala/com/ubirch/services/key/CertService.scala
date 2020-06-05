@@ -5,7 +5,7 @@ import java.security.cert.{ CertificateFactory, X509Certificate }
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityRow, PublicKey, PublicKeyInfo, PublicKeyRow, PublicKeyRowDAO }
+import com.ubirch.models._
 import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -66,7 +66,7 @@ class DefaultCertService @Inject() (
       identity = Identity(uuid.toString, "CSR", data_id, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
-      exists <- identitiesDAO.byIdAndDataId(identityRow.id, identityRow.data_id).headOptionL
+      exists <- identitiesDAO.byIdAndDataId(identityRow.ownerId, identityRow.identityId).headOptionL
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
 
       res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
@@ -127,7 +127,7 @@ class DefaultCertService @Inject() (
       identity = Identity(uuid.toString, "X509", data, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
-      exists <- identitiesDAO.byIdAndDataId(identityRow.id, identityRow.data_id).headOptionL
+      exists <- identitiesDAO.byIdAndDataId(identityRow.ownerId, identityRow.identityId).headOptionL
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
 
       res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL

@@ -7,13 +7,12 @@ drop table if exists identities;
 
 create table identities
 (
-	id text,
-	data_id text,
+	owner_id text,
+	identity_id text,
 	category text,
 	created timestamp,
 	data text,
 	description text,
-	primary key ((id, data_id), category)
-)
-with clustering order by (category desc);
+	primary key (owner_id, identity_id)
+);
 

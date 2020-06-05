@@ -6,16 +6,16 @@ import com.ubirch.util.Hasher
 
 /**
   * Represents the identity data access object
-  * @param id the id of the identity
-  * @param data_id the id of the data - calculated by getting the hash256 of the data.
+  * @param ownerId the id of the identity
+  * @param identityId the id of the data - calculated by getting the hash256 of the data.
   * @param category the category/group for the data
   * @param created the date when the record was created
   * @param data the encoded cert/csr
   * @param description a brief description of the identity
   */
 case class IdentityRow(
-    id: String,
-    data_id: String,
+    ownerId: String,
+    identityId: String,
     category: String,
     created: Date,
     data: String,

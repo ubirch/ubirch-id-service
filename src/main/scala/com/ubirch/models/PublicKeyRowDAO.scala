@@ -26,7 +26,7 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 
   def byHwDeviceIdQ(hwDeviceId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.hwDeviceId == lift(hwDeviceId))
+      .filter(x => x.pubKeyInfoRow.ownerId == lift(hwDeviceId))
       .map(x => x)
   }
 
