@@ -2,8 +2,8 @@ package com.ubirch.util
 import com.roundeights.hasher.Implicits._
 
 /**
- * Simple hash helper to creates hashes.
- */
+  * Simple hash helper to creates hashes.
+  */
 trait Hasher {
 
   def hash(v: String): String = v.sha256.hex

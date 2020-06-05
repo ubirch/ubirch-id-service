@@ -1,6 +1,7 @@
 package com.ubirch.controllers.concerns
 
 import java.io.{ ByteArrayInputStream, FileOutputStream }
+import java.security.cert.X509Certificate
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
@@ -195,6 +196,22 @@ abstract class ControllerBase extends ScalatraServlet
         // _ <- Try(store(bytes))
         maybeCSR <- certService.extractCRS(bytes)
       } yield maybeCSR
+
+      ReadBody(body, rawBody.map { _._2 }.getOrElse("No Body Found"))
+
+    }
+
+    def readCert(certService: CertService)(implicit request: HttpServletRequest): ReadBody[X509Certificate] = {
+
+      val rawBody = getBytes
+
+      val body = for {
+        _body <- rawBody
+        (bytes, bytesAsString) = _body
+        _ = logger.info("body={}", bytesAsString)
+        // _ <- Try(store(bytes))
+        maybeCert <- certService.extractCert(bytes)
+      } yield maybeCert
 
       ReadBody(body, rawBody.map { _._2 }.getOrElse("No Body Found"))
 

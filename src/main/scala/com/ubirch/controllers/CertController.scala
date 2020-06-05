@@ -46,6 +46,27 @@ class CertController @Inject() (
 
   }
 
+  post("/v1/cert/register") {
+
+    logRequestInfo
+
+    ReadBody.readCert(certService).async { cert =>
+
+      certService.processCert(cert)
+        .map(x => Ok(x))
+        .recover {
+          case e: CertServiceException =>
+            logger.error("1.1 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            BadRequest(NOK.crsError("Error registering csr"))
+          case e: Exception =>
+            logger.error("1.2 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+        }
+
+    }.run
+
+  }
+
   notFound {
     logger.info("controller=CertController route_not_found={} query_string={}", requestPath, request.getQueryString)
     NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
