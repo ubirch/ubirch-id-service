@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.{ ConsumerConfPaths, ProducerConfPaths }
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
-import com.ubirch.models.{ IdentitiesDAO, Identity }
+import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityRow }
 import com.ubirch.services.lifeCycle.Lifecycle
 import com.ubirch.util.Exceptions.StoringException
 import javax.inject._
@@ -86,7 +86,7 @@ class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, life
       .collect {
         case Right(identity) => identity
       }
-      .flatMap(identity => identitiesDAO.insert(identity))
+      .flatMap(identity => identitiesDAO.insert(IdentityRow.fromIdentity(identity)))
       .onErrorHandle {
         case e: ExecutionException =>
           e.getCause match {

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.models.Identity
@@ -17,7 +18,7 @@ import scala.util.{ Failure, Random, Success }
 /**
   * Represents a simple tool to inject Identities for testing.
   */
-object DataInjectorTest {
+object DataInjectorTest extends LazyLogging {
 
   implicit lazy val scheduler: Scheduler = monix.execution.Scheduler(scala.concurrent.ExecutionContext.Implicits.global)
   implicit val formats: Formats = DefaultFormats
@@ -32,17 +33,19 @@ object DataInjectorTest {
         write(data).getBytes(StandardCharsets.UTF_8)
       }
       val production: ProducerRunner[String, Identity] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
-      val producerBootstrapServers: String = "localhost:9092"
+      override def producerBootstrapServers: String = "localhost:9092"
       val lingerMs: Int = 600
     }
 
     val count = new CountDownLatch(total)
 
     def createIdentity = {
-      def identity = Identity(UUID.randomUUID().toString, "ABC", Random.nextString(300))
+      def identity = Identity(UUID.randomUUID().toString, "ABC", Random.nextString(300), "Imported from TEST")
       producer.send("com.ubirch.identity", identity).onComplete {
-        case Success(value) => count.countDown()
-        case Failure(exception) => count.countDown()
+        case Success(_) => count.countDown()
+        case Failure(exception) =>
+          logger.error("error :=", exception)
+          count.countDown()
       }
     }
 

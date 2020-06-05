@@ -51,13 +51,13 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
     val batch = 50
     val validIdentities = (1 to batch).map { _ =>
-      val id = Identity(UUID.randomUUID().toString, "sim_import", UUID.randomUUID().toString)
+      val id = Identity(UUID.randomUUID().toString, "sim_import", UUID.randomUUID().toString, "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
 
     val invalidIdentities = (1 to batch).map { _ =>
-      val id = Identity(UUID.randomUUID().toString, "sim_import", "")
+      val id = Identity(UUID.randomUUID().toString, "sim_import", "", "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
@@ -105,12 +105,17 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
       CqlScript.statements("drop table if exists identities;"),
       CqlScript.statements(
         """
-          |create table if not exists identities (
-          |    id text,
-          |    category text,
-          |    cert text,
-          |    PRIMARY KEY (id, category)
-          |);
+          |create table identities
+          |(
+          |	id text,
+          |	data_id text,
+          |	category text,
+          |	created timestamp,
+          |	data text,
+          |	description text,
+          |	primary key ((id, data_id), category)
+          |)
+          |with clustering order by (category desc);
         """.stripMargin
       )
     )
