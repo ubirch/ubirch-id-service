@@ -132,6 +132,22 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
           |    and created          is not null
           |PRIMARY KEY (pub_key_id, hw_device_id);
           |""".stripMargin
+      ),
+      CqlScript.statements("drop table if exists identities;"),
+      CqlScript.statements(
+        """
+          |create table identities
+          |(
+          |	id text,
+          |	data_id text,
+          |	category text,
+          |	created timestamp,
+          |	data text,
+          |	description text,
+          |	primary key ((id, data_id), category)
+          |)
+          |with clustering order by (category desc);
+          |""".stripMargin
       )
     )
 

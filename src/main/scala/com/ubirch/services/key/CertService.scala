@@ -5,7 +5,7 @@ import java.security.cert.{ CertificateFactory, X509Certificate }
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.PublicKeyInfo
+import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityRow, PublicKeyInfo }
 import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -13,7 +13,7 @@ import monix.execution.{ CancelableFuture, Scheduler }
 import org.bouncycastle.operator.ContentVerifierProvider
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.bouncycastle.util.encoders.Base64
+import org.bouncycastle.util.encoders.{ Base64, Hex }
 
 import scala.util.Try
 import scala.util.control.NoStackTrace
@@ -24,7 +24,7 @@ trait CertService {
 }
 
 @Singleton
-class DefaultCertService @Inject() (pubKeyService: PubKeyService)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
+class DefaultCertService @Inject() (pubKeyService: PubKeyService, identitiesDAO: IdentitiesDAO)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
 
   import DefaultCertService._
 
@@ -43,7 +43,21 @@ class DefaultCertService @Inject() (pubKeyService: PubKeyService)(implicit sched
       curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
 
       pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
-      pubKeyAsBase64 <- lift(Base64.toBase64String(pubKey.getPublicKey.getEncoded))(EncodingException("Error encoding key into base 64"))
+      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
+
+      data_id <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
+
+      identity = Identity(uuid.toString, curve.name(), data_id, "This is a description")
+      identityRow = IdentityRow.fromIdentity(identity)
+
+      exists <- identitiesDAO.byIdAndDataId(identityRow.id, identityRow.data_id).headOptionL
+      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
+
+      res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CSR_Insert"))
+
     } yield {
       PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
     }).runToFuture
@@ -105,4 +119,7 @@ object DefaultCertService {
   case class UnknownCurve(message: String) extends CertServiceException(message)
   case class RecreationException(message: String) extends CertServiceException(message)
   case class EncodingException(message: String) extends CertServiceException(message)
+  case class IdentityAlreadyExistsException(message: String) extends CertServiceException(message)
+  case class OperationReturnsNone(message: String) extends CertServiceException(message)
 }
+
