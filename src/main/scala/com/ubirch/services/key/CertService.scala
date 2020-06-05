@@ -89,12 +89,6 @@ class DefaultCertService @Inject() (
     }
   }
 
-  private def verifyCSR(request: Array[Byte]): Boolean = {
-    val provider = new org.bouncycastle.jce.provider.BouncyCastleProvider()
-    val jcaRequest = new JcaPKCS10CertificationRequest(request).setProvider(provider)
-    verifyCSR(jcaRequest)
-  }
-
   private def verifyCSR(jcaRequest: JcaPKCS10CertificationRequest): Boolean = {
     val provider = new org.bouncycastle.jce.provider.BouncyCastleProvider()
     val key = jcaRequest.getPublicKey
@@ -176,7 +170,7 @@ class DefaultCertService @Inject() (
 }
 
 /**
-  * Convinience object for the Cert Service
+  * Convenience object for the Cert Service
   */
 object DefaultCertService {
 
