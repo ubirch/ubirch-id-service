@@ -1,13 +1,13 @@
 package com.ubirch.controllers
 
-import com.ubirch.controllers.concerns.ControllerBase
+import com.ubirch.controllers.concerns.{ControllerBase, SwaggerElements}
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import com.ubirch.services.key.DefaultCertService.CertServiceException
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._
-import org.scalatra.swagger.Swagger
+import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupportSyntax}
 
 import scala.concurrent.ExecutionContext
 
@@ -25,7 +25,18 @@ class CertController @Inject() (
     contentType = formats("json")
   }
 
-  post("/v1/csr/register") {
+  val postCsrRegister: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[PublicKeyInfo]("CSRRegister")
+      summary "Certification Signing Requests"
+      description "Validates and stores Certification Signing Requests"
+      parameters bodyParam[Byte]("csr request").description("The certification request").required
+      tags SwaggerElements.TAG_CERT_SERVICE
+      responseMessages (
+      ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error registering csr"),
+      ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "1.2 Sorry, something went wrong on our end")
+    ))
+
+  post("/v1/csr/register", operation(postCsrRegister)) {
 
     logRequestInfo
 
@@ -46,7 +57,18 @@ class CertController @Inject() (
 
   }
 
-  post("/v1/cert/register") {
+  val postCertRegister: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[PublicKeyInfo]("CertRegister")
+      summary "Creates a key in the identity service based on the cert"
+      description "Creates a key in the identity service based on the cert"
+      parameters bodyParam[Byte]("cert request").description("The X509 certificate").required
+      tags SwaggerElements.TAG_CERT_SERVICE
+      responseMessages (
+        ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error registering Cert"),
+        ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "1.2 Sorry, something went wrong on our end")
+      ))
+
+  post("/v1/cert/register", operation(postCertRegister)) {
 
     logRequestInfo
 
