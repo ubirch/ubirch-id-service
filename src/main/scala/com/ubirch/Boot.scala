@@ -2,6 +2,7 @@ package com.ubirch
 
 import com.google.inject.{ Guice, Injector, Module }
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.services.lifeCycle.JVMHook
 import com.ubirch.services.metrics.PrometheusMetrics
 
 import scala.reflect._
@@ -59,6 +60,19 @@ object InjectorHelper {
 /**
   * Util that integrates an elegant way to add shut down hooks to the JVM.
   */
+trait WithJVMHooks {
+
+  _: InjectorHelper =>
+
+  private def bootJVMHook(): JVMHook = get[JVMHook]
+
+  bootJVMHook()
+
+}
+
+/**
+  * Util that integrates an elegant way to add shut down hooks to the JVM.
+  */
 trait WithPrometheusMetrics {
 
   _: InjectorHelper =>
@@ -69,9 +83,9 @@ trait WithPrometheusMetrics {
 
 /**
   * Represents an assembly for the boot process
-  * @param modules
+  * @param modules It is the modules of the system
   */
-abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithPrometheusMetrics {
+abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithJVMHooks with WithPrometheusMetrics {
   def *[T](block: => T): Unit =
     try { block } catch {
       case e: Exception =>
