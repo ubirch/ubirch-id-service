@@ -30,6 +30,7 @@ trait CertService {
   def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo]
   def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo]
   def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest]
+  def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo]
 }
 
 /**
@@ -85,7 +86,7 @@ class DefaultCertService @Inject() (
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
-      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
+      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
       res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
@@ -146,7 +147,7 @@ class DefaultCertService @Inject() (
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
-      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
+      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
       res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
@@ -185,6 +186,41 @@ class DefaultCertService @Inject() (
     }).toEither
   }
 
+  override def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo] = count("activate_cert_x509") {
+    (for {
+
+      maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityId(activation.ownerId, activation.identityId).headOptionL
+      _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
+
+      cert <- liftTry(extractCert(Hex.decode(maybeIdentity.get.data)))(EncodingException("Error building cert"))
+      _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
+
+      cn <- lift(CertUtil.getCN(new JcaX509CertificateHolder(cert).getSubject))(InvalidCertCN(cert))
+      cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCertCN(cert))
+      uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))
+
+      alg = cert.getSigAlgName
+      curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
+
+      pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
+      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
+
+      data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
+
+      pubKeyInfo = PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
+      publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
+
+      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
+      res <- publicKeyDAO.insert(row).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+
+    } yield {
+      pubKeyInfo
+    }).runToFuture
+  }
+
 }
 
 /**
@@ -205,6 +241,7 @@ object DefaultCertService {
   case class RecreationException(message: String) extends CertServiceException(message)
   case class EncodingException(message: String) extends CertServiceException(message)
   case class IdentityAlreadyExistsException(message: String) extends CertServiceException(message)
+  case class IdentityNotFoundException(message: String) extends CertServiceException(message)
   case class OperationReturnsNone(message: String) extends CertServiceException(message)
 }
 

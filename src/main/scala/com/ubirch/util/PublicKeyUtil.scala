@@ -16,7 +16,7 @@ import scala.util.{ Failure, Success, Try }
   */
 object PublicKeyUtil extends LazyLogging {
 
-  final val ECDSA_names = List("ecdsa-p256v1", "ECC_ECDSA", "ECDSA", "SHA256withECDSA")
+  final val ECDSA_names = List("ecdsa-p256v1", "ECC_ECDSA", "ECDSA", "SHA256withECDSA", "SHA512withECDSA")
   final val EDDSA_names = List("ed25519-sha-512", "ECC_ED25519", "Ed25519", "1.3.101.112")
 
   final val ECDSA = ECDSA_names.headOption.getOrElse("CURVE WITH NO NAME")

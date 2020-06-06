@@ -438,7 +438,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
   }
 
   protected override def beforeAll(): Unit = {
-
+    CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
     cassandra.start()
 

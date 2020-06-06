@@ -42,6 +42,8 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
       .map(x => x)
   }
 
+  def selectAllQ: db.Quoted[db.EntityQuery[PublicKeyRow]] = quote(query[PublicKeyRow])
+
 }
 
 /**
@@ -63,5 +65,7 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) exten
   def delete(pubKeyId: String): Observable[Unit] = run(deleteQ(pubKeyId))
 
   def getSome(take: Int): Observable[PublicKeyRow] = run(getSomeQ(take))
+
+  def selectAll: Observable[PublicKeyRow] = run(selectAllQ)
 
 }
