@@ -5,8 +5,6 @@ import io.getquill.{ CassandraStreamContext, SnakeCase }
 import javax.inject.{ Inject, Singleton }
 import monix.reactive.Observable
 
-import scala.concurrent.ExecutionContext
-
 /**
   * Represents the queries for the key column family.
   */
@@ -49,10 +47,9 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 /**
   * Represents the Data Access Object for the PublicKey Queries
   * @param connectionService Represents the Connection to Cassandra
-  * @param ec Represents the execution context for async processes.
   */
 @Singleton
-class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends PublicKeyRowQueries {
+class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) extends PublicKeyRowQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._

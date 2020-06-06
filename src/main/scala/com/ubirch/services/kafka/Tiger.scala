@@ -86,7 +86,16 @@ class DefaultTiger @Inject() (identitiesDAO: IdentitiesDAO, config: Config, life
       .collect {
         case Right(identity) => identity
       }
-      .flatMap(identity => identitiesDAO.insert(IdentityRow.fromIdentity(identity)))
+      .flatMap { identity =>
+        identitiesDAO
+          .insertIfNotExists(IdentityRow.fromIdentity(identity))
+          .map(x => (identity, x))
+      }
+      .flatMap { case (identity, c) =>
+        if (c < 1) logger.warn("identity_already_exists={}", identity.toString)
+        else logger.info("identity_inserted={}", identity.toString)
+        Observable.unit
+      }
       .onErrorHandle {
         case e: ExecutionException =>
           e.getCause match {

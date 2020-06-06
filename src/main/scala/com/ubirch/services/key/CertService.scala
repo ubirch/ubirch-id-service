@@ -84,7 +84,7 @@ class DefaultCertService @Inject() (
       identity = Identity(Hasher.hash(data), uuid.toString, "CSR", data, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
-      exists <- identitiesDAO.byIdAndDataId(identityRow.ownerId, identityRow.identityId).headOptionL
+      exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
 
       res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
@@ -145,7 +145,7 @@ class DefaultCertService @Inject() (
       identity = Identity(Hasher.hash(data), uuid.toString, "X.509", data, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
-      exists <- identitiesDAO.byIdAndDataId(identityRow.ownerId, identityRow.identityId).headOptionL
+      exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(cnAsString))
 
       res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
