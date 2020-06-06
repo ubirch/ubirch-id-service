@@ -8,7 +8,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
-import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
+import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil, TaskHelpers }
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -79,9 +79,9 @@ class DefaultCertService @Inject() (
       pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
 
-      data_id <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
+      data <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
 
-      identity = Identity(uuid.toString, "CSR", data_id, "This is a description")
+      identity = Identity(Hasher.hash(data), uuid.toString, "CSR", data, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byIdAndDataId(identityRow.ownerId, identityRow.identityId).headOptionL
@@ -142,7 +142,7 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      identity = Identity(uuid.toString, "X509", data, "This is a description")
+      identity = Identity(Hasher.hash(data), uuid.toString, "X.509", data, "This is a description")
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byIdAndDataId(identityRow.ownerId, identityRow.identityId).headOptionL

@@ -1,9 +1,13 @@
 package com.ubirch.util
 
+import java.security.KeyPairGenerator
+import java.security.spec.ECGenParameterSpec
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
 import com.ubirch.util.Exceptions.NoCurveException
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 import scala.util.{ Failure, Success, Try }
 
@@ -27,5 +31,12 @@ object PublicKeyUtil extends LazyLogging {
   }
 
   def pubKey(pubKeyBytes: Array[Byte], curve: Curve): PubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, curve)
+
+  def provider = {
+    val provider = new BouncyCastleProvider
+    val kpg = KeyPairGenerator.getInstance("EC", provider)
+    kpg.initialize(new ECGenParameterSpec("PRIME256V1"))
+    kpg
+  }
 
 }

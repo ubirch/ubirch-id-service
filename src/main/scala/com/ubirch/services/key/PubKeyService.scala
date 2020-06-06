@@ -16,8 +16,8 @@ import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
+import scala.util.Try
 import scala.util.control.NoStackTrace
-import scala.util.{ Failure, Success, Try }
 
 /**
   * Represents a PubKeyService to work with PublicKeys

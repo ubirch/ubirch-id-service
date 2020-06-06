@@ -9,6 +9,7 @@ package com.ubirch.models
   */
 case class Identity(
     id: String,
+    ownerId: String,
     category: String,
     data: String,
     description: String

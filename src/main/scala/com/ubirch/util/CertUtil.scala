@@ -1,11 +1,16 @@
 package com.ubirch.util
 
 import java.math.BigInteger
+import java.security.KeyPairGenerator
 import java.util.UUID
 
+import com.ubirch.cert.BCCertGen
+import com.ubirch.models.Identity
+import org.apache.commons.codec.binary.Hex
 import org.bouncycastle.asn1.x500.style.{ BCStyle, IETFUtils }
 import org.bouncycastle.asn1.x500.{ RDN, X500Name }
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.jcajce.BCFKSLoadStoreParameter.SignatureAlgorithm
 import org.bouncycastle.operator.{ DefaultAlgorithmNameFinder, DefaultSignatureAlgorithmIdentifierFinder }
 
 import scala.util.Try
@@ -39,6 +44,30 @@ object CertUtil {
   def algorithmIdentifier(name: String): Try[AlgorithmIdentifier] = Try {
     val nameFinder = new DefaultSignatureAlgorithmIdentifierFinder()
     nameFinder.find(name)
+  }
+
+  def createCert(uuid: UUID)(kpg: KeyPairGenerator): Identity = {
+    val kp = kpg.generateKeyPair
+
+    val xCert = BCCertGen.generate(
+      kp.getPrivate,
+      kp.getPublic,
+      365,
+      SignatureAlgorithm.SHA512withECDSA.toString,
+      true,
+      uuid.toString
+    )
+
+    val encodedCert: String = Hex.encodeHexString(xCert.getEncoded)
+
+    Identity(
+      id = Hasher.hash(encodedCert),
+      ownerId = uuid.toString,
+      category = "X.509",
+      data = encodedCert,
+      description = "This is a description for " + uuid
+    )
+
   }
 
 }

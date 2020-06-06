@@ -11,6 +11,7 @@ import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ IdentitiesDAO, Identity }
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.{ CertUtil, PublicKeyUtil }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 
@@ -49,15 +50,18 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     val jsonConverter = Injector.get[JsonConverterService]
     val identitiesDAO = Injector.get[IdentitiesDAO]
 
+    val provider = PublicKeyUtil.provider
+
     val batch = 50
+    def ownerId = UUID.randomUUID()
     val validIdentities = (1 to batch).map { _ =>
-      val id = Identity(UUID.randomUUID().toString, "sim_import", UUID.randomUUID().toString, "this is a description")
+      val id = CertUtil.createCert(ownerId)(provider)
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
 
     val invalidIdentities = (1 to batch).map { _ =>
-      val id = Identity(UUID.randomUUID().toString, "sim_import", "", "this is a description")
+      val id = Identity("", ownerId.toString, "sim_import", "", "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }

@@ -8,12 +8,13 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.models.Identity
+import com.ubirch.util.{ CertUtil, PublicKeyUtil }
 import monix.execution.Scheduler
 import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
 import org.json4s.jackson.Serialization.write
 import org.json4s.{ DefaultFormats, Formats }
 
-import scala.util.{ Failure, Random, Success }
+import scala.util.{ Failure, Success }
 
 /**
   * Represents a simple tool to inject Identities for testing.
@@ -25,7 +26,7 @@ object DataInjectorTest extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
 
-    val total = 1000000
+    val total = 1000
 
     val producer = new ExpressProducer[String, Identity] {
       val keySerializer: Serializer[String] = new StringSerializer
@@ -39,8 +40,10 @@ object DataInjectorTest extends LazyLogging {
 
     val count = new CountDownLatch(total)
 
+    val provider = PublicKeyUtil.provider
+
     def createIdentity = {
-      def identity = Identity(UUID.randomUUID().toString, "ABC", Random.nextString(300), "Imported from TEST")
+      def identity = CertUtil.createCert(UUID.randomUUID())(provider)
       producer.send("com.ubirch.identity", identity).onComplete {
         case Success(_) => count.countDown()
         case Failure(exception) =>
