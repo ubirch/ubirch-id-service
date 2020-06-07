@@ -1,6 +1,6 @@
 package com.ubirch.services.cluster
 
-import com.github.nosan.embedded.cassandra.cql.CqlScript
+import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 import com.google.inject.Guice
 import com.ubirch.{ Binder, EmbeddedCassandra, TestBase }
 
@@ -48,11 +48,11 @@ class ClusterSpec extends TestBase with EmbeddedCassandra {
 
   override protected def beforeAll(): Unit = {
     cassandra.start()
-    cassandra.executeScripts(
-      CqlScript.statements("CREATE KEYSPACE IF NOT EXISTS identity_system  WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };"),
-      CqlScript.statements("drop table if exists identity_system.identities;"),
-      CqlScript.statements("USE identity_system;"),
-      CqlScript.statements(
+    List(
+      CqlScript.ofString("CREATE KEYSPACE IF NOT EXISTS identity_system  WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };"),
+      CqlScript.ofString("drop table if exists identity_system.identities;"),
+      CqlScript.ofString("USE identity_system;"),
+      CqlScript.ofString(
         """
           |create table if not exists identities (
           |    id text,
@@ -62,9 +62,9 @@ class ClusterSpec extends TestBase with EmbeddedCassandra {
           |);
         """.stripMargin
       ),
-      CqlScript.statements(
+      CqlScript.ofString(
         "insert into identities (id, category, cert) values ('522f3e64-6ee5-470c-8b66-9edb0cfbf3b1', 'MYID', 'This is a cert');".stripMargin
       )
-    )
+    ).foreach(x => x.forEachStatement(connection.execute _))
   }
 }

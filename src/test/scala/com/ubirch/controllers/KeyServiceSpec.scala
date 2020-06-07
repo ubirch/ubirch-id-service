@@ -3,7 +3,7 @@ package com.ubirch.controllers
 import java.nio.file.{ Files, Paths }
 import java.util.{ Base64, UUID }
 
-import com.github.nosan.embedded.cassandra.cql.CqlScript
+import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
@@ -435,11 +435,11 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     addServlet(keyController, "/*")
 
-    cassandra.executeScripts(
-      CqlScript.statements("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
-      CqlScript.statements("USE identity_system;"),
-      CqlScript.statements("drop table if exists keys;"),
-      CqlScript.statements(
+    List(
+      CqlScript.ofString("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
+      CqlScript.ofString("USE identity_system;"),
+      CqlScript.ofString("drop table if exists keys;"),
+      CqlScript.ofString(
         """
           |create table if not exists keys(
           |    pub_key          text,
@@ -456,8 +456,8 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |);
         """.stripMargin
       ),
-      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_hw_device_id;"),
-      CqlScript.statements(
+      CqlScript.ofString("drop MATERIALIZED VIEW IF exists keys_hw_device_id;"),
+      CqlScript.ofString(
         """
           |CREATE MATERIALIZED VIEW keys_hw_device_id AS
           |SELECT *
@@ -475,8 +475,8 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |PRIMARY KEY (hw_device_id, pub_key_id);
           |""".stripMargin
       ),
-      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_pub_key_id;"),
-      CqlScript.statements(
+      CqlScript.ofString("drop MATERIALIZED VIEW IF exists keys_pub_key_id;"),
+      CqlScript.ofString(
         """
           |CREATE MATERIALIZED VIEW keys_pub_key_id AS
           |SELECT *
@@ -494,7 +494,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           |PRIMARY KEY (pub_key_id, hw_device_id);
           |""".stripMargin
       )
-    )
+    ).foreach(x => x.forEachStatement(connection.execute _))
 
     super.beforeAll()
   }

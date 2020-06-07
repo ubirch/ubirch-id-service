@@ -70,7 +70,7 @@
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <quill.cassandra.version>3.4.1</quill.cassandra.version>
         <embedded-kafka>2.3.0</embedded-kafka>
-        <embedded-cassandra-test>1.2.9</embedded-cassandra-test>
+        <embedded-cassandra>3.0.3</embedded-cassandra>
 
         <guice.version>4.1.0</guice.version>
 
@@ -289,8 +289,8 @@
 
         <dependency>
             <groupId>com.github.nosan</groupId>
-            <artifactId>embedded-cassandra-test</artifactId>
-            <version>${embedded-cassandra-test}</version>
+            <artifactId>embedded-cassandra</artifactId>
+            <version>${embedded-cassandra}</version>
         </dependency>
 
         <dependency>

@@ -2,7 +2,7 @@ package com.ubirch.services.kafka
 
 import java.util.UUID
 
-import com.github.nosan.embedded.cassandra.cql.CqlScript
+import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.ConfPaths.{ ConsumerConfPaths, ProducerConfPaths }
@@ -85,9 +85,11 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   }
 
   override protected def beforeEach(): Unit = {
-    cassandra.executeScripts(
-      CqlScript.statements("truncate identity_system.identities;")
-    )
+
+    CqlScript
+      .ofString("truncate identity_system.identities;")
+      .forEachStatement(connection.execute _)
+
     CollectorRegistry.defaultRegistry.clear()
   }
 
@@ -99,11 +101,11 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
     cassandra.start()
 
-    cassandra.executeScripts(
-      CqlScript.statements("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
-      CqlScript.statements("USE identity_system;"),
-      CqlScript.statements("drop table if exists identities;"),
-      CqlScript.statements(
+    List(
+      CqlScript.ofString("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
+      CqlScript.ofString("USE identity_system;"),
+      CqlScript.ofString("drop table if exists identities;"),
+      CqlScript.ofString(
         """
           |create table if not exists identities (
           |    id text,
@@ -113,7 +115,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
           |);
         """.stripMargin
       )
-    )
+    ).foreach(x => x.forEachStatement(connection.execute _))
 
   }
 
