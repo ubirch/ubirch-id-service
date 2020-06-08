@@ -35,7 +35,10 @@ trait CertService {
 
 /**
   * Default implementation of a CertService
+  *
+  * @param config Represents a config object
   * @param pubKeyService Service for managing public keys
+  * @param publicKeyDAO DAO for keys
   * @param identitiesDAO DAO for the identities
   * @param scheduler Executor Scheduler.
   */

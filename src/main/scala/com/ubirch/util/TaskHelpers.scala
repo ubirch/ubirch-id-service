@@ -4,6 +4,10 @@ import monix.eval.Task
 
 import scala.util.Try
 
+/**
+  * A simple helper for making tasks easier to deal with for when wrting for
+  * comprehensions
+  */
 trait TaskHelpers {
 
   def escape[A](task: Task[A])(f: Throwable): Task[A] =

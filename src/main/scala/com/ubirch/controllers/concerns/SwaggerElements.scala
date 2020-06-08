@@ -8,7 +8,7 @@ object SwaggerElements {
   val INTERNAL_ERROR_CODE_500 = 500
 
   val TAG_KEY_SERVICE = "Key Service"
-  val TAG_CERT_SERVICE = "Cert Controller Service"
+  val TAG_CERT_SERVICE = "Cert Service"
   val TAG_WELCOME = "Welcome"
   val TAG_HEALTH = "Health"
 

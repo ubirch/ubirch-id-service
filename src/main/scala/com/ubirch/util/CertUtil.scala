@@ -15,6 +15,9 @@ import org.bouncycastle.operator.{ DefaultAlgorithmNameFinder, DefaultSignatureA
 
 import scala.util.Try
 
+/**
+  * A helper for daily operations on certs
+  */
 object CertUtil {
 
   def getCN(x500Name: X500Name): RDN = x500Name.getRDNs(BCStyle.CN)(0)
