@@ -10,7 +10,7 @@ import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
   * Represents a Data Transfer Object for the Public Key
   * @param algorithm Represents the algorithm that the key supports
   * @param created Represents the creation time for the key. This is value is set by the user.
-  * @param hwDeviceId Represents the hardware id of the device
+  * @param hwDeviceId Represents the owner id of the identity
   * @param pubKey Represents the public key
   * @param pubKeyId Represents the public key id. If not provided, it is set as the pubKey.
   * @param validNotAfter Represents when in the future the key should not be valid anymore.
@@ -74,7 +74,7 @@ object PublicKeyInfo {
     PublicKeyInfo(
       publicKeyInfoRow.algorithm,
       publicKeyInfoRow.created,
-      publicKeyInfoRow.hwDeviceId,
+      publicKeyInfoRow.ownerId,
       publicKeyInfoRow.pubKey,
       publicKeyInfoRow.pubKeyId,
       publicKeyInfoRow.validNotAfter,

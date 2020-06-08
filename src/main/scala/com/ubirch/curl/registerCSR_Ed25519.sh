@@ -11,5 +11,5 @@ fi
 
 echo "=> host: $host"
 
-curl -s -X POST --data-binary @packet3.mpack $host/api/keyService/v1/pubkey/mpack | jq .
+curl -s -X POST --header "Content-Type:application/octet-stream" --data-binary @registerCSR_Ed25519.der $host/api/certs/v1/csr/register | jq .
 

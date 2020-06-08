@@ -32,8 +32,7 @@ class KeyController @Inject() (
     jFormats: Formats,
     pubKeyService: PubKeyService,
     pmService: ProtocolMessageService
-)(implicit val executor: ExecutionContext)
-  extends ControllerBase(pmService) {
+)(implicit val executor: ExecutionContext) extends ControllerBase {
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -110,7 +109,7 @@ class KeyController @Inject() (
     (apiOperation[String]("getV1CurrentHardwareId")
       summary "queries all currently valid public keys for this hardwareId"
       description "queries all currently valid public keys based on the hardwareId"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys")
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No hardwareId parameter found in path"),
@@ -140,7 +139,7 @@ class KeyController @Inject() (
     (apiOperation[String]("postV1PubKey")
       summary "stores new public key"
       description "stores the given public key with its unique pubKeyID"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters bodyParam[String]("pubkey").description("the new public key object with the pubKey that should be stored for the unique pubKeyId - also part of the pub key object - in the key registry to be able to find the public key; pubKeyId may not exist already")
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error creating pub key"),
@@ -171,7 +170,7 @@ class KeyController @Inject() (
     (apiOperation[String]("postV1PubKeyMsgPack")
       summary "stores new public key received as msgpack format"
       description "stores the given public key with its unique pubKeyID"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       consumes "application/octet-stream"
       produces "application/json"
       parameters bodyParam[String]("pubkey").description("a mgspack representation of the public key registration. The format follows both the json structure (with binary values instead of encoded) as well as the [ubirch-protocol](https://github.com/ubirch/ubirch-protocol#key-registration) format.")
@@ -184,7 +183,7 @@ class KeyController @Inject() (
 
     logRequestInfo
 
-    ReadBody.readMsgPack
+    ReadBody.readMsgPack(pmService)
       .async { up =>
         pubKeyService.create(up.pm, up.rawProtocolMessage)
           .map { key => Ok(key) }
@@ -204,7 +203,7 @@ class KeyController @Inject() (
     (apiOperation[String]("deleteV1PubKey")
       summary "delete a public key"
       description "delete a public key"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
@@ -240,13 +239,13 @@ class KeyController @Inject() (
         request.header("content-type").getOrElse("") != octet
       )) {
 
-        logger.error(ReadBody.readMsgPack.toString)
+        logger.error(ReadBody.readMsgPack(pmService).toString)
         halt(BadRequest(NOK.parsingError("Bad Content Type. I am expecting =" + octet)))
       } else {
         halt(BadRequest(NOK.serverError("Bad message")))
       }
     case e =>
-      logger.error("error :=", e)
+      logger.error("error key_controller :=", e)
       contentType = formats("json")
       logRequestInfo
       halt(BadRequest(NOK.serverError("There was an error. Please try again.")))

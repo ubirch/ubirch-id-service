@@ -29,25 +29,26 @@ class PublicKeySpec extends TestBase {
 
       def go(curveName: String) {
 
-        val curve = PublicKeyUtil.associateCurve(curveName)
-        val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
-        val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
         val hardwareDeviceId = UUID.randomUUID()
 
         val now = DateUtil.nowUTC
         val inSixMonths = now.plusMonths(6)
         val pubKeyUUID = UUID.randomUUID()
-        val pubKeyInfo = PublicKeyInfo(
-          algorithm = curveName,
-          created = now.toDate,
-          hwDeviceId = hardwareDeviceId.toString,
-          pubKey = newPublicKey,
-          pubKeyId = pubKeyUUID.toString,
-          validNotAfter = Some(inSixMonths.toDate),
-          validNotBefore = now.toDate
-        )
 
         val res = for {
+          curve <- PublicKeyUtil.associateCurve(curveName).toEither
+          newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
+          newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
+          pubKeyInfo = PublicKeyInfo(
+            algorithm = curveName,
+            created = now.toDate,
+            hwDeviceId = hardwareDeviceId.toString,
+            pubKey = newPublicKey,
+            pubKeyId = pubKeyUUID.toString,
+            validNotAfter = Some(inSixMonths.toDate),
+            validNotBefore = now.toDate
+          )
+
           publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
           signature <- Try(Base64.getEncoder.encodeToString(newPrivKey.sign(publicKeyInfoAsString.getBytes))).toEither
           publicKey = PublicKey(pubKeyInfo, signature)

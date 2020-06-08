@@ -1,17 +1,16 @@
 package com.ubirch.controllers
 
-import java.nio.file.{ Files, Paths }
 import java.util.{ Base64, UUID }
 
-import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
-import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
+import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, WithFixtures }
+import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.joda.time.DateTime
-import org.scalatest.Tag
+import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.language.postfixOps
@@ -20,11 +19,7 @@ import scala.util.Try
 /**
   * Test for the Key Controller
   */
-class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka {
-
-  def loadFixture(resource: String) = {
-    Files.readAllBytes(Paths.get(resource))
-  }
+class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach {
 
   def getPublicKey(
       curveName: String,
@@ -34,21 +29,19 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       hardwareDeviceId: UUID = UUID.randomUUID()
   ) = {
 
-    val curve = PublicKeyUtil.associateCurve(curveName)
-    val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
-    val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-
-    val pubKeyInfo = PublicKeyInfo(
-      algorithm = curveName,
-      created = created.toDate,
-      hwDeviceId = hardwareDeviceId.toString,
-      pubKey = newPublicKey,
-      pubKeyId = newPublicKey,
-      validNotAfter = validNotAfter.map(_.toDate),
-      validNotBefore = validNotBefore.toDate
-    )
-
     for {
+      curve <- PublicKeyUtil.associateCurve(curveName).toEither
+      newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
+      newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
+      pubKeyInfo = PublicKeyInfo(
+        algorithm = curveName,
+        created = created.toDate,
+        hwDeviceId = hardwareDeviceId.toString,
+        pubKey = newPublicKey,
+        pubKeyId = newPublicKey,
+        validNotAfter = validNotAfter.map(_.toDate),
+        validNotBefore = validNotBefore.toDate
+      )
       publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
       signatureAsBytes <- Try(newPrivKey.sign(publicKeyInfoAsString.getBytes)).toEither
       signature <- Try(Base64.getEncoder.encodeToString(signatureAsBytes)).toEither
@@ -380,7 +373,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         (pk3, pkAsString3, _, _, pkr3) = res3
         signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
         signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
-        pubDelete3 = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
+        _ = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
 
       } yield {
 
@@ -418,6 +411,24 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
+    "wrong body as mpack" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey/mpack", body = Array.empty) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body as json" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey", body = "") {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
   protected override def afterAll(): Unit = {
@@ -427,7 +438,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
   }
 
   protected override def beforeAll(): Unit = {
-
+    CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
     cassandra.start()
 
@@ -435,66 +446,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     addServlet(keyController, "/*")
 
-    cassandra.executeScripts(
-      CqlScript.statements("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
-      CqlScript.statements("USE identity_system;"),
-      CqlScript.statements("drop table if exists keys;"),
-      CqlScript.statements(
-        """
-          |create table if not exists keys(
-          |    pub_key          text,
-          |    pub_key_id       text,
-          |    hw_device_id     text,
-          |    algorithm        text,
-          |    valid_not_after  timestamp,
-          |    valid_not_before timestamp,
-          |    signature         text,
-          |    raw               text,
-          |    category          text,
-          |    created           timestamp,
-          |    PRIMARY KEY (pub_key_id, hw_device_id)
-          |);
-        """.stripMargin
-      ),
-      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_hw_device_id;"),
-      CqlScript.statements(
-        """
-          |CREATE MATERIALIZED VIEW keys_hw_device_id AS
-          |SELECT *
-          |FROM keys
-          |WHERE hw_device_id is not null
-          |    and pub_key         is not null
-          |    and pub_key_id       is not null
-          |    and algorithm        is not null
-          |    and valid_not_after  is not null
-          |    and valid_not_before is not null
-          |    and signature        is not null
-          |    and raw              is not null
-          |    and category         is not null
-          |    and created          is not null
-          |PRIMARY KEY (hw_device_id, pub_key_id);
-          |""".stripMargin
-      ),
-      CqlScript.statements("drop MATERIALIZED VIEW IF exists keys_pub_key_id;"),
-      CqlScript.statements(
-        """
-          |CREATE MATERIALIZED VIEW keys_pub_key_id AS
-          |SELECT *
-          |FROM keys
-          |WHERE pub_key_id is not null
-          |    and pub_key         is not null
-          |    and hw_device_id     is not null
-          |    and algorithm        is not null
-          |    and valid_not_after  is not null
-          |    and valid_not_before is not null
-          |    and signature        is not null
-          |    and raw              is not null
-          |    and category         is not null
-          |    and created          is not null
-          |PRIMARY KEY (pub_key_id, hw_device_id);
-          |""".stripMargin
-      )
-    )
+    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
 
     super.beforeAll()
   }

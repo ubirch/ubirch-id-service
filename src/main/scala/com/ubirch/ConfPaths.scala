@@ -31,7 +31,8 @@ object ConfPaths {
 
   trait ConsumerConfPaths {
     final val BOOTSTRAP_SERVERS = "identitySystem.kafkaConsumer.bootstrapServers"
-    final val TOPICS_PATH = "identitySystem.kafkaConsumer.topics"
+    final val IMPORT_TOPIC_PATH = "identitySystem.kafkaConsumer.import"
+    final val ACTIVATION_TOPIC_PATH = "identitySystem.kafkaConsumer.activation"
     final val MAX_POLL_RECORDS = "identitySystem.kafkaConsumer.maxPollRecords"
     final val GROUP_ID_PATH = "identitySystem.kafkaConsumer.groupId"
     final val GRACEFUL_TIMEOUT_PATH = "identitySystem.kafkaConsumer.gracefulTimeout"

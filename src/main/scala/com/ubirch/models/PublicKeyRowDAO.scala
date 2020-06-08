@@ -5,8 +5,6 @@ import io.getquill.{ CassandraStreamContext, SnakeCase }
 import javax.inject.{ Inject, Singleton }
 import monix.reactive.Observable
 
-import scala.concurrent.ExecutionContext
-
 /**
   * Represents the queries for the key column family.
   */
@@ -26,7 +24,7 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 
   def byHwDeviceIdQ(hwDeviceId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.hwDeviceId == lift(hwDeviceId))
+      .filter(x => x.pubKeyInfoRow.ownerId == lift(hwDeviceId))
       .map(x => x)
   }
 
@@ -44,15 +42,16 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
       .map(x => x)
   }
 
+  def selectAllQ: db.Quoted[db.EntityQuery[PublicKeyRow]] = quote(query[PublicKeyRow])
+
 }
 
 /**
   * Represents the Data Access Object for the PublicKey Queries
   * @param connectionService Represents the Connection to Cassandra
-  * @param ec Represents the execution context for async processes.
   */
 @Singleton
-class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService)(implicit val ec: ExecutionContext) extends PublicKeyRowQueries {
+class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) extends PublicKeyRowQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._
@@ -66,5 +65,7 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService)(impli
   def delete(pubKeyId: String): Observable[Unit] = run(deleteQ(pubKeyId))
 
   def getSome(take: Int): Observable[PublicKeyRow] = run(getSomeQ(take))
+
+  def selectAll: Observable[PublicKeyRow] = run(selectAllQ)
 
 }

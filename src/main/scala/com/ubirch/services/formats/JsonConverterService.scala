@@ -3,7 +3,7 @@ package com.ubirch.services.formats
 import javax.inject._
 import org.json4s.native.JsonMethods.{ compact, render }
 import org.json4s.native.Serialization.{ read, write }
-import org.json4s.{ Formats, JValue }
+import org.json4s.{ Extraction, Formats, JValue }
 
 /**
   * Represents an internal service or component for managing Json.
@@ -37,6 +37,25 @@ class JsonConverterService @Inject() (implicit formats: Formats) {
       s <- toString[T](obj)
       jv <- toJValue(s)
     } yield jv
+  }
+
+  def as[T: Manifest](v1: JValue, camelize: Boolean) = {
+    try {
+      Right(Extraction.extract[T](v1))
+    } catch {
+      case e: Exception =>
+        Left(e)
+    }
+
+  }
+
+  def as[T: Manifest](value: String): Either[Exception, T] = {
+    try {
+      Right(read[T](value))
+    } catch {
+      case e: Exception =>
+        Left(e)
+    }
   }
 
 }
