@@ -36,14 +36,34 @@ trait IdentitiesQueries extends TablePointer[IdentityRow] {
 /**
   * Represents the Data Access Object for the Identity Queries
   * @param connectionService Represents the Connection to Cassandra
-  * @param ec Represents the execution context for async processes.
+  * @param scheduler Represents the execution context scheduler.
   */
-class IdentitiesDAO @Inject() (val connectionService: ConnectionService)(implicit scheduler: Scheduler) extends IdentitiesQueries {
+class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identityByStateDAO: IdentityByStateDAO)(implicit scheduler: Scheduler) extends IdentitiesQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._
 
   def insert(identityRow: IdentityRow): Observable[Unit] = run(insertQ(identityRow))
+
+  def insertWithState(identityRow: IdentityRow, state: State): Observable[Unit] = {
+
+    for {
+      _ <- run(insertQ(identityRow))
+      byState = IdentityByStateRow.fromIdentityRow(identityRow, state)
+      _ <- identityByStateDAO.insert(byState)
+    } yield ()
+
+  }
+
+  def insertWithStateIfNotExists(identityRow: IdentityRow, state: State): Observable[Int] = {
+    byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId)
+      .count
+      .flatMap { x =>
+        if (x > 0) Observable(0)
+        else insertWithState(identityRow, state).map(_ => 2) // Two because two records are inserted
+      }
+
+  }
 
   def insertIfNotExists(identityRow: IdentityRow): Observable[Int] = {
     byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId)

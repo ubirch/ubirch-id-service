@@ -89,6 +89,19 @@ object EmbeddedCassandra {
         |	primary key (owner_id, identity_id)
         |);
         |""".stripMargin
+    ),
+    CqlScript.statements("drop table if exists identities_by_state;"),
+    CqlScript.statements(
+      """
+        |create table identities_by_state
+        |(
+        |    owner_id text,
+        |    identity_id text,
+        |    state text,
+        |    created timestamp,
+        |    primary key (identity_id, state)
+        |);
+        |""".stripMargin
     )
   )
 }

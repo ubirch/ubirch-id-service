@@ -11,7 +11,7 @@ import com.ubirch.kafka.consumer.WithConsumerShutdownHook
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.producer.WithProducerShutdownHook
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
-import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityActivation, IdentityRow }
+import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import com.ubirch.services.lifeCycle.Lifecycle
 import com.ubirch.util.Exceptions.StoringException
@@ -105,7 +105,7 @@ class DefaultTiger @Inject() (
       }
       .flatMap { identity =>
         identitiesDAO
-          .insertIfNotExists(IdentityRow.fromIdentity(identity))
+          .insertWithStateIfNotExists(IdentityRow.fromIdentity(identity), X509Created)
           .map(x => (identity, x))
       }
       .flatMap { case (identity, c) =>

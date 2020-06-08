@@ -47,7 +47,8 @@ class DefaultCertService @Inject() (
     config: Config,
     pubKeyService: PubKeyService,
     publicKeyDAO: PublicKeyRowDAO,
-    identitiesDAO: IdentitiesDAO
+    identitiesDAO: IdentitiesDAO,
+    identitiesByStateDAO: IdentityByStateDAO
 )(implicit scheduler: Scheduler) extends CertService with TaskHelpers with ServiceMetrics with LazyLogging {
 
   import DefaultCertService._
@@ -85,13 +86,13 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
 
-      identity = Identity(Hasher.hash(data), uuid.toString, "CSR", data, "This is a description")
+      identity = Identity(Hasher.hash(data), uuid.toString, "CSR", data, pubKeyAsBase64)
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
-      res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
+      res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), CSRCreated).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
       _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CSR_Insert"))
@@ -146,13 +147,13 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      identity = Identity(Hasher.hash(data), uuid.toString, "X.509", data, "This is a description")
+      identity = Identity(Hasher.hash(data), uuid.toString, "X.509", data, pubKeyAsBase64)
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
-      res <- identitiesDAO.insert(IdentityRow.fromIdentity(identity)).headOptionL
+      res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), X509Created).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
       _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
@@ -214,6 +215,12 @@ class DefaultCertService @Inject() (
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
       row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
+
+      res <- identitiesByStateDAO.insert(IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", maybeIdentity.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", maybeIdentity.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+
       res <- publicKeyDAO.insert(row).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
       _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
