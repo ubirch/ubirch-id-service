@@ -17,6 +17,7 @@ trait EmbeddedCassandra {
 
 object EmbeddedCassandra {
   def scripts = List(
+    CqlScript.statements("drop keyspace IF EXISTS identity_system;"),
     CqlScript.statements("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
     CqlScript.statements("USE identity_system;"),
     CqlScript.statements("drop table if exists keys;"),
@@ -102,6 +103,7 @@ object EmbeddedCassandra {
         |    primary key (identity_id, state)
         |);
         |""".stripMargin
-    )
+    ),
+    CqlScript.statements("alter table keys add prev_signature text;")
   )
 }

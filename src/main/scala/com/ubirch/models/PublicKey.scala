@@ -88,7 +88,7 @@ object PublicKeyInfo {
   * @param pubKeyInfo Represents a Data Transfer Object for the Public Key
   * @param signature Represents the signature of the pubKeyInfo
   */
-case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String)
+case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, prevSignature: Option[String] = None)
 
 /**
   * Companion for the PublicKey Container
@@ -96,7 +96,8 @@ case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String)
 object PublicKey {
   def fromPublicKeyRow(publicKeyRow: PublicKeyRow): PublicKey = PublicKey(
     PublicKeyInfo.fromPublicKeyInfoRow(publicKeyRow.pubKeyInfoRow),
-    publicKeyRow.signature
+    publicKeyRow.signature,
+    publicKeyRow.prevSignature
   )
 }
 

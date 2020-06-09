@@ -48,7 +48,7 @@ object PublicKeyInfoRow {
   * @param signature Represents the signature of the pubKeyInfo
   * @param raw Represents the raw request.
   */
-case class PublicKeyRow(pubKeyInfoRow: PublicKeyInfoRow, category: String, signature: String, raw: String)
+case class PublicKeyRow(pubKeyInfoRow: PublicKeyInfoRow, category: String, signature: String, prevSignature: Option[String], raw: String)
 
 /**
   * Represents a companion object for the PublicKeyRow
@@ -62,6 +62,7 @@ object PublicKeyRow {
     PublicKeyInfoRow.fromPublicKeyInfo(publicKey.pubKeyInfo),
     category,
     publicKey.signature,
+    publicKey.prevSignature,
     raw
   )
 

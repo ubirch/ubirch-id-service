@@ -28,8 +28,8 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
       .map(x => x)
   }
 
-  def insertQ(PublicKeyRow: PublicKeyRow): db.Quoted[db.Insert[PublicKeyRow]] = quote {
-    query[PublicKeyRow].insert(lift(PublicKeyRow))
+  def insertQ(publicKeyRow: PublicKeyRow): db.Quoted[db.Insert[PublicKeyRow]] = quote {
+    query[PublicKeyRow].insert(lift(publicKeyRow))
   }
 
   def deleteQ(pubKeyId: String): db.Quoted[db.Delete[PublicKeyRow]] = quote {
@@ -58,7 +58,7 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) exten
 
   def byPubKeyId(pubKeyId: String): Observable[PublicKeyRow] = run(byPubKeyIdQ(pubKeyId))
 
-  def insert(PublicKeyRow: PublicKeyRow): Observable[Unit] = run(insertQ(PublicKeyRow))
+  def insert(publicKeyRow: PublicKeyRow): Observable[Unit] = run(insertQ(publicKeyRow))
 
   def byHwDeviceId(hwDeviceId: String): Observable[PublicKeyRow] = run(byHwDeviceIdQ(hwDeviceId))
 
