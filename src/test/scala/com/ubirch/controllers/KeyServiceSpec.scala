@@ -2,14 +2,12 @@ package com.ubirch.controllers
 
 import java.util.{ Base64, UUID }
 
-import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyInfo }
+import com.ubirch._
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete }
 import com.ubirch.services.formats.JsonConverterService
-import com.ubirch.util.{ DateUtil, PublicKeyUtil }
-import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, WithFixtures }
+import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.joda.time.DateTime
 import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
@@ -19,39 +17,12 @@ import scala.util.Try
 /**
   * Test for the Key Controller
   */
-class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach {
-
-  def getPublicKey(
-      curveName: String,
-      created: DateTime,
-      validNotAfter: Option[DateTime],
-      validNotBefore: DateTime,
-      hardwareDeviceId: UUID = UUID.randomUUID()
-  ) = {
-
-    for {
-      curve <- PublicKeyUtil.associateCurve(curveName).toEither
-      newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
-      newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-      pubKeyInfo = PublicKeyInfo(
-        algorithm = curveName,
-        created = created.toDate,
-        hwDeviceId = hardwareDeviceId.toString,
-        pubKey = newPublicKey,
-        pubKeyId = newPublicKey,
-        validNotAfter = validNotAfter.map(_.toDate),
-        validNotBefore = validNotBefore.toDate
-      )
-      publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
-      signatureAsBytes <- Try(newPrivKey.sign(publicKeyInfoAsString.getBytes)).toEither
-      signature <- Try(Base64.getEncoder.encodeToString(signatureAsBytes)).toEither
-      publicKey = PublicKey(pubKeyInfo, signature)
-      publicKeyAsString <- jsonConverter.toString[PublicKey](publicKey)
-    } yield {
-      (publicKey, publicKeyAsString, signatureAsBytes, signature, newPrivKey)
-    }
-
-  }
+class KeyServiceSpec
+  extends ScalatraWordSpec
+  with EmbeddedCassandra
+  with EmbeddedKafka
+  with WithFixtures
+  with BeforeAndAfterEach {
 
   lazy val Injector = new InjectorHelper(List(new Binder)) {}
 
@@ -132,7 +103,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "get public key object when data exists by hardware id when / is present" taggedAs Tag("lychee") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -144,14 +115,14 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         body should equal("[" + dataKey1 + "]")
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="},{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}]"""
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)
@@ -205,7 +176,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val validNotAfter = Some(created.plusMonths(6))
       val validNotBefore = created
 
-      getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -215,7 +186,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           fail(e)
 
       }
-      getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
         case Right((pk, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -295,7 +266,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val validNotAfter = None
       val validNotBefore = created
 
-      getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -305,7 +276,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           fail(e)
 
       }
-      getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, created) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, created) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -325,7 +296,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val validNotBefore = created
 
       (for {
-        res <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore)
+        res <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore)
         (pk, pkAsString, _, _, pkr) = res
         signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
         signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
@@ -352,25 +323,40 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
       val validNotBefore = created
-      val hardwareDeviceId: UUID = UUID.randomUUID()
+      val hardwareDeviceId: String = UUID.randomUUID().toString
 
       (for {
-        res1 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        res1 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
         (pk1, pkAsString1, _, _, pkr1) = res1
+
         signature1 <- Try(pkr1.sign(pkr1.getRawPublicKey)).toEither
         signatureAsString1 <- Try(Base64.getEncoder.encodeToString(signature1)).toEither
         pubDelete1 = PublicKeyDelete(pk1.pubKeyInfo.pubKeyId, signatureAsString1)
         pubDeleteAsString1 <- jsonConverter.toString[PublicKeyDelete](pubDelete1)
 
-        res2 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
-        (pk2, pkAsString2, _, _, pkr2) = res2
+        res2 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk2, _, _, _, pkr2) = res2
+
+        signed2 <- PublicKeyCreationHelpers.sign(pk2.pubKeyInfo, pkr1)
+        (_, signature2, _) = signed2
+
+        pk2WithPrevSign = pk2.copy(prevSignature = Option(signature2))
+        pk2WithPrevSignAsString <- jsonConverter.toString[PublicKey](pk2WithPrevSign)
+
         signature2 <- Try(pkr2.sign(pkr2.getRawPublicKey)).toEither
         signatureAsString2 <- Try(Base64.getEncoder.encodeToString(signature2)).toEither
-        pubDelete2 = PublicKeyDelete(pk2.pubKeyInfo.pubKeyId, signatureAsString2)
+        pubDelete2 = PublicKeyDelete(pk2WithPrevSign.pubKeyInfo.pubKeyId, signatureAsString2)
         pubDeleteAsString2 <- jsonConverter.toString[PublicKeyDelete](pubDelete2)
 
-        res3 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
-        (pk3, pkAsString3, _, _, pkr3) = res3
+        res3 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk3, _, _, _, pkr3) = res3
+
+        signed3 <- PublicKeyCreationHelpers.sign(pk3.pubKeyInfo, pkr2)
+        (_, signature3, _) = signed3
+
+        pk3WithPrevSign = pk3.copy(prevSignature = Option(signature3))
+        pk3WithPrevSignAsString <- jsonConverter.toString[PublicKey](pk3WithPrevSign)
+
         signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
         signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
         _ = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
@@ -382,14 +368,14 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           body should equal(pkAsString1)
         }
 
-        post("/v1/pubkey", body = pkAsString2) {
+        post("/v1/pubkey", body = pk2WithPrevSignAsString) {
           status should equal(200)
-          body should equal(pkAsString2)
+          body should equal(pk2WithPrevSignAsString)
         }
 
-        post("/v1/pubkey", body = pkAsString3) {
+        post("/v1/pubkey", body = pk3WithPrevSignAsString) {
           status should equal(200)
-          body should equal(pkAsString3)
+          body should equal(pk3WithPrevSignAsString)
         }
 
         patch("/v1/pubkey", body = pubDeleteAsString1) {
@@ -404,7 +390,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
         get("/v1/pubkey/current/hardwareId/" + hardwareDeviceId) {
           status should equal(200)
-          body should equal(s"[$pkAsString3]")
+          body should equal(s"[$pk3WithPrevSignAsString]")
         }
 
       }).getOrElse(fail())
@@ -425,10 +411,59 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       }
     }
 
+    "create a second key when signed by the previous key -json-" taggedAs Tag("soursop") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(200)
+        body should equal(dataKey2)
+      }
+
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal(expectedKeys)
+      }
+
+    }
+
+    "second key should not be created if not signed -json-" taggedAs Tag("sapote") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(400)
+        body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+      }
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal("[" + dataKey1 + "]")
+      }
+
+    }
+
   }
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
+    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
   }
 
   protected override def afterAll(): Unit = {
@@ -446,7 +481,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     addServlet(keyController, "/*")
 
-    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
+    //cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
 
     super.beforeAll()
   }

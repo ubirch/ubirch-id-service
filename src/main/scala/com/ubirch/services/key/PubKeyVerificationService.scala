@@ -42,6 +42,16 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, 
     }).fold(e => { logger.error(e.getMessage); false }, x => x)
   }
 
+  def validate(publicKeyN_1: PublicKey, publicKeyN: PublicKey): Boolean = {
+    (for {
+      publicKeyInfoNString <- jsonConverter.toString(publicKeyN.pubKeyInfo)
+      curveN_1 <- getCurve(publicKeyN_1.pubKeyInfo.algorithm).toEither
+      prevSigForN <- Try(publicKeyN.prevSignature).filter(_.nonEmpty).map(_.get).toEither
+    } yield {
+      validateFromBase64(publicKeyN_1.pubKeyInfo.pubKey, prevSigForN, publicKeyInfoNString.getBytes, curveN_1)
+    }).fold(e => { logger.error("validation_error={}", e.getMessage); false }, x => x)
+  }
+
   def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean = {
     val decoder = Base64.getDecoder
     import decoder._

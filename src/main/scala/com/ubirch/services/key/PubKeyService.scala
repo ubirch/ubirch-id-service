@@ -117,9 +117,9 @@ class DefaultPubKeyService @Inject() (
       pubKeys <- publicKeyByPubKeyIdDao
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
-        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+        .toListL
 
-      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
+      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime)).map(sort)
       _ = logger.info("keys_found={} valid_keys_found={} pub_key_id={}", pubKeys.size, validPubKeys.size, pubKeyId)
 
     } yield {
@@ -129,26 +129,35 @@ class DefaultPubKeyService @Inject() (
   }
 
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_hardware_id") {
-    (for {
+    getByHardwareIdAsTask(hwDeviceId).runToFuture
+  }
+
+  def getByHardwareIdAsTask(hwDeviceId: String): Task[Seq[PublicKey]] = {
+    for {
       pubKeys <- publicKeyByHwDeviceIdDao
         .byOwnerId(hwDeviceId)
         .map(PublicKey.fromPublicKeyRow)
-        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+        .toListL
 
-      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
+      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime)).map(sort)
+
       _ = logger.info("keys_found={} valid_keys_found={} hardware_id={}", pubKeys.size, validPubKeys.size, hwDeviceId)
 
     } yield {
       validPubKeys
-    }).runToFuture
-
+    }
   }
 
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
     (for {
-      maybeKey <- publicKeyDAO.byPubKeyId(publicKey.pubKeyInfo.pubKey).headOptionL
-      _ = if (maybeKey.isDefined) logger.info("key_found={}", maybeKey.toString)
-      _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
+      maybePrevKey <- getByHardwareIdAsTask(publicKey.pubKeyInfo.hwDeviceId).map(_.headOption)
+      _ = if (publicKey.prevSignature.isDefined && maybePrevKey.isEmpty) logger.info("with_prev_sig={} prev_key={}", publicKey.prevSignature, maybePrevKey.toString)
+      _ <- earlyResponseIf(publicKey.prevSignature.exists(_.isEmpty) && maybePrevKey.isDefined)(InvalidVerification(publicKey))
+      _ = if (maybePrevKey.isDefined) logger.info("key_found={}", maybePrevKey.toString)
+
+      prevSignatureVerification <- Task.delay(maybePrevKey.forall(x => verification.validate(x, publicKey)))
+      _ = if (!prevSignatureVerification) logger.error("failed_prev_verification_for={}", publicKey.toString)
+      _ <- earlyResponseIf(!prevSignatureVerification)(InvalidVerification(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
@@ -220,6 +229,12 @@ class DefaultPubKeyService @Inject() (
       pubKey
     }
 
+  }
+
+  def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
+    publicKeys
+      .sortWith { (a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created) }
+      .sortWith { (a, _) => a.prevSignature.isDefined }
   }
 
 }
