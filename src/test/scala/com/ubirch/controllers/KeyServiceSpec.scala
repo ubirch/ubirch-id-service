@@ -411,6 +411,54 @@ class KeyServiceSpec
       }
     }
 
+    "create a second key when signed by the previous key -json-" taggedAs Tag("soursop") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(200)
+        body should equal(dataKey2)
+      }
+
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal(expectedKeys)
+      }
+
+    }
+
+    "second key should not be created if not signed -json-" taggedAs Tag("sapote") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(400)
+        body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+      }
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal("[" + dataKey1 + "]")
+      }
+
+    }
+
   }
 
   override protected def beforeEach(): Unit = {
