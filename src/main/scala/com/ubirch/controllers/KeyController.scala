@@ -79,7 +79,7 @@ class KeyController @Inject() (
     (apiOperation[String]("getV1PubKeyPubKey")
       summary "retrieves public key"
       description "retrieves the given public key found by pubKeyID in the key registry with the given data; the public key must exist already"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters pathParam[String]("pubkey").description("public key for which to search for currently valid public keys").required
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No pubKeyId parameter found in path"),

@@ -187,7 +187,7 @@ class KeyServiceSpec
 
       }
       PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
-        case Right((pk, pkAsString, _, _, _)) =>
+        case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
             body should equal(pkAsString)
