@@ -45,7 +45,7 @@ class KeyController @Inject() (
     (apiOperation[String]("getV1Check")
       summary "Welcome / Health"
       description "Check if KeyController service is up and running"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_HEALTH)
+      tags SwaggerElements.TAG_HEALTH
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Not successful response"))
 
   get("/v1/check", operation(getV1Check)) {
@@ -55,9 +55,9 @@ class KeyController @Inject() (
 
   val getV1DeepCheck: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1DeepCheck")
-      summary "health monitor deep check"
+      summary "Health monitor deep check"
       description "allows a deep check of the service"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_HEALTH)
+      tags SwaggerElements.TAG_HEALTH
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "something is not fine"))
 
   get("/v1/deepCheck", operation(getV1DeepCheck)) {
@@ -77,7 +77,7 @@ class KeyController @Inject() (
 
   val getV1PubKeyPubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1PubKeyPubKey")
-      summary "retrieves public key"
+      summary "Retrieves public key"
       description "retrieves the given public key found by pubKeyID in the key registry with the given data; the public key must exist already"
       tags SwaggerElements.TAG_KEY_SERVICE
       parameters pathParam[String]("pubkey").description("public key for which to search for currently valid public keys").required
@@ -107,7 +107,7 @@ class KeyController @Inject() (
 
   val getV1CurrentHardwareId: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1CurrentHardwareId")
-      summary "queries all currently valid public keys for this hardwareId"
+      summary "Queries all currently valid public keys for this hardwareId"
       description "queries all currently valid public keys based on the hardwareId"
       tags SwaggerElements.TAG_KEY_SERVICE
       parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys")
@@ -137,7 +137,7 @@ class KeyController @Inject() (
 
   val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("postV1PubKey")
-      summary "stores new public key"
+      summary "Stores new public key"
       description "stores the given public key with its unique pubKeyID"
       tags SwaggerElements.TAG_KEY_SERVICE
       parameters bodyParam[String]("pubkey").description("the new public key object with the pubKey that should be stored for the unique pubKeyId - also part of the pub key object - in the key registry to be able to find the public key; pubKeyId may not exist already")
@@ -168,7 +168,7 @@ class KeyController @Inject() (
 
   val postV1PubKeyMsgPack: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("postV1PubKeyMsgPack")
-      summary "stores new public key received as msgpack format"
+      summary "Stores new public key received as msgpack format"
       description "stores the given public key with its unique pubKeyID"
       tags SwaggerElements.TAG_KEY_SERVICE
       consumes "application/octet-stream"
@@ -201,8 +201,8 @@ class KeyController @Inject() (
 
   val deleteV1PubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("deleteV1PubKey")
-      summary "delete a public key"
-      description "delete a public key"
+      summary "Deletes a public key"
+      description "deletes a public key"
       tags SwaggerElements.TAG_KEY_SERVICE
       parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
       responseMessages (
