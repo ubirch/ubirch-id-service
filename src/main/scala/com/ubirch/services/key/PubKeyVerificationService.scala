@@ -18,11 +18,28 @@ import scala.util.Try
 
 /**
   * Represents a Public Key Verification tool
+  */
+trait PubKeyVerificationService {
+  def getCurve(algorithm: String): Try[Curve]
+  def validateTime(publicKey: PublicKey): Boolean
+  def validate(publicKey: PublicKey): Boolean
+  def validate(publicKeyN_1: PublicKey, publicKeyN: PublicKey): Boolean
+  def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean
+  def validate(publicKey: Array[Byte], signature: Array[Byte], message: Array[Byte], curve: Curve): Boolean
+  def validate(publicKey: Array[Byte], signature: Array[Byte], curve: Curve): Boolean
+  def validateFromBase64(publicKey: String, signature: String, curve: Curve): Boolean
+  def validate(pubKeyInfo: PublicKeyInfo, pm: ProtocolMessage): Boolean
+}
+
+/**
+  * Represents a Default Public Key Verification tool
   * @param jsonConverter Represents a json converter convenience
   * @param pmService Represents the Protocol Message Component
   */
 @Singleton
-class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, pmService: ProtocolMessageService) extends LazyLogging {
+class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, pmService: ProtocolMessageService)
+  extends PubKeyVerificationService
+  with LazyLogging {
 
   def getCurve(algorithm: String): Try[Curve] = PublicKeyUtil.associateCurve(algorithm)
 

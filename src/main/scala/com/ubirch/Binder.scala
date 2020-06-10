@@ -5,10 +5,11 @@ import com.typesafe.config.Config
 import com.ubirch.services.cluster._
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
-import com.ubirch.services.formats.JsonFormatsProvider
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.kafka.{ DefaultTiger, Tiger }
-import com.ubirch.services.key.{ CertService, DefaultCertService, DefaultPubKeyService, PubKeyService }
+import com.ubirch.services.key.{ CertService, DefaultCertService, DefaultPubKeyService, DefaultPubKeyVerificationService, PubKeyService, PubKeyVerificationService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
+import com.ubirch.services.pm.{ DefaultProtocolMessageService, ProtocolMessageService }
 import com.ubirch.services.rest.SwaggerProvider
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -29,6 +30,9 @@ class Binder
   def Formats = bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
   def Lifecycle = bind(classOf[Lifecycle]).to(classOf[DefaultLifecycle])
   def JVMHook = bind(classOf[JVMHook]).to(classOf[DefaultJVMHook])
+  def JsonConverterService = bind(classOf[JsonConverterService]).to(classOf[DefaultJsonConverterService])
+  def ProtocolMessageService = bind(classOf[ProtocolMessageService]).to(classOf[DefaultProtocolMessageService])
+  def PubKeyVerificationService = bind(classOf[PubKeyVerificationService]).to(classOf[DefaultPubKeyVerificationService])
   def PubKeyService = bind(classOf[PubKeyService]).to(classOf[DefaultPubKeyService])
   def ClusterService = bind(classOf[ClusterService]).to(classOf[DefaultClusterService])
   def ConnectionService = bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
@@ -43,11 +47,14 @@ class Binder
     Formats
     Lifecycle
     JVMHook
+    JsonConverterService
     PubKeyService
     ClusterService
     ConnectionService
     Tiger
     CertService
+    PubKeyVerificationService
+    ProtocolMessageService
   }
 
 }
