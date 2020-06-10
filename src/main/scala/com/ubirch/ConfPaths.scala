@@ -29,7 +29,7 @@ object ConfPaths {
     final val PREPARED_STATEMENT_CACHE_SIZE = "identitySystem.cassandra.cluster.preparedStatementCacheSize"
   }
 
-  trait ConsumerConfPaths {
+  trait TigerConsumerConfPaths {
     final val BOOTSTRAP_SERVERS = "identitySystem.tiger.kafkaConsumer.bootstrapServers"
     final val IMPORT_TOPIC_PATH = "identitySystem.tiger.kafkaConsumer.import"
     final val ACTIVATION_TOPIC_PATH = "identitySystem.tiger.kafkaConsumer.activation"
@@ -62,7 +62,7 @@ object ConfPaths {
 
   object GenericConfPaths extends GenericConfPaths
   object HttpServerConfPaths extends HttpServerConfPaths
-  object ConsumerConfPaths extends ConsumerConfPaths
+  object TigerConsumerConfPaths extends TigerConsumerConfPaths
   object TigerProducerConfPaths extends TigerProducerConfPaths
   object AnchoringProducerConfPaths extends AnchoringProducerConfPaths
 

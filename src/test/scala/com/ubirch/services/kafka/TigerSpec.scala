@@ -5,7 +5,7 @@ import java.util.UUID
 import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
-import com.ubirch.ConfPaths.{ ConsumerConfPaths, TigerProducerConfPaths }
+import com.ubirch.ConfPaths.{ TigerConsumerConfPaths, TigerProducerConfPaths }
 import com.ubirch._
 import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityActivation, PublicKeyRowDAO }
@@ -26,10 +26,10 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   def FakeInjector(bootstrapServers: String, importTopic: String, activationTopic: String) = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(new ConfigProvider {
       override def conf: Config = super.conf
-        .withValue(ConsumerConfPaths.BOOTSTRAP_SERVERS, ConfigValueFactory.fromAnyRef(bootstrapServers))
+        .withValue(TigerConsumerConfPaths.BOOTSTRAP_SERVERS, ConfigValueFactory.fromAnyRef(bootstrapServers))
         .withValue(TigerProducerConfPaths.BOOTSTRAP_SERVERS, ConfigValueFactory.fromAnyRef(bootstrapServers))
-        .withValue(ConsumerConfPaths.IMPORT_TOPIC_PATH, ConfigValueFactory.fromAnyRef(importTopic))
-        .withValue(ConsumerConfPaths.ACTIVATION_TOPIC_PATH, ConfigValueFactory.fromAnyRef(activationTopic))
+        .withValue(TigerConsumerConfPaths.IMPORT_TOPIC_PATH, ConfigValueFactory.fromAnyRef(importTopic))
+        .withValue(TigerConsumerConfPaths.ACTIVATION_TOPIC_PATH, ConfigValueFactory.fromAnyRef(activationTopic))
 
     })
   })) {}

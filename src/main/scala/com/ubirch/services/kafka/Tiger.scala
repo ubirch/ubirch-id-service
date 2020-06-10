@@ -6,7 +6,7 @@ import java.util.concurrent.ExecutionException
 import com.datastax.driver.core.exceptions.{ InvalidQueryException, NoHostAvailableException }
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.{ ConsumerConfPaths, TigerProducerConfPaths }
+import com.ubirch.ConfPaths.{ TigerConsumerConfPaths, TigerProducerConfPaths }
 import com.ubirch.kafka.consumer.WithConsumerShutdownHook
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.producer.WithProducerShutdownHook
@@ -39,18 +39,18 @@ abstract class Tiger(val config: Config, lifecycle: Lifecycle)
 
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
   override val valueDeserializer: Deserializer[Array[Byte]] = new ByteArrayDeserializer
-  val importTopic: String = config.getString(ConsumerConfPaths.IMPORT_TOPIC_PATH)
-  val activationTopic: String = config.getString(ConsumerConfPaths.ACTIVATION_TOPIC_PATH)
+  val importTopic: String = config.getString(TigerConsumerConfPaths.IMPORT_TOPIC_PATH)
+  val activationTopic: String = config.getString(TigerConsumerConfPaths.ACTIVATION_TOPIC_PATH)
   override val consumerTopics: Set[String] = Set(importTopic, activationTopic)
   override val keySerializer: Serializer[String] = new StringSerializer
   override val valueSerializer: Serializer[Array[Byte]] = new ByteArraySerializer
-  override val consumerBootstrapServers: String = config.getString(ConsumerConfPaths.BOOTSTRAP_SERVERS)
-  override val consumerGroupId: String = config.getString(ConsumerConfPaths.GROUP_ID_PATH)
-  override val consumerMaxPollRecords: Int = config.getInt(ConsumerConfPaths.MAX_POLL_RECORDS)
-  override val consumerGracefulTimeout: Int = config.getInt(ConsumerConfPaths.GRACEFUL_TIMEOUT_PATH)
-  override val metricsSubNamespace: String = config.getString(ConsumerConfPaths.METRICS_SUB_NAMESPACE)
-  override val consumerReconnectBackoffMsConfig: Long = config.getLong(ConsumerConfPaths.RECONNECT_BACKOFF_MS_CONFIG)
-  override val consumerReconnectBackoffMaxMsConfig: Long = config.getLong(ConsumerConfPaths.RECONNECT_BACKOFF_MAX_MS_CONFIG)
+  override val consumerBootstrapServers: String = config.getString(TigerConsumerConfPaths.BOOTSTRAP_SERVERS)
+  override val consumerGroupId: String = config.getString(TigerConsumerConfPaths.GROUP_ID_PATH)
+  override val consumerMaxPollRecords: Int = config.getInt(TigerConsumerConfPaths.MAX_POLL_RECORDS)
+  override val consumerGracefulTimeout: Int = config.getInt(TigerConsumerConfPaths.GRACEFUL_TIMEOUT_PATH)
+  override val metricsSubNamespace: String = config.getString(TigerConsumerConfPaths.METRICS_SUB_NAMESPACE)
+  override val consumerReconnectBackoffMsConfig: Long = config.getLong(TigerConsumerConfPaths.RECONNECT_BACKOFF_MS_CONFIG)
+  override val consumerReconnectBackoffMaxMsConfig: Long = config.getLong(TigerConsumerConfPaths.RECONNECT_BACKOFF_MAX_MS_CONFIG)
   override val maxTimeAggregationSeconds: Long = 120
   override val producerBootstrapServers: String = config.getString(TigerProducerConfPaths.BOOTSTRAP_SERVERS)
   override val lingerMs: Int = config.getInt(TigerProducerConfPaths.LINGER_MS)

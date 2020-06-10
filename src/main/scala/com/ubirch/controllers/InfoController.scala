@@ -6,9 +6,9 @@ import com.ubirch.models.{ NOK, Simple }
 import javax.inject._
 import javax.servlet.http.HttpServletRequest
 import org.json4s.Formats
+import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra._
 
 /**
   * Represents a simple controller for the base path "/"

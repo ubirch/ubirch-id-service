@@ -2,10 +2,11 @@ package com.ubirch.controllers
 
 import java.util.{ Base64, UUID }
 
+import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
-import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper, _ }
+import com.ubirch.{ EmbeddedCassandra, _ }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.scalatest.{ BeforeAndAfterEach, Tag }
@@ -24,7 +25,10 @@ class KeyServiceSpec
   with WithFixtures
   with BeforeAndAfterEach {
 
-  lazy val Injector = new InjectorHelper(List(new Binder)) {}
+  implicit lazy val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+
+  lazy val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
+  lazy val Injector = new InjectorHelperImpl(bootstrapServers) {}
 
   val jsonConverter = Injector.get[JsonConverterService]
 
@@ -476,8 +480,6 @@ class KeyServiceSpec
   }
 
   protected override def beforeAll(): Unit = {
-
-    implicit val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = 9092, zooKeeperPort = 6001)
 
     CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
