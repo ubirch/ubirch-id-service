@@ -7,10 +7,21 @@ import org.json4s.{ Formats, JValue }
 
 /**
   * Represents an internal service or component for managing Json.
+  */
+trait JsonConverterService {
+  def toString(value: JValue): String
+  def toString[T](t: T): Either[Exception, String]
+  def toJValue(value: String): Either[Exception, JValue]
+  def toJValue[T](obj: T): Either[Exception, JValue]
+  def as[T: Manifest](value: String): Either[Exception, T]
+}
+
+/**
+  * Represents a default internal service or component for managing Json.
   * @param formats Represents the json formats used for parsing.
   */
 @Singleton
-class JsonConverterService @Inject() (implicit formats: Formats) {
+class DefaultJsonConverterService @Inject() (implicit formats: Formats) extends JsonConverterService {
 
   def toString(value: JValue): String = compact(render(value))
 

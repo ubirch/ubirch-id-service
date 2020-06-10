@@ -7,28 +7,35 @@ import com.ubirch.client.protocol.DefaultProtocolVerifier
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.protocol.codec.KeyMsgPackProtocolDecoder
-import com.ubirch.protocol.{ ProtocolException, ProtocolMessage }
+import com.ubirch.protocol.{ ProtocolException, ProtocolMessage, ProtocolVerifier }
+import com.ubirch.services.pm.ProtocolMessageService.UnPacked
 import javax.inject._
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
 import scala.util.{ Failure, Success, Try }
 
+trait ProtocolMessageService {
+  def protocolVerifier(pubKeyAsString: String, curve: Curve): ProtocolVerifier
+  def unpackFromBytes(bytes: Array[Byte]): Try[UnPacked]
+}
+
 /**
   * Represents a component for managing Protocol Messages
   * @param formats Represents the json formats for the system
   */
 @Singleton
-class ProtocolMessageService @Inject() (implicit formats: Formats) extends LazyLogging {
+class DefaultProtocolMessageService @Inject() (implicit formats: Formats) extends ProtocolMessageService with LazyLogging {
 
   import ProtocolMessageService._
 
-  def protocolVerifier(pubKeyAsString: String, curve: Curve) = new DefaultProtocolVerifier((_: UUID) => {
-    val decoder = Base64.getDecoder
-    import decoder._
-    val key = GeneratorKeyFactory.getPubKey(decode(pubKeyAsString), curve)
-    List(key)
-  })
+  def protocolVerifier(pubKeyAsString: String, curve: Curve): ProtocolVerifier =
+    new DefaultProtocolVerifier((_: UUID) => {
+      val decoder = Base64.getDecoder
+      import decoder._
+      val key = GeneratorKeyFactory.getPubKey(decode(pubKeyAsString), curve)
+      List(key)
+    })
 
   def unpackFromBytes(bytes: Array[Byte]): Try[UnPacked] = {
     (for {

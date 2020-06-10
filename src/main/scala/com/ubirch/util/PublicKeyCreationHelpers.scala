@@ -8,9 +8,9 @@ import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
 import com.ubirch.models.{ PublicKey, PublicKeyInfo }
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.protocol.codec.MsgPackProtocolEncoder
-import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
-import com.ubirch.services.key.PubKeyVerificationService
-import com.ubirch.services.pm.ProtocolMessageService
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.key.DefaultPubKeyVerificationService
+import com.ubirch.services.pm.DefaultProtocolMessageService
 import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods._
 
@@ -22,9 +22,9 @@ import scala.util.Try
 object PublicKeyCreationHelpers extends LazyLogging {
 
   implicit val formats = new JsonFormatsProvider get ()
-  val jsonConverter = new JsonConverterService()
-  val pmService = new ProtocolMessageService()
-  val verification = new PubKeyVerificationService(jsonConverter, pmService)
+  val jsonConverter = new DefaultJsonConverterService()
+  val pmService = new DefaultProtocolMessageService()
+  val verification = new DefaultPubKeyVerificationService(jsonConverter, pmService)
 
   def main(args: Array[String]): Unit = {
     /*    val re = for {
