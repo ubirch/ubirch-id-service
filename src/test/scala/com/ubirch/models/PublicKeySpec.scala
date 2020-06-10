@@ -4,9 +4,9 @@ import java.util.{ Base64, UUID }
 
 import com.ubirch.TestBase
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.services.formats.{ JsonConverterService, JsonFormatsProvider }
-import com.ubirch.services.key.PubKeyVerificationService
-import com.ubirch.services.pm.ProtocolMessageService
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.key.DefaultPubKeyVerificationService
+import com.ubirch.services.pm.DefaultProtocolMessageService
 import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import org.joda.time.format.ISODateTimeFormat
 
@@ -20,34 +20,35 @@ class PublicKeySpec extends TestBase {
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
 
   implicit val formats = new JsonFormatsProvider {} get ()
-  val jsonConverter = new JsonConverterService()
-  val pmService = new ProtocolMessageService()
-  val verification = new PubKeyVerificationService(jsonConverter, pmService)
+  val jsonConverter = new DefaultJsonConverterService()
+  val pmService = new DefaultProtocolMessageService()
+  val verification = new DefaultPubKeyVerificationService(jsonConverter, pmService)
 
   "PublicKey" must {
     s"be successfully stringified and verified using ${PublicKeyUtil.ECDSA} and ${PublicKeyUtil.EDDSA}" in {
 
       def go(curveName: String) {
 
-        val curve = PublicKeyUtil.associateCurve(curveName)
-        val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
-        val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
         val hardwareDeviceId = UUID.randomUUID()
 
         val now = DateUtil.nowUTC
         val inSixMonths = now.plusMonths(6)
         val pubKeyUUID = UUID.randomUUID()
-        val pubKeyInfo = PublicKeyInfo(
-          algorithm = curveName,
-          created = now.toDate,
-          hwDeviceId = hardwareDeviceId.toString,
-          pubKey = newPublicKey,
-          pubKeyId = pubKeyUUID.toString,
-          validNotAfter = Some(inSixMonths.toDate),
-          validNotBefore = now.toDate
-        )
 
         val res = for {
+          curve <- PublicKeyUtil.associateCurve(curveName).toEither
+          newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
+          newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
+          pubKeyInfo = PublicKeyInfo(
+            algorithm = curveName,
+            created = now.toDate,
+            hwDeviceId = hardwareDeviceId.toString,
+            pubKey = newPublicKey,
+            pubKeyId = pubKeyUUID.toString,
+            validNotAfter = Some(inSixMonths.toDate),
+            validNotBefore = now.toDate
+          )
+
           publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
           signature <- Try(Base64.getEncoder.encodeToString(newPrivKey.sign(publicKeyInfoAsString.getBytes))).toEither
           publicKey = PublicKey(pubKeyInfo, signature)

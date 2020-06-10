@@ -32,8 +32,7 @@ class KeyController @Inject() (
     jFormats: Formats,
     pubKeyService: PubKeyService,
     pmService: ProtocolMessageService
-)(implicit val executor: ExecutionContext)
-  extends ControllerBase(pmService) {
+)(implicit val executor: ExecutionContext) extends ControllerBase {
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -46,26 +45,28 @@ class KeyController @Inject() (
     (apiOperation[String]("getV1Check")
       summary "Welcome / Health"
       description "Check if KeyController service is up and running"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_HEALTH)
+      tags SwaggerElements.TAG_HEALTH
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Not successful response"))
 
   get("/v1/check", operation(getV1Check)) {
+    logRequestInfo
     Simple("I survived a check")
   }
 
   val getV1DeepCheck: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1DeepCheck")
-      summary "health monitor deep check"
+      summary "Health monitor deep check"
       description "allows a deep check of the service"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_HEALTH)
+      tags SwaggerElements.TAG_HEALTH
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "something is not fine"))
 
   get("/v1/deepCheck", operation(getV1DeepCheck)) {
 
     asyncResult { implicit request =>
-
+      logRequestInfo
       pubKeyService.getSome()
-        .map(_ => Simple("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+        //We use a BooleanList Response to keep backwards compatibility with clients
+        .map(_ => BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
         .recover {
           case e: Exception =>
             logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
@@ -76,9 +77,9 @@ class KeyController @Inject() (
 
   val getV1PubKeyPubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1PubKeyPubKey")
-      summary "retrieves public key"
+      summary "Retrieves public key"
       description "retrieves the given public key found by pubKeyID in the key registry with the given data; the public key must exist already"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters pathParam[String]("pubkey").description("public key for which to search for currently valid public keys").required
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No pubKeyId parameter found in path"),
@@ -106,9 +107,9 @@ class KeyController @Inject() (
 
   val getV1CurrentHardwareId: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getV1CurrentHardwareId")
-      summary "queries all currently valid public keys for this hardwareId"
+      summary "Queries all currently valid public keys for this hardwareId"
       description "queries all currently valid public keys based on the hardwareId"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters pathParam[String]("hardwareId").description("hardwareId for which to search for currently valid public keys")
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "No hardwareId parameter found in path"),
@@ -136,9 +137,9 @@ class KeyController @Inject() (
 
   val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("postV1PubKey")
-      summary "stores new public key"
+      summary "Stores new public key"
       description "stores the given public key with its unique pubKeyID"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters bodyParam[String]("pubkey").description("the new public key object with the pubKey that should be stored for the unique pubKeyId - also part of the pub key object - in the key registry to be able to find the public key; pubKeyId may not exist already")
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Error creating pub key"),
@@ -167,9 +168,9 @@ class KeyController @Inject() (
 
   val postV1PubKeyMsgPack: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("postV1PubKeyMsgPack")
-      summary "stores new public key received as msgpack format"
+      summary "Stores new public key received as msgpack format"
       description "stores the given public key with its unique pubKeyID"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      tags SwaggerElements.TAG_KEY_SERVICE
       consumes "application/octet-stream"
       produces "application/json"
       parameters bodyParam[String]("pubkey").description("a mgspack representation of the public key registration. The format follows both the json structure (with binary values instead of encoded) as well as the [ubirch-protocol](https://github.com/ubirch/ubirch-protocol#key-registration) format.")
@@ -182,7 +183,7 @@ class KeyController @Inject() (
 
     logRequestInfo
 
-    ReadBody.readMsgPack
+    ReadBody.readMsgPack(pmService)
       .async { up =>
         pubKeyService.create(up.pm, up.rawProtocolMessage)
           .map { key => Ok(key) }
@@ -200,9 +201,9 @@ class KeyController @Inject() (
 
   val deleteV1PubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("deleteV1PubKey")
-      summary "delete a public key"
-      description "delete a public key"
-      tags (SwaggerElements.TAG_KEY_SERVICE)
+      summary "Deletes a public key"
+      description "deletes a public key"
+      tags SwaggerElements.TAG_KEY_SERVICE
       parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
@@ -238,13 +239,13 @@ class KeyController @Inject() (
         request.header("content-type").getOrElse("") != octet
       )) {
 
-        logger.error(ReadBody.readMsgPack.toString)
+        logger.error(ReadBody.readMsgPack(pmService).toString)
         halt(BadRequest(NOK.parsingError("Bad Content Type. I am expecting =" + octet)))
       } else {
         halt(BadRequest(NOK.serverError("Bad message")))
       }
     case e =>
-      logger.error("error :=", e)
+      logger.error("error key_controller :=", e)
       contentType = formats("json")
       logRequestInfo
       halt(BadRequest(NOK.serverError("There was an error. Please try again.")))

@@ -18,13 +18,30 @@ import scala.util.Try
 
 /**
   * Represents a Public Key Verification tool
+  */
+trait PubKeyVerificationService {
+  def getCurve(algorithm: String): Try[Curve]
+  def validateTime(publicKey: PublicKey): Boolean
+  def validate(publicKey: PublicKey): Boolean
+  def validate(publicKeyN_1: PublicKey, publicKeyN: PublicKey): Boolean
+  def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean
+  def validate(publicKey: Array[Byte], signature: Array[Byte], message: Array[Byte], curve: Curve): Boolean
+  def validate(publicKey: Array[Byte], signature: Array[Byte], curve: Curve): Boolean
+  def validateFromBase64(publicKey: String, signature: String, curve: Curve): Boolean
+  def validate(pubKeyInfo: PublicKeyInfo, pm: ProtocolMessage): Boolean
+}
+
+/**
+  * Represents a Default Public Key Verification tool
   * @param jsonConverter Represents a json converter convenience
   * @param pmService Represents the Protocol Message Component
   */
 @Singleton
-class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, pmService: ProtocolMessageService) extends LazyLogging {
+class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, pmService: ProtocolMessageService)
+  extends PubKeyVerificationService
+  with LazyLogging {
 
-  def getCurve(algorithm: String): Curve = PublicKeyUtil.associateCurve(algorithm)
+  def getCurve(algorithm: String): Try[Curve] = PublicKeyUtil.associateCurve(algorithm)
 
   def validateTime(publicKey: PublicKey): Boolean = {
     val now = DateTime.now(DateTimeZone.UTC)
@@ -34,14 +51,22 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, 
   }
 
   def validate(publicKey: PublicKey): Boolean = {
-    jsonConverter.toString(publicKey.pubKeyInfo) match {
-      case Right(publicKeyInfoString) =>
-        val curve = getCurve(publicKey.pubKeyInfo.algorithm)
-        validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, publicKeyInfoString.getBytes, curve)
-      case Left(e) =>
-        logger.error(e.getMessage)
-        false
-    }
+    (for {
+      publicKeyInfoString <- jsonConverter.toString(publicKey.pubKeyInfo)
+      curve <- getCurve(publicKey.pubKeyInfo.algorithm).toEither
+    } yield {
+      validateFromBase64(publicKey.pubKeyInfo.pubKey, publicKey.signature, publicKeyInfoString.getBytes, curve)
+    }).fold(e => { logger.error(e.getMessage); false }, x => x)
+  }
+
+  def validate(publicKeyN_1: PublicKey, publicKeyN: PublicKey): Boolean = {
+    (for {
+      publicKeyInfoNString <- jsonConverter.toString(publicKeyN.pubKeyInfo)
+      curveN_1 <- getCurve(publicKeyN_1.pubKeyInfo.algorithm).toEither
+      prevSigForN <- Try(publicKeyN.prevSignature).filter(_.nonEmpty).map(_.get).toEither
+    } yield {
+      validateFromBase64(publicKeyN_1.pubKeyInfo.pubKey, prevSigForN, publicKeyInfoNString.getBytes, curveN_1)
+    }).fold(e => { logger.error("validation_error={}", e.getMessage); false }, x => x)
   }
 
   def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean = {
@@ -87,7 +112,8 @@ class PubKeyVerificationService @Inject() (jsonConverter: JsonConverterService, 
 
   def validate(pubKeyInfo: PublicKeyInfo, pm: ProtocolMessage): Boolean = {
     (for {
-      verifier <- Try(pmService.protocolVerifier(pubKeyInfo.pubKey, getCurve(pubKeyInfo.algorithm)))
+      curve <- getCurve(pubKeyInfo.algorithm)
+      verifier <- Try(pmService.protocolVerifier(pubKeyInfo.pubKey, curve))
       verification <- Try(verifier.verify(pm.getUUID, pm.getSigned, 0, pm.getSigned.length, pm.getSignature))
     } yield {
       verification

@@ -5,10 +5,13 @@ import java.util.concurrent.TimeoutException
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
+import com.ubirch.crypto.utils.Curve
+import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.kafka.KeyAnchoring
+import com.ubirch.util.TaskHelpers
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -17,10 +20,10 @@ import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.json4s.Formats
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.language.postfixOps
+import scala.util.Try
 import scala.util.control.NoStackTrace
-import scala.util.{ Failure, Success }
 
 /**
   * Represents a PubKeyService to work with PublicKeys
@@ -32,6 +35,7 @@ trait PubKeyService {
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
+  def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
 }
 
 /**
@@ -49,49 +53,29 @@ trait PubKeyService {
 class DefaultPubKeyService @Inject() (
     config: Config,
     publicKeyDAO: PublicKeyRowDAO,
-    publicKeyByHwDeviceIdDao: PublicKeyRowByHwDeviceIdDAO,
+    publicKeyByHwDeviceIdDao: PublicKeyRowByOwnerIdDAO,
     publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService,
     keyAnchoring: KeyAnchoring
 )(implicit scheduler: Scheduler, jsFormats: Formats)
-  extends PubKeyService with LazyLogging {
+  extends PubKeyService with TaskHelpers with ServiceMetrics with LazyLogging {
 
   import DefaultPubKeyService._
 
   val service: String = config.getString(GenericConfPaths.NAME)
 
-  private val successCounter = Counter.build()
+  val successCounter: Counter = Counter.build()
     .name("pubkey_management_success")
     .help("Represents the number of public key management successes")
     .labelNames("service", "method")
     .register()
 
-  private val errorCounter = Counter.build()
+  val errorCounter: Counter = Counter.build()
     .name("pubkey_management_failures")
     .help("Represents the number of public key management failures")
     .labelNames("service", "method")
     .register()
-
-  def countWhen[T](method: String)(ft: T => Boolean)(cf: CancelableFuture[T]): CancelableFuture[T] = {
-
-    def s = successCounter.labels(service, method).inc()
-    def f = errorCounter.labels(service, method).inc()
-
-    cf.onComplete {
-      case Success(t) => if (ft(t)) s else f
-      case Failure(_) => f
-    }
-    cf
-  }
-
-  def count[T](method: String)(cf: CancelableFuture[T]): CancelableFuture[T] = {
-    cf.onComplete {
-      case Success(_) => successCounter.labels(service, method).inc()
-      case Failure(_) => errorCounter.labels(service, method).inc()
-    }
-    cf
-  }
 
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
 
@@ -103,7 +87,7 @@ class DefaultPubKeyService @Inject() (
 
       key = maybeKey.get
       pubKeyInfo = key.pubKeyInfoRow
-      curve = verification.getCurve(pubKeyInfo.algorithm)
+      curve <- Task.fromTry(verification.getCurve(pubKeyInfo.algorithm))
       verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.publicKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("invalid_signature_on_key_deletion={}", publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidVerification(PublicKey.fromPublicKeyRow(key)))
@@ -137,9 +121,9 @@ class DefaultPubKeyService @Inject() (
       pubKeys <- publicKeyByPubKeyIdDao
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
-        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+        .toListL
 
-      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
+      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime)).map(sort)
       _ = logger.info("keys_found={} valid_keys_found={} pub_key_id={}", pubKeys.size, validPubKeys.size, pubKeyId)
 
     } yield {
@@ -149,19 +133,23 @@ class DefaultPubKeyService @Inject() (
   }
 
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_hardware_id") {
-    (for {
-      pubKeys <- publicKeyByHwDeviceIdDao
-        .byHwDeviceId(hwDeviceId)
-        .map(PublicKey.fromPublicKeyRow)
-        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+    getByHardwareIdAsTask(hwDeviceId).runToFuture
+  }
 
-      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime))
+  def getByHardwareIdAsTask(hwDeviceId: String): Task[Seq[PublicKey]] = {
+    for {
+      pubKeys <- publicKeyByHwDeviceIdDao
+        .byOwnerId(hwDeviceId)
+        .map(PublicKey.fromPublicKeyRow)
+        .toListL
+
+      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime)).map(sort)
+
       _ = logger.info("keys_found={} valid_keys_found={} hardware_id={}", pubKeys.size, validPubKeys.size, hwDeviceId)
 
     } yield {
       validPubKeys
-    }).runToFuture
-
+    }
   }
 
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
@@ -174,9 +162,14 @@ class DefaultPubKeyService @Inject() (
 
   private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
     (for {
-      maybeKey <- publicKeyDAO.byPubKeyId(publicKey.pubKeyInfo.pubKey).headOptionL
-      _ = if (maybeKey.isDefined) logger.info("key_found={}", maybeKey.toString)
-      _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
+      maybePrevKey <- getByHardwareIdAsTask(publicKey.pubKeyInfo.hwDeviceId).map(_.headOption)
+      _ = if (publicKey.prevSignature.isDefined && maybePrevKey.isEmpty) logger.info("with_prev_sig={} prev_key={}", publicKey.prevSignature, maybePrevKey.toString)
+      _ <- earlyResponseIf(publicKey.prevSignature.exists(_.isEmpty) && maybePrevKey.isDefined)(InvalidVerification(publicKey))
+      _ = if (maybePrevKey.isDefined) logger.info("key_found={}", maybePrevKey.toString)
+
+      prevSignatureVerification <- Task.delay(maybePrevKey.forall(x => verification.validate(x, publicKey)))
+      _ = if (!prevSignatureVerification) logger.error("failed_prev_verification_for={}", publicKey.toString)
+      _ <- earlyResponseIf(!prevSignatureVerification)(InvalidVerification(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
@@ -249,7 +242,7 @@ class DefaultPubKeyService @Inject() (
         .timeoutWith(timeout, FailedKafkaPublish(publicKey, Option(new TimeoutException(s"failed_publish_timeout=${timeout.toString()}"))))
         .onErrorHandleWith(e => Task.raiseError(FailedKafkaPublish(publicKey, Option(e))))
       _ = if (maybeRM.isEmpty) logger.error("failed_publish={}", publicKey.toString)
-      _ = if (maybeRM.isDefined) logger.info("publish_succeeded")
+      _ = if (maybeRM.isDefined) logger.info("publish_succeeded_for={}", publicKey.pubKeyInfo.pubKeyId)
       _ <- earlyResponseIf(maybeRM.isEmpty)(FailedKafkaPublish(publicKey, None))
     } yield {
       (maybeRM.get, publicKey)
@@ -277,8 +270,28 @@ class DefaultPubKeyService @Inject() (
     }
   }
 
-  private def earlyResponseIf(condition: Boolean)(response: Exception): Task[Unit] =
-    if (condition) Task.raiseError(response) else Task.unit
+  def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey] = {
+
+    def recreate(bytes: Array[Byte]) = Try(GeneratorKeyFactory.getPubKey(bytes, curve))
+
+    val bytesLength = encoded.length
+    for {
+      bytesToUse <- Try {
+        //We are slicing as only the latest 64 bytes are needed to recreate the key.
+        if (curve == Curve.PRIME256V1) encoded.slice(bytesLength - 64, bytesLength) else encoded
+      }
+      pubKey <- recreate(bytesToUse)
+    } yield {
+      pubKey
+    }
+
+  }
+
+  def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
+    publicKeys
+      .sortWith { (a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created) }
+      .sortWith { (a, _) => a.prevSignature.isDefined }
+  }
 
 }
 
@@ -290,14 +303,10 @@ object DefaultPubKeyService {
   abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
 
   case class ParsingError(message: String) extends PubKeyServiceException(message)
-
   case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
-
   case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
-
   case class FailedKafkaPublish(publicKey: PublicKey, maybeThrowable: Option[Throwable]) extends PubKeyServiceException(maybeThrowable.map(_.getMessage).getOrElse("Failed Publish"))
-
   case class OperationReturnsNone(message: String) extends PubKeyServiceException(message)
-
   case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
+
 }

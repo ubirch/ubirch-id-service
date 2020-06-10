@@ -83,7 +83,7 @@ trait WithPrometheusMetrics {
 
 /**
   * Represents an assembly for the boot process
-  * @param modules
+  * @param modules It is the modules of the system
   */
 abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithJVMHooks with WithPrometheusMetrics {
   def *[T](block: => T): Unit =

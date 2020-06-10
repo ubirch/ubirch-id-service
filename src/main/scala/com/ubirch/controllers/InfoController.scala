@@ -4,10 +4,11 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.SwaggerElements
 import com.ubirch.models.{ NOK, Simple }
 import javax.inject._
+import javax.servlet.http.HttpServletRequest
 import org.json4s.Formats
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, NotFound, Ok, ScalatraServlet }
+import org.scalatra._
 
 /**
   * Represents a simple controller for the base path "/"
@@ -23,11 +24,36 @@ class InfoController @Inject() (val swagger: Swagger, jFormats: Formats) extends
 
   val getSimpleCheck: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("simpleCheck")
-      summary "Welcome / Health /"
-      description "Check if service is up and running"
-      tags (SwaggerElements.TAG_KEY_SERVICE, SwaggerElements.TAG_WELCOME, SwaggerElements.TAG_HEALTH))
+      summary "Welcome"
+      description "Getting a hello from the system"
+      tags SwaggerElements.TAG_WELCOME)
+
+  get("/hola", operation(getSimpleCheck)) {
+    hello
+  }
 
   get("/hello", operation(getSimpleCheck)) {
+    hello
+  }
+
+  get("/ping", operation(getSimpleCheck)) {
+    Ok("pong")
+  }
+
+  get("/", operation(getSimpleCheck)) {
+    Ok(Simple("Hallo, Hola, Hello, Salut, Hej, this is the Ubirch Identity Service."))
+  }
+
+  before() {
+    contentType = formats("json")
+  }
+
+  notFound {
+    logger.info("controller=InfoController route_not_found={} query_string={}", requestPath, request.getQueryString)
+    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+  }
+
+  private def hello(implicit request: HttpServletRequest): ActionResult = {
     contentType = formats("txt")
     val data =
       """
@@ -62,19 +88,6 @@ class InfoController @Inject() (val swagger: Swagger, jFormats: Formats) extends
         |https://asciiart.website/index.php?art=animals/wolves
         |""".stripMargin
     Ok(data)
-  }
-
-  get("/", operation(getSimpleCheck)) {
-    Ok(Simple("Hallo, Hola, Hello, Salut, Hej, this is the Ubirch Identity Service."))
-  }
-
-  before() {
-    contentType = formats("json")
-  }
-
-  notFound {
-    logger.info("controller=InfoController route_not_found={} query_string={}", requestPath, request.getQueryString)
-    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
   }
 
 }
