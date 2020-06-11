@@ -1,4 +1,5 @@
-package com.ubirch.services.kafka
+package com.ubirch
+package services.kafka
 
 import java.io.ByteArrayInputStream
 import java.util.concurrent.ExecutionException
@@ -14,7 +15,6 @@ import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import com.ubirch.services.lifeCycle.Lifecycle
-import com.ubirch.util.Exceptions.StoringException
 import javax.inject._
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }

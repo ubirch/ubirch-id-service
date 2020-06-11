@@ -1,4 +1,5 @@
-package com.ubirch.services.kafka
+package com.ubirch
+package services.kafka
 
 import java.nio.charset.StandardCharsets
 
@@ -10,6 +11,7 @@ import com.ubirch.kafka.producer.{ ProducerRunner, WithProducerShutdownHook }
 import com.ubirch.models.PublicKey
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.util.TaskHelpers
 import javax.inject._
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -17,15 +19,21 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.{ ByteArraySerializer, Serializer, StringSerializer }
 import org.json4s.{ DefaultFormats, Formats }
 
+import scala.concurrent.TimeoutException
+import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.language.postfixOps
+
 trait KeyAnchoring {
   def anchorKey(value: PublicKey): Task[RecordMetadata]
   def anchorKeyAsOpt(value: PublicKey): Task[Option[RecordMetadata]]
+  def anchorKey(value: PublicKey, timeout: FiniteDuration = 10 seconds): Task[(RecordMetadata, PublicKey)]
 }
 
 abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)(implicit scheduler: Scheduler)
   extends KeyAnchoring
   with ExpressProducer[String, Array[Byte]]
   with WithProducerShutdownHook
+  with TaskHelpers
   with LazyLogging {
 
   override val producerBootstrapServers: String = config.getString(AnchoringProducerConfPaths.BOOTSTRAP_SERVERS)
@@ -58,6 +66,19 @@ abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConver
         logger.error("Error publishing pubkey to kafka, pk={} exception={} error_message", value, e.getClass.getName, e.getMessage)
         None
     }
+
+  override def anchorKey(value: PublicKey, timeout: FiniteDuration): Task[(RecordMetadata, PublicKey)] = {
+    for {
+      maybeRM <- anchorKeyAsOpt(value)
+        .timeoutWith(timeout, FailedKafkaPublish(value, Option(new TimeoutException(s"failed_publish_timeout=${timeout.toString()}"))))
+        .onErrorHandleWith(e => Task.raiseError(FailedKafkaPublish(value, Option(e))))
+      _ = if (maybeRM.isEmpty) logger.error("failed_publish={}", value.toString)
+      _ = if (maybeRM.isDefined) logger.info("publish_succeeded_for={}", value.pubKeyInfo.pubKeyId)
+      _ <- earlyResponseIf(maybeRM.isEmpty)(FailedKafkaPublish(value, None))
+    } yield {
+      (maybeRM.get, value)
+    }
+  }
 
   lifecycle.addStopHook(hookFunc(production))
 

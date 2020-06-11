@@ -1,4 +1,5 @@
-package com.ubirch.util
+package com.ubirch
+package util
 
 import java.security.KeyPairGenerator
 import java.security.spec.ECGenParameterSpec
@@ -6,7 +7,6 @@ import java.security.spec.ECGenParameterSpec
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
-import com.ubirch.util.Exceptions.NoCurveException
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 import scala.util.{ Failure, Success, Try }

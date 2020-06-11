@@ -1,4 +1,5 @@
-package com.ubirch.services.key
+package com.ubirch
+package services.key
 
 import java.io.ByteArrayInputStream
 import java.security.cert.{ CertificateFactory, X509Certificate }
@@ -20,7 +21,6 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.bouncycastle.util.encoders.{ Base64, Hex }
 
 import scala.util.Try
-import scala.util.control.NoStackTrace
 
 /**
   * Basic description of what a CertService is
@@ -51,8 +51,6 @@ class DefaultCertService @Inject() (
     identitiesByStateDAO: IdentityByStateDAO
 )(implicit scheduler: Scheduler) extends CertService with TaskHelpers with ServiceMetrics with LazyLogging {
 
-  import DefaultCertService._
-
   val service: String = config.getString(GenericConfPaths.NAME)
 
   val successCounter: Counter = Counter.build()
@@ -71,7 +69,7 @@ class DefaultCertService @Inject() (
     (for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
-      _ <- earlyResponseIf(!verification)(InvalidVerification(csr))
+      _ <- earlyResponseIf(!verification)(InvalidCSRVerification(csr))
 
       cn <- lift(CertUtil.getCN(csr.getSubject))(InvalidCN(csr))
       cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
@@ -231,27 +229,5 @@ class DefaultCertService @Inject() (
     }).runToFuture
   }
 
-}
-
-/**
-  * Convenience object for the Cert Service
-  */
-object DefaultCertService {
-
-  abstract class CertServiceException(message: String) extends Exception(message) with NoStackTrace
-
-  case class InvalidVerification(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
-
-  case class InvalidCertVerification(csr: X509Certificate) extends CertServiceException("Invalid cert verification")
-  case class InvalidCN(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid Common Name in CSR")
-  case class InvalidCertCN(csr: X509Certificate) extends CertServiceException("Invalid Common Name in Cert")
-  case class InvalidUUID(message: String) extends CertServiceException(message)
-  case class UnknownSignatureAlgorithm(message: String) extends CertServiceException(message)
-  case class UnknownCurve(message: String) extends CertServiceException(message)
-  case class RecreationException(message: String) extends CertServiceException(message)
-  case class EncodingException(message: String) extends CertServiceException(message)
-  case class IdentityAlreadyExistsException(message: String) extends CertServiceException(message)
-  case class IdentityNotFoundException(message: String) extends CertServiceException(message)
-  case class OperationReturnsNone(message: String) extends CertServiceException(message)
 }
 

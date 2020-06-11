@@ -1,4 +1,5 @@
-package com.ubirch.services.cluster
+package com.ubirch
+package services.cluster
 
 import java.net.InetSocketAddress
 
@@ -6,7 +7,6 @@ import com.datastax.driver.core._
 import com.datastax.driver.core.policies.RoundRobinPolicy
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.CassandraClusterConfPaths
-import com.ubirch.util.Exceptions.InvalidConsistencyLevel
 import com.ubirch.util.URLsHelper
 import javax.inject._
 

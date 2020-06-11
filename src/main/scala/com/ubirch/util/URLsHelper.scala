@@ -1,8 +1,7 @@
-package com.ubirch.util
+package com.ubirch
+package util
 
 import java.net.{ InetSocketAddress, URL }
-
-import com.ubirch.util.Exceptions.{ InvalidContactPointsException, NoContactPointsException }
 
 import scala.util.Try
 
