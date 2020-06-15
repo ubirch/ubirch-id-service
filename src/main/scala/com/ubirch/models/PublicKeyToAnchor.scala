@@ -2,7 +2,7 @@ package com.ubirch.models
 
 /**
   * Represents the information that will be sent the Event Log System
-  * @param hardwareId
-  * @param publicKey
+  * @param id of the entity that created the key
+  * @param publicKey public key
   */
-case class PublicKeyToAnchor(hardwareId: String, publicKey: String)
+case class PublicKeyToAnchor(id: String, publicKey: String)
