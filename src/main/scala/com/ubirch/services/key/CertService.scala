@@ -158,7 +158,7 @@ class DefaultCertService @Inject() (
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
       _ <- pubKeyService.createRow(publicKey, data)
-      _ <- pubKeyService.anchorAfter(() => Task.delay(publicKey))
+      _ <- pubKeyService.anchorAfter()(() => Task.delay(publicKey))
 
     } yield {
       pubKeyInfo
@@ -213,7 +213,7 @@ class DefaultCertService @Inject() (
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
       _ <- pubKeyService.createRow(publicKey, data)
-      _ <- pubKeyService.anchorAfter(() => Task.delay(publicKey))
+      _ <- pubKeyService.anchorAfter()(() => Task.delay(publicKey))
 
     } yield {
       pubKeyInfo

@@ -34,7 +34,7 @@ trait PubKeyService {
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
   def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])]
-  def anchorAfter(fk: () => Task[PublicKey]): Task[PublicKey]
+  def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey]
 }
 
 /**
@@ -166,7 +166,7 @@ class DefaultPubKeyService @Inject() (
   }
 
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
-    anchorAfter(() => createFromJson(publicKey, rawMessage)).runToFuture
+    anchorAfter()(() => createFromJson(publicKey, rawMessage)).runToFuture
   }
 
   private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
@@ -194,7 +194,7 @@ class DefaultPubKeyService @Inject() (
   }
 
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msg_pack") {
-    anchorAfter(() => createFromMsgPack(pm, rawMsgPack)).runToFuture
+    anchorAfter()(() => createFromMsgPack(pm, rawMsgPack)).runToFuture
   }
 
   private def createFromMsgPack(pm: ProtocolMessage, rawMsgPack: String): Task[PublicKey] = {
@@ -255,10 +255,10 @@ class DefaultPubKeyService @Inject() (
     }
   }
 
-  def anchorAfter(fk: () => Task[PublicKey]): Task[PublicKey] = {
+  def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey] = {
     (for {
       publicKey <- fk()
-      _ <- keyAnchoring.anchorKey(publicKey, 10 seconds)
+      _ <- keyAnchoring.anchorKey(publicKey, timeout)
     } yield publicKey)
       .onErrorRecoverWith {
         case e @ FailedKafkaPublish(publicKey, _) =>
