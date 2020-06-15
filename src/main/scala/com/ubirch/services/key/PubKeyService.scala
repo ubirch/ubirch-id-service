@@ -18,6 +18,7 @@ import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
+import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -32,6 +33,8 @@ trait PubKeyService {
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
+  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])]
+  def anchorAfter(fk: () => Task[PublicKey]): Task[PublicKey]
 }
 
 /**
@@ -181,8 +184,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, rawMessage))
-      _ <- createRow(row)
+      _ <- createRow(publicKey, rawMessage)
 
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
@@ -221,14 +223,25 @@ class DefaultPubKeyService @Inject() (
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsgPack))
-      _ <- createRow(row)
+      _ <- createRow(publicKey, rawMsgPack)
 
     } yield publicKey)
       .onErrorRecover {
         case KeyExists(publicKey) => publicKey
         case e: Throwable => throw e
       }
+  }
+
+  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])] = {
+    for {
+      row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsg))
+      res <- createRow(row)
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("PubKey_Insert"))
+    } yield {
+      (row, res)
+    }
   }
 
   def createRow(publicKeyRow: PublicKeyRow): Task[Option[Unit]] = {
@@ -245,7 +258,7 @@ class DefaultPubKeyService @Inject() (
   def anchorAfter(fk: () => Task[PublicKey]): Task[PublicKey] = {
     (for {
       publicKey <- fk()
-      _ <- keyAnchoring.anchorKey(publicKey)
+      _ <- keyAnchoring.anchorKey(publicKey, 10 seconds)
     } yield publicKey)
       .onErrorRecoverWith {
         case e @ FailedKafkaPublish(publicKey, _) =>

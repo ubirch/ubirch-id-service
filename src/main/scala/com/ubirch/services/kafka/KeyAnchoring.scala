@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.AnchoringProducerConfPaths
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.{ ProducerRunner, WithProducerShutdownHook }
-import com.ubirch.models.PublicKey
+import com.ubirch.models.{ PublicKey, PublicKeyToAnchor }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.lifeCycle.Lifecycle
 import com.ubirch.util.TaskHelpers
@@ -22,11 +22,13 @@ import org.json4s.{ DefaultFormats, Formats }
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.language.postfixOps
+import scala.util.Try
 
 trait KeyAnchoring {
   def anchorKey(value: PublicKey): Task[RecordMetadata]
   def anchorKeyAsOpt(value: PublicKey): Task[Option[RecordMetadata]]
   def anchorKey(value: PublicKey, timeout: FiniteDuration = 10 seconds): Task[(RecordMetadata, PublicKey)]
+  def publicKeyToAnchor(value: PublicKey): Try[PublicKeyToAnchor]
 }
 
 abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)(implicit scheduler: Scheduler)
@@ -43,14 +45,21 @@ abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConver
 
   val producerTopic: String = config.getString(AnchoringProducerConfPaths.TOPIC_PATH)
 
+  override def publicKeyToAnchor(value: PublicKey): Try[PublicKeyToAnchor] = {
+    Try(PublicKeyToAnchor(value.pubKeyInfo.hwDeviceId, value.pubKeyInfo.pubKey))
+  }
+
   override def anchorKey(value: PublicKey): Task[RecordMetadata] = Task.defer {
 
     for {
-      kd <- Task.fromTry(jsonConverterService.toString(value).toTry)
+      toPublish <- Task.fromTry(publicKeyToAnchor(value))
+      toPublishAsJValue <- Task.fromTry(jsonConverterService.toJValue(toPublish).toTry.map(_.snakizeKeys))
+      toPublishAsString <- Task.delay(jsonConverterService.toString(toPublishAsJValue))
+      toPublishAsBytes <- Task.delay(toPublishAsString.getBytes(StandardCharsets.UTF_8))
       rm <- Task.fromFuture {
         send(
           producerTopic,
-          kd.getBytes(StandardCharsets.UTF_8)
+          toPublishAsBytes
         )
       }
     } yield {

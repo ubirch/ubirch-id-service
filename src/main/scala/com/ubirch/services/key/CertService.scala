@@ -38,7 +38,6 @@ trait CertService {
   *
   * @param config Represents a config object
   * @param pubKeyService Service for managing public keys
-  * @param publicKeyDAO DAO for keys
   * @param identitiesDAO DAO for the identities
   * @param scheduler Executor Scheduler.
   */
@@ -46,7 +45,6 @@ trait CertService {
 class DefaultCertService @Inject() (
     config: Config,
     pubKeyService: PubKeyService,
-    publicKeyDAO: PublicKeyRowDAO,
     identitiesDAO: IdentitiesDAO,
     identitiesByStateDAO: IdentityByStateDAO
 )(implicit scheduler: Scheduler) extends CertService with TaskHelpers with ServiceMetrics with LazyLogging {
@@ -159,11 +157,8 @@ class DefaultCertService @Inject() (
       pubKeyInfo = PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
-      res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+      _ <- pubKeyService.createRow(publicKey, data)
+      _ <- pubKeyService.anchorAfter(() => Task.delay(publicKey))
 
     } yield {
       pubKeyInfo
@@ -212,17 +207,13 @@ class DefaultCertService @Inject() (
       pubKeyInfo = PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
-
       res <- identitiesByStateDAO.insert(IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", maybeIdentity.toString)
       _ = if (res.isDefined) logger.info("creation_succeeded={}", maybeIdentity.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
-      res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+      _ <- pubKeyService.createRow(publicKey, data)
+      _ <- pubKeyService.anchorAfter(() => Task.delay(publicKey))
 
     } yield {
       pubKeyInfo

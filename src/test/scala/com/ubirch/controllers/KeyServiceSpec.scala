@@ -201,6 +201,9 @@ class KeyServiceSpec
 
       }
 
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
+      assert(anchors.nonEmpty)
+
     }
 
     "create key using the json endpoint when pubKeyId is missing" taggedAs Tag("apricots") in {
@@ -213,6 +216,9 @@ class KeyServiceSpec
         status should equal(200)
         body should equal(expected)
       }
+
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 1)
+      assert(anchors.nonEmpty)
 
     }
 
