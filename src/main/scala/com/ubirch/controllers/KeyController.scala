@@ -42,7 +42,7 @@ class KeyController @Inject() (
   }
 
   val getV1Check: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("getV1Check")
+    (apiOperation[Simple]("getV1Check")
       summary "Welcome / Health"
       description "Check if KeyController service is up and running"
       tags SwaggerElements.TAG_HEALTH
@@ -54,7 +54,7 @@ class KeyController @Inject() (
   }
 
   val getV1DeepCheck: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("getV1DeepCheck")
+    (apiOperation[BooleanListResponse]("getV1DeepCheck")
       summary "Health monitor deep check"
       description "allows a deep check of the service"
       tags SwaggerElements.TAG_HEALTH
@@ -76,7 +76,7 @@ class KeyController @Inject() (
   }
 
   val getV1PubKeyPubKey: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("getV1PubKeyPubKey")
+    (apiOperation[PublicKey]("getV1PubKeyPubKey")
       summary "Retrieves public key"
       description "retrieves the given public key found by pubKeyID in the key registry with the given data; the public key must exist already"
       tags SwaggerElements.TAG_KEY_SERVICE
@@ -106,7 +106,7 @@ class KeyController @Inject() (
   }
 
   val getV1CurrentHardwareId: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("getV1CurrentHardwareId")
+    (apiOperation[Seq[PublicKey]]("getV1CurrentHardwareId")
       summary "Queries all currently valid public keys for this hardwareId"
       description "queries all currently valid public keys based on the hardwareId"
       tags SwaggerElements.TAG_KEY_SERVICE
@@ -136,7 +136,7 @@ class KeyController @Inject() (
   }
 
   val postV1PubKey: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("postV1PubKey")
+    (apiOperation[PublicKey]("postV1PubKey")
       summary "Stores new public key"
       description "stores the given public key with its unique pubKeyID"
       tags SwaggerElements.TAG_KEY_SERVICE
@@ -200,7 +200,7 @@ class KeyController @Inject() (
   }
 
   val deleteV1PubKey: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("deleteV1PubKey")
+    (apiOperation[PublicKeyDelete]("deleteV1PubKey")
       summary "Deletes a public key"
       description "deletes a public key"
       tags SwaggerElements.TAG_KEY_SERVICE
