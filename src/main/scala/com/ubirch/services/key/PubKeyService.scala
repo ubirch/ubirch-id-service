@@ -245,8 +245,6 @@ class DefaultPubKeyService @Inject() (
     for {
       row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsg))
       res <- createRow(row)
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("PubKey_Insert"))
     } yield {
       (row, res)
