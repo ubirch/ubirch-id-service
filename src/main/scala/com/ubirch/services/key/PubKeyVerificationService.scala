@@ -4,6 +4,7 @@ import java.security.spec.InvalidKeySpecException
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.InvalidPreSignature
 import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.models.{ PublicKey, PublicKeyInfo }
@@ -63,10 +64,12 @@ class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterSe
     (for {
       publicKeyInfoNString <- jsonConverter.toString(publicKeyN.pubKeyInfo)
       curveN_1 <- getCurve(publicKeyN_1.pubKeyInfo.algorithm).toEither
-      prevSigForN <- Try(publicKeyN.prevSignature).filter(_.nonEmpty).map(_.get).toEither
+      prevSigForN <- Try(publicKeyN.prevSignature)
+        .map(_.filter(_.nonEmpty).getOrElse(throw InvalidPreSignature(publicKeyN.pubKeyInfo.pubKey)))
+        .toEither
     } yield {
       validateFromBase64(publicKeyN_1.pubKeyInfo.pubKey, prevSigForN, publicKeyInfoNString.getBytes, curveN_1)
-    }).fold(e => { logger.error("validation_error={}", e.getMessage); false }, x => x)
+    }).fold(e => { logger.error("exception={} validation_error={}", e.getClass.getCanonicalName, e.getMessage); false }, x => x)
   }
 
   def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean = {
