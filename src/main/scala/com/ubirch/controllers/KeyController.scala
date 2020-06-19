@@ -1,8 +1,8 @@
-package com.ubirch.controllers
+package com.ubirch
+package controllers
 
 import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
-import com.ubirch.services.key.DefaultPubKeyService.PubKeyServiceException
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.DateUtil

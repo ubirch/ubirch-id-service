@@ -6,8 +6,8 @@ import com.ubirch.services.cluster._
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
-import com.ubirch.services.kafka.{ DefaultTiger, Tiger }
-import com.ubirch.services.key.{ CertService, DefaultCertService, DefaultPubKeyService, DefaultPubKeyVerificationService, PubKeyService, PubKeyVerificationService }
+import com.ubirch.services.kafka.{ DefaultKeyAnchoring, DefaultTiger, KeyAnchoring, Tiger }
+import com.ubirch.services.key._
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.pm.{ DefaultProtocolMessageService, ProtocolMessageService }
 import com.ubirch.services.rest.SwaggerProvider
@@ -37,6 +37,7 @@ class Binder
   def ClusterService = bind(classOf[ClusterService]).to(classOf[DefaultClusterService])
   def ConnectionService = bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
   def Tiger = bind(classOf[Tiger]).to(classOf[DefaultTiger])
+  def KeyAnchoring = bind(classOf[KeyAnchoring]).to(classOf[DefaultKeyAnchoring])
   def CertService = bind(classOf[CertService]).to(classOf[DefaultCertService])
 
   def configure(): Unit = {
@@ -55,6 +56,7 @@ class Binder
     CertService
     PubKeyVerificationService
     ProtocolMessageService
+    KeyAnchoring
   }
 
 }

@@ -2,12 +2,13 @@ package com.ubirch.controllers
 
 import java.util.{ Base64, UUID }
 
-import com.ubirch._
+import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
+import com.ubirch.{ EmbeddedCassandra, _ }
 import io.prometheus.client.CollectorRegistry
-import net.manub.embeddedkafka.EmbeddedKafka
+import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
@@ -24,7 +25,10 @@ class KeyServiceSpec
   with WithFixtures
   with BeforeAndAfterEach {
 
-  lazy val Injector = new InjectorHelper(List(new Binder)) {}
+  implicit lazy val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+
+  lazy val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
+  lazy val Injector = new InjectorHelperImpl(bootstrapServers) {}
 
   val jsonConverter = Injector.get[JsonConverterService]
 
@@ -170,6 +174,68 @@ class KeyServiceSpec
 
     }
 
+    "create key using the json endpoint when same key" taggedAs Tag("date_fruit") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareDeviceId: String = UUID.randomUUID().toString
+
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId) match {
+
+        case Right((_, pkAsString, _, _, _)) =>
+
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+
+        case Left(e) =>
+          fail(e)
+
+      }
+
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
+      assert(anchors.nonEmpty)
+
+    }
+
+    "create key using the json endpoint when diff key" taggedAs Tag("figs") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareDeviceId: String = UUID.randomUUID().toString
+
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId) match {
+        case Right((_, pkAsString, _, _, _)) =>
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+        case Left(e) =>
+          fail(e)
+
+      }
+
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId) match {
+        case Right((_, pkAsString, _, _, _)) =>
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(400)
+            body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+          }
+        case Left(e) =>
+          fail(e)
+
+      }
+
+    }
+
     "create key using the json endpoint" taggedAs Tag("orange") in {
 
       val created = DateUtil.nowUTC
@@ -197,6 +263,9 @@ class KeyServiceSpec
 
       }
 
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
+      assert(anchors.nonEmpty)
+
     }
 
     "create key using the json endpoint when pubKeyId is missing" taggedAs Tag("apricots") in {
@@ -210,12 +279,35 @@ class KeyServiceSpec
         body should equal(expected)
       }
 
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 1)
+      assert(anchors.nonEmpty)
+
     }
 
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
+
       val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
+        status should equal(200)
+      }
+
+    }
+
+    "create key twice using the mpack endpoint with same data" taggedAs Tag("jackfruit") in {
+
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
+
+      val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
+      post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
         status should equal(200)
       }
 
@@ -473,6 +565,7 @@ class KeyServiceSpec
   }
 
   protected override def beforeAll(): Unit = {
+
     CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
     cassandra.start()
