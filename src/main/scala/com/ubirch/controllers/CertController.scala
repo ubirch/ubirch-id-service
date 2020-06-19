@@ -1,9 +1,9 @@
-package com.ubirch.controllers
+package com.ubirch
+package controllers
 
 import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
-import com.ubirch.services.key.DefaultCertService.CertServiceException
 import javax.inject._
 import org.json4s.Formats
 import org.scalatra._

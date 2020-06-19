@@ -1,4 +1,5 @@
-package com.ubirch.services.key
+package com.ubirch
+package services.key
 
 import java.io.ByteArrayInputStream
 import java.security.cert.{ CertificateFactory, X509Certificate }
@@ -20,7 +21,6 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.bouncycastle.util.encoders.{ Base64, Hex }
 
 import scala.util.Try
-import scala.util.control.NoStackTrace
 
 /**
   * Basic description of what a CertService is
@@ -28,9 +28,9 @@ import scala.util.control.NoStackTrace
 trait CertService {
   def extractCert(request: Array[Byte]): Try[X509Certificate]
   def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo]
+  def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo]
   def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo]
   def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest]
-  def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo]
 }
 
 /**
@@ -38,7 +38,6 @@ trait CertService {
   *
   * @param config Represents a config object
   * @param pubKeyService Service for managing public keys
-  * @param publicKeyDAO DAO for keys
   * @param identitiesDAO DAO for the identities
   * @param scheduler Executor Scheduler.
   */
@@ -46,12 +45,9 @@ trait CertService {
 class DefaultCertService @Inject() (
     config: Config,
     pubKeyService: PubKeyService,
-    publicKeyDAO: PublicKeyRowDAO,
     identitiesDAO: IdentitiesDAO,
     identitiesByStateDAO: IdentityByStateDAO
 )(implicit scheduler: Scheduler) extends CertService with TaskHelpers with ServiceMetrics with LazyLogging {
-
-  import DefaultCertService._
 
   val service: String = config.getString(GenericConfPaths.NAME)
 
@@ -67,11 +63,72 @@ class DefaultCertService @Inject() (
     .labelNames("service", "method")
     .register()
 
+  override def extractCert(request: Array[Byte]): Try[X509Certificate] = {
+    for {
+      cert <- materializeCert(request).toTry
+      _ = logger.info("crs_extracted={}", cert.toString)
+    } yield {
+      cert
+    }
+  }
+
+  override def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo] = count("process_cert_x509") {
+    (for {
+      _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
+      publicKey <- buildPublicKey(cert)
+
+      data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
+
+      identity = Identity(Hasher.hash(data), publicKey.pubKeyInfo.hwDeviceId, "X.509", data, publicKey.pubKeyInfo.pubKeyId)
+      identityRow = IdentityRow.fromIdentity(identity)
+
+      exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
+      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
+
+      res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), X509Created).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+
+      _ <- pubKeyService.createRow(publicKey, data)
+      _ <- pubKeyService.anchorAfter()(() => Task.delay(publicKey))
+
+    } yield {
+      publicKey.pubKeyInfo
+    }).runToFuture
+  }
+
+  override def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo] = count("activate_cert_x509") {
+    (for {
+
+      maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityId(activation.ownerId, activation.identityId).headOptionL
+      _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
+
+      cert <- liftTry(extractCert(Hex.decode(maybeIdentity.get.data)))(EncodingException("Error building cert"))
+      _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
+
+      publicKey <- buildPublicKey(cert)
+
+      data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
+
+      res <- identitiesByStateDAO.insert(IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", maybeIdentity.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", maybeIdentity.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
+
+      _ <- pubKeyService.createRow(publicKey, data)
+      _ <- pubKeyService.anchorAfter()(() => Task.delay(publicKey))
+
+    } yield {
+      publicKey.pubKeyInfo
+    }).runToFuture
+  }
+
   override def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo] = count("process_csr") {
     (for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
-      _ <- earlyResponseIf(!verification)(InvalidVerification(csr))
+      _ <- earlyResponseIf(!verification)(InvalidCSRVerification(csr))
 
       cn <- lift(CertUtil.getCN(csr.getSubject))(InvalidCN(csr))
       cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
@@ -82,7 +139,7 @@ class DefaultCertService @Inject() (
       curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
 
       pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
-      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
+      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
       data <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
 
@@ -98,12 +155,12 @@ class DefaultCertService @Inject() (
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CSR_Insert"))
 
     } yield {
-      PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
+      PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
     }).runToFuture
 
   }
 
-  def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest] = {
+  override def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest] = {
     for {
       csr <- materializeCRS(request).toTry
       _ = logger.info("crs_extracted={}", csr.getSubject.toString)
@@ -131,8 +188,8 @@ class DefaultCertService @Inject() (
     }).toEither
   }
 
-  override def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo] = count("process_cert_x509") {
-    (for {
+  private def buildPublicKey(cert: X509Certificate): Task[PublicKey] = {
+    for {
       _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
 
       cn <- lift(CertUtil.getCN(new JcaX509CertificateHolder(cert).getSubject))(InvalidCertCN(cert))
@@ -143,42 +200,15 @@ class DefaultCertService @Inject() (
       curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
 
       pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
-      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
+      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
-      data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
-
-      identity = Identity(Hasher.hash(data), uuid.toString, "X.509", data, pubKeyAsBase64)
-      identityRow = IdentityRow.fromIdentity(identity)
-
-      exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
-      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
-
-      res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), X509Created).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
-
-      pubKeyInfo = PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
+      pubKeyInfo = PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
-      res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
-
     } yield {
-      pubKeyInfo
-    }).runToFuture
-  }
-
-  def extractCert(request: Array[Byte]): Try[X509Certificate] = {
-    for {
-      cert <- materializeCert(request).toTry
-      _ = logger.info("crs_extracted={}", cert.toString)
-    } yield {
-      cert
+      publicKey
     }
+
   }
 
   private def materializeCert(certBin: Array[Byte]): Either[Throwable, X509Certificate] = {
@@ -190,68 +220,5 @@ class DefaultCertService @Inject() (
     }).toEither
   }
 
-  override def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo] = count("activate_cert_x509") {
-    (for {
-
-      maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityId(activation.ownerId, activation.identityId).headOptionL
-      _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
-
-      cert <- liftTry(extractCert(Hex.decode(maybeIdentity.get.data)))(EncodingException("Error building cert"))
-      _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
-
-      cn <- lift(CertUtil.getCN(new JcaX509CertificateHolder(cert).getSubject))(InvalidCertCN(cert))
-      cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCertCN(cert))
-      uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))
-
-      alg = cert.getSigAlgName
-      curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
-
-      pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
-      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getPublicKey.getEncoded)))(EncodingException("Error encoding key into base 64"))
-
-      data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
-
-      pubKeyInfo = PublicKeyInfo(alg, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
-      publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
-
-      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, data))
-
-      res <- identitiesByStateDAO.insert(IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", maybeIdentity.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", maybeIdentity.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
-
-      res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
-
-    } yield {
-      pubKeyInfo
-    }).runToFuture
-  }
-
-}
-
-/**
-  * Convenience object for the Cert Service
-  */
-object DefaultCertService {
-
-  abstract class CertServiceException(message: String) extends Exception(message) with NoStackTrace
-
-  case class InvalidVerification(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
-
-  case class InvalidCertVerification(csr: X509Certificate) extends CertServiceException("Invalid cert verification")
-  case class InvalidCN(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid Common Name in CSR")
-  case class InvalidCertCN(csr: X509Certificate) extends CertServiceException("Invalid Common Name in Cert")
-  case class InvalidUUID(message: String) extends CertServiceException(message)
-  case class UnknownSignatureAlgorithm(message: String) extends CertServiceException(message)
-  case class UnknownCurve(message: String) extends CertServiceException(message)
-  case class RecreationException(message: String) extends CertServiceException(message)
-  case class EncodingException(message: String) extends CertServiceException(message)
-  case class IdentityAlreadyExistsException(message: String) extends CertServiceException(message)
-  case class IdentityNotFoundException(message: String) extends CertServiceException(message)
-  case class OperationReturnsNone(message: String) extends CertServiceException(message)
 }
 

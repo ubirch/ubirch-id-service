@@ -1,4 +1,5 @@
-package com.ubirch.services.key
+package com.ubirch
+package services.key
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
@@ -8,6 +9,7 @@ import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
 import com.ubirch.models._
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.services.kafka.KeyAnchoring
 import com.ubirch.util.TaskHelpers
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
@@ -16,8 +18,9 @@ import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
+import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.Try
-import scala.util.control.NoStackTrace
 
 /**
   * Represents a PubKeyService to work with PublicKeys
@@ -30,6 +33,8 @@ trait PubKeyService {
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
+  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])]
+  def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey]
 }
 
 /**
@@ -50,11 +55,10 @@ class DefaultPubKeyService @Inject() (
     publicKeyByHwDeviceIdDao: PublicKeyRowByOwnerIdDAO,
     publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
-    jsonConverterService: JsonConverterService
+    jsonConverterService: JsonConverterService,
+    keyAnchoring: KeyAnchoring
 )(implicit scheduler: Scheduler, jsFormats: Formats)
   extends PubKeyService with TaskHelpers with ServiceMetrics with LazyLogging {
-
-  import DefaultPubKeyService._
 
   val service: String = config.getString(GenericConfPaths.NAME)
 
@@ -83,20 +87,27 @@ class DefaultPubKeyService @Inject() (
       curve <- Task.fromTry(verification.getCurve(pubKeyInfo.algorithm))
       verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.publicKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("invalid_signature_on_key_deletion={}", publicKeyDelete)
-      _ <- earlyResponseIf(!verification)(InvalidVerification(PublicKey.fromPublicKeyRow(key)))
+      _ <- earlyResponseIf(!verification)(InvalidKeyVerification(PublicKey.fromPublicKeyRow(key)))
 
-      deletion <- publicKeyDAO.delete(publicKeyDelete.publicKey).headOptionL
-      _ = if (deletion.isEmpty) logger.error("failed_key_deletion={}", publicKeyDelete.toString)
-      _ = if (deletion.isDefined) logger.info("key_deletion_succeeded={}", publicKeyDelete.toString)
-      _ <- earlyResponseIf(deletion.isEmpty)(OperationReturnsNone("Delete"))
+      deletion <- del(publicKeyDelete.publicKey)
 
-    } yield true).onErrorRecover {
+    } yield deletion).onErrorRecover {
       case KeyNotExists(_) => false
-      case InvalidVerification(_) => false
+      case InvalidKeyVerification(_) => false
       case OperationReturnsNone(_) => false
       case e: Throwable => throw e
     }.runToFuture
 
+  }
+
+  private def del(pubKeyId: String): Task[Boolean] = {
+    for {
+      deletion <- publicKeyDAO.delete(pubKeyId).headOptionL
+      _ = if (deletion.isEmpty) logger.error("failed_key_deletion={}", pubKeyId)
+      _ = if (deletion.isDefined) logger.info("key_deletion_succeeded={}", pubKeyId)
+    } yield {
+      deletion.isDefined
+    }
   }
 
   def getSome(take: Int): CancelableFuture[Seq[PublicKey]] = count("get_some") {
@@ -104,7 +115,7 @@ class DefaultPubKeyService @Inject() (
       pubKeys <- publicKeyDAO
         .getSome(take)
         .map(PublicKey.fromPublicKeyRow)
-        .foldLeftL(Nil: Seq[PublicKey])((a, b) => a ++ Seq(b))
+        .toListL
 
     } yield {
       pubKeys
@@ -148,34 +159,52 @@ class DefaultPubKeyService @Inject() (
     }
   }
 
+  def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
+    publicKeys
+      .sortWith { (a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created) }
+      .sortWith { (a, _) => a.prevSignature.isDefined }
+  }
+
   def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
+    anchorAfter()(() => createFromJson(publicKey, rawMessage)).runToFuture
+  }
+
+  private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
     (for {
       maybePrevKey <- getByHardwareIdAsTask(publicKey.pubKeyInfo.hwDeviceId).map(_.headOption)
       _ = if (publicKey.prevSignature.isDefined && maybePrevKey.isEmpty) logger.info("with_prev_sig={} prev_key={}", publicKey.prevSignature, maybePrevKey.toString)
-      _ <- earlyResponseIf(publicKey.prevSignature.exists(_.isEmpty) && maybePrevKey.isDefined)(InvalidVerification(publicKey))
       _ = if (maybePrevKey.isDefined) logger.info("key_found={}", maybePrevKey.toString)
+      _ <- earlyResponseIf(maybePrevKey.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
+      _ <- earlyResponseIf(publicKey.prevSignature.exists(_.isEmpty) && maybePrevKey.isDefined)(InvalidKeyVerification(publicKey))
 
       prevSignatureVerification <- Task.delay(maybePrevKey.forall(x => verification.validate(x, publicKey)))
       _ = if (!prevSignatureVerification) logger.error("failed_prev_verification_for={}", publicKey.toString)
-      _ <- earlyResponseIf(!prevSignatureVerification)(InvalidVerification(publicKey))
+      _ <- earlyResponseIf(!prevSignatureVerification)(InvalidKeyVerification(publicKey))
+
+      maybeKey <- publicKeyDAO.byPubKeyId(publicKey.pubKeyInfo.pubKey)
+        .headOptionL
+        .map(_.filter(x => verification.validateTime(PublicKey.fromPublicKeyRow(x))))
+      _ = if (maybeKey.isDefined) logger.info("key_found={}", maybeKey.toString)
+      _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
-      _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
+      _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsJson(publicKey, rawMessage))
-      res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Json_Insert"))
+      _ <- createRow(publicKey, rawMessage)
+
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
       case e: Throwable => throw e
-    }.runToFuture
+    }
 
   }
 
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msg_pack") {
+    anchorAfter()(() => createFromMsgPack(pm, rawMsgPack)).runToFuture
+  }
+
+  private def createFromMsgPack(pm: ProtocolMessage, rawMsgPack: String): Task[PublicKey] = {
     (for {
 
       text <- Task(pm.getPayload.toString)
@@ -191,7 +220,9 @@ class DefaultPubKeyService @Inject() (
         case e: Exception => throw ParsingError(e.getMessage)
       }
 
-      maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey).headOptionL
+      maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey)
+        .headOptionL
+        .map(_.filter(x => verification.validateTime(PublicKey.fromPublicKeyRow(x))))
       _ = if (maybeKey.isDefined) logger.info("key_found={} ", maybeKey)
 
       publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature)))
@@ -199,19 +230,51 @@ class DefaultPubKeyService @Inject() (
 
       verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
-      _ <- earlyResponseIf(!verification)(InvalidVerification(publicKey))
+      _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsgPack))
-      res <- publicKeyDAO.insert(row).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKey.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKey.toString)
-      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Msg_Pack_Insert"))
+      _ <- createRow(publicKey, rawMsgPack)
 
-    } yield publicKey).onErrorRecover {
-      case KeyExists(publicKey) => publicKey
-      case e: Throwable => throw e
-    }.runToFuture
+    } yield publicKey)
+      .onErrorRecover {
+        case KeyExists(publicKey) => publicKey
+        case e: Throwable => throw e
+      }
+  }
 
+  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])] = {
+    for {
+      row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsg))
+      res <- createRow(row)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("PubKey_Insert"))
+    } yield {
+      (row, res)
+    }
+  }
+
+  def createRow(publicKeyRow: PublicKeyRow): Task[Option[Unit]] = {
+    for {
+      res <- publicKeyDAO.insert(publicKeyRow).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKeyRow.toString)
+      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKeyRow.toString)
+      _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Core_Insert"))
+    } yield {
+      res
+    }
+  }
+
+  def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey] = {
+    (for {
+      publicKey <- fk()
+      _ <- keyAnchoring.anchorKey(publicKey, timeout)
+    } yield publicKey)
+      .onErrorRecoverWith {
+        case e @ FailedKafkaPublish(publicKey, _) =>
+          //We try and delete the key and still fail
+          del(publicKey.pubKeyInfo.pubKeyId)
+            .flatMap(_ => Task.raiseError(e))
+            .onErrorHandleWith(_ => Task.raiseError(e))
+
+      }
   }
 
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey] = {
@@ -230,26 +293,5 @@ class DefaultPubKeyService @Inject() (
     }
 
   }
-
-  def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
-    publicKeys
-      .sortWith { (a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created) }
-      .sortWith { (a, _) => a.prevSignature.isDefined }
-  }
-
-}
-
-/**
-  * Represents the companion object for the DefaultPubKeyService
-  */
-object DefaultPubKeyService {
-
-  abstract class PubKeyServiceException(message: String) extends Exception(message) with NoStackTrace
-
-  case class ParsingError(message: String) extends PubKeyServiceException(message)
-  case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
-  case class InvalidVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
-  case class OperationReturnsNone(message: String) extends PubKeyServiceException(message)
-  case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
 
 }

@@ -1,10 +1,10 @@
-package com.ubirch.services.cluster
+package com.ubirch
+package services.cluster
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.CassandraClusterConfPaths
 import com.ubirch.services.lifeCycle.Lifecycle
-import com.ubirch.util.Exceptions.NoKeyspaceException
 import io.getquill.{ CassandraStreamContext, NamingStrategy, SnakeCase }
 import javax.inject._
 
