@@ -43,8 +43,6 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identit
 
   import db._
 
-  def insert(identityRow: IdentityRow): Observable[Unit] = run(insertQ(identityRow))
-
   def insertWithState(identityRow: IdentityRow, state: State): Observable[Unit] = {
 
     for {
@@ -61,16 +59,6 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identit
       .flatMap { x =>
         if (x > 0) Observable(0)
         else insertWithState(identityRow, state).map(_ => 2) // Two because two records are inserted
-      }
-
-  }
-
-  def insertIfNotExists(identityRow: IdentityRow): Observable[Int] = {
-    byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId)
-      .count
-      .flatMap { x =>
-        if (x > 0) Observable(0)
-        else run(insertQ(identityRow)).map(_ => 1)
       }
 
   }
