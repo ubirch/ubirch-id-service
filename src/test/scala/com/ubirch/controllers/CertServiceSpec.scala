@@ -79,6 +79,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
+    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
   }
 
   protected override def afterAll(): Unit = {
@@ -95,8 +96,6 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
     lazy val certController = Injector.get[CertController]
 
     addServlet(certController, "/*")
-
-    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
 
     super.beforeAll()
   }

@@ -574,8 +574,6 @@ class KeyServiceSpec
 
     addServlet(keyController, "/*")
 
-    //cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
-
     super.beforeAll()
   }
 }
