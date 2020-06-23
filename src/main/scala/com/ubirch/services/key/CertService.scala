@@ -146,8 +146,8 @@ class DefaultCertService @Inject() (
       identity = Identity(Hasher.hash(data), uuid.toString, "CSR", data, pubKeyAsBase64)
       identityRow = IdentityRow.fromIdentity(identity)
 
-      exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
-      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
+      maybeIdentityRow <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
+      _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
       res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), CSRCreated).headOptionL
       _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
