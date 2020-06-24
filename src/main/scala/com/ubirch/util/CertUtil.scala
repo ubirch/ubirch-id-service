@@ -2,7 +2,7 @@ package com.ubirch.util
 
 import java.math.BigInteger
 import java.security.KeyPairGenerator
-import java.util.UUID
+import java.util.{ Base64, UUID }
 
 import com.ubirch.cert.BCCertGen
 import com.ubirch.models.Identity
@@ -64,7 +64,7 @@ object CertUtil {
     val encodedCert: String = Hex.encodeHexString(xCert.getEncoded)
 
     Identity(
-      id = Hasher.hash(encodedCert),
+      id = Base64.getEncoder.encodeToString(kp.getPublic.getEncoded),
       ownerId = uuid.toString,
       category = "X.509",
       data = encodedCert,

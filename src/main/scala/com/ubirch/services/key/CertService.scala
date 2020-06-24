@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
-import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil, TaskHelpers }
+import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
@@ -79,7 +79,7 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      identity = Identity(Hasher.hash(data), publicKey.pubKeyInfo.hwDeviceId, "X.509", data, publicKey.pubKeyInfo.pubKeyId)
+      identity = Identity(publicKey.pubKeyInfo.pubKeyId, publicKey.pubKeyInfo.hwDeviceId, "X.509", data, publicKey.pubKeyInfo.algorithm + " | " + cert.getSubjectX500Principal.toString)
       identityRow = IdentityRow.fromIdentity(identity)
 
       exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
@@ -103,6 +103,9 @@ class DefaultCertService @Inject() (
 
       maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityId(activation.ownerId, activation.identityId).headOptionL
       _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
+
+      keys <- pubKeyService.getByPubKeyIdAsTask(activation.identityId)
+      _ <- earlyResponseIf(keys.exists(_.pubKeyInfo.pubKeyId == activation.identityId))(IdentityAlreadyExistsException(activation.toString))
 
       cert <- liftTry(extractCert(Hex.decode(maybeIdentity.get.data)))(EncodingException("Error building cert"))
       _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
@@ -143,7 +146,7 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
 
-      identity = Identity(Hasher.hash(data), uuid.toString, "CSR", data, pubKeyAsBase64)
+      identity = Identity(pubKeyAsBase64, uuid.toString, "CSR", data, curve + " | " + csr.getSubject.toString)
       identityRow = IdentityRow.fromIdentity(identity)
 
       maybeIdentityRow <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL

@@ -30,6 +30,7 @@ trait PubKeyService {
   def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
   def getSome(take: Int = 1): CancelableFuture[Seq[PublicKey]]
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
+  def getByPubKeyIdAsTask(pubKeyId: String): Task[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
@@ -124,7 +125,11 @@ class DefaultPubKeyService @Inject() (
   }
 
   def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_pub_key") {
-    (for {
+    getByPubKeyIdAsTask(pubKeyId).runToFuture
+  }
+
+  def getByPubKeyIdAsTask(pubKeyId: String): Task[Seq[PublicKey]] = {
+    for {
       pubKeys <- publicKeyByPubKeyIdDao
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
@@ -135,8 +140,7 @@ class DefaultPubKeyService @Inject() (
 
     } yield {
       validPubKeys
-    }).runToFuture
-
+    }
   }
 
   def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_hardware_id") {
