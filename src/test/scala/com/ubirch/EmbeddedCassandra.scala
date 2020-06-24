@@ -83,12 +83,13 @@ object EmbeddedCassandra {
         |(
         |	owner_id text,
         |	identity_id text,
+        |	data_hash text,
         |	category text,
         |	created timestamp,
         |	data text,
         |	description text,
-        |	primary key (owner_id, identity_id)
-        |);
+        |	primary key ((owner_id), identity_id, data_hash, created)
+        |) with clustering order by (identity_id desc, data_hash desc, created desc);
         |""".stripMargin
     ),
     CqlScript.statements("drop table if exists identities_by_state;"),
