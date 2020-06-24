@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
-import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil, TaskHelpers }
+import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
 import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
