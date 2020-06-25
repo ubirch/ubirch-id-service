@@ -40,10 +40,10 @@ object DataInjectorTest extends LazyLogging {
 
     val count = new CountDownLatch(total)
 
-    val provider = PublicKeyUtil.provider
+    val provider = PublicKeyUtil.keyPairGenerator
 
     def createIdentity = {
-      def identity = CertUtil.createCert(UUID.randomUUID())(provider)
+      val (_, _, identity) = CertUtil.createCert(UUID.randomUUID())(provider)
       producer.send("com.ubirch.identity", identity).onComplete {
         case Success(_) => count.countDown()
         case Failure(exception) =>

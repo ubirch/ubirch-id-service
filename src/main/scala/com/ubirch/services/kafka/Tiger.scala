@@ -104,13 +104,15 @@ class DefaultTiger @Inject() (
         case Right(identity) => identity
       }
       .flatMap { identity =>
+
+        val row = IdentityRow.fromIdentity(identity)
         identitiesDAO
-          .insertWithStateIfNotExists(IdentityRow.fromIdentity(identity), X509Created)
-          .map(x => (identity, x))
+          .insertWithStateIfNotExists(row, X509Created)
+          .map(x => (identity, row, x))
       }
-      .flatMap { case (identity, c) =>
-        if (c < 1) logger.warn("identity_already_exists={}", identity.toString)
-        else logger.info("identity_inserted={}", identity.toString)
+      .flatMap { case (identity, row, c) =>
+        if (c < 1) logger.warn("identity_already_exists={}", row.toString)
+        else logger.info("identity_inserted={}", row.toString)
         Observable.unit
       }
       .onErrorHandle {

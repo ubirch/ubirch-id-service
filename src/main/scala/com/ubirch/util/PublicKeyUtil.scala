@@ -32,8 +32,9 @@ object PublicKeyUtil extends LazyLogging {
 
   def pubKey(pubKeyBytes: Array[Byte], curve: Curve): PubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, curve)
 
-  def provider: KeyPairGenerator = {
-    val provider = new BouncyCastleProvider
+  def provider = new BouncyCastleProvider
+
+  def keyPairGenerator: KeyPairGenerator = {
     val kpg = KeyPairGenerator.getInstance("EC", provider)
     kpg.initialize(new ECGenParameterSpec("PRIME256V1"))
     kpg

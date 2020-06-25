@@ -48,12 +48,12 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     val jsonConverter = Injector.get[JsonConverterService]
     val identitiesDAO = Injector.get[IdentitiesDAO]
 
-    val provider = PublicKeyUtil.provider
+    val provider = PublicKeyUtil.keyPairGenerator
 
     val batch = 50
     def ownerId = UUID.randomUUID()
     val validIdentities = (1 to batch).map { _ =>
-      val id = CertUtil.createCert(ownerId)(provider)
+      val (_, _, id) = CertUtil.createCert(ownerId)(provider)
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
@@ -99,12 +99,12 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     val identitiesDAO = Injector.get[IdentitiesDAO]
     val publicKeyRowDAO = Injector.get[PublicKeyRowDAO]
 
-    val provider = PublicKeyUtil.provider
+    val provider = PublicKeyUtil.keyPairGenerator
 
     val batch = 50
     def ownerId = UUID.randomUUID()
     val validIdentities = (1 to batch).map { _ =>
-      val id = CertUtil.createCert(ownerId)(provider)
+      val (_, _, id) = CertUtil.createCert(ownerId)(provider)
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }

@@ -50,7 +50,7 @@ class DefaultCertService @Inject() (
   override def extractCert(request: Array[Byte]): Try[X509Certificate] = {
     for {
       cert <- materializeCert(request).toTry
-      _ = logger.info("crs_extracted={}", cert.toString)
+      _ = logger.info("cert_extracted={}", cert.toString)
     } yield {
       cert
     }
@@ -70,8 +70,8 @@ class DefaultCertService @Inject() (
       _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
       res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), X509Created).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
+      _ = if (res.isEmpty) logger.error("failed_cert_creation={} ", identityRow.toString)
+      _ = if (res.isDefined) logger.info("cert_creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
       _ <- pubKeyService.createRow(publicKey, data)
@@ -98,9 +98,10 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      res <- identitiesByStateDAO.insert(IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", maybeIdentity.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", maybeIdentity.toString)
+      state = IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)
+      res <- identitiesByStateDAO.insert(state).headOptionL
+      _ = if (res.isEmpty) logger.error("failed_state_creation={} ", state.toString)
+      _ = if (res.isDefined) logger.info("state_creation_succeeded={}", state.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
       _ <- pubKeyService.createRow(publicKey, data)
@@ -111,7 +112,8 @@ class DefaultCertService @Inject() (
     }
   }
 
-  override def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
+  override def processCSRPass
+  (csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
     for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
@@ -137,8 +139,8 @@ class DefaultCertService @Inject() (
       _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(identity.toString))
 
       res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), CSRCreated).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", identityRow.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", identityRow.toString)
+      _ = if (res.isEmpty) logger.error("failed_csr_creation={} ", identityRow.toString)
+      _ = if (res.isDefined) logger.info("csr_creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CSR_Insert"))
 
     } yield {

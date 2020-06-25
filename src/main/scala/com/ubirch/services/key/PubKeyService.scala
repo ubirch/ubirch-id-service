@@ -232,8 +232,8 @@ class DefaultPubKeyService @Inject() (
   def createRow(publicKeyRow: PublicKeyRow): Task[Option[Unit]] = {
     for {
       res <- publicKeyDAO.insert(publicKeyRow).headOptionL
-      _ = if (res.isEmpty) logger.error("failed_creation={} ", publicKeyRow.toString)
-      _ = if (res.isDefined) logger.info("creation_succeeded={}", publicKeyRow.toString)
+      _ = if (res.isEmpty) logger.error("failed_key_creation={} ", publicKeyRow.toString)
+      _ = if (res.isDefined) logger.info("key_creation_succeeded={}", publicKeyRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("Core_Insert"))
     } yield {
       res
