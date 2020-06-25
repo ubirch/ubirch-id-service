@@ -4,7 +4,7 @@ import io.prometheus.client.Counter
 import monix.execution.CancelableFuture
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 trait ServiceMetrics {
 

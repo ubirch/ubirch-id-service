@@ -51,8 +51,9 @@ class KeyController @Inject() (
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Not successful response"))
 
   get("/v1/check", operation(getV1Check)) {
-    logRequestInfo
-    Simple("I survived a check")
+    asyncResult { _ =>
+      Task.delay(Simple("I survived a check"))
+    }
   }
 
   val getV1DeepCheck: SwaggerSupportSyntax.OperationBuilder =
@@ -66,7 +67,6 @@ class KeyController @Inject() (
 
     asyncResult { implicit request =>
       for {
-        _ <- Task.delay(logRequestInfo)
         res <- pubKeyService.getSome()
           //We use a BooleanList Response to keep backwards compatibility with clients
           .map(_ => BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
@@ -159,7 +159,6 @@ class KeyController @Inject() (
     asyncResult { implicit request =>
 
       for {
-        _ <- Task.delay(logRequestInfo)
         readBody <- Task.delay(ReadBody.readJson[PublicKey](PublicKeyInfo.checkPubKeyId))
         res <- pubKeyService.create(readBody.extracted, readBody.asString)
           .map { key => Ok(key) }
@@ -198,7 +197,6 @@ class KeyController @Inject() (
     asyncResult { implicit request =>
 
       for {
-        _ <- Task.delay(logRequestInfo)
         readBody <- Task.delay(ReadBody.readMsgPack(pmService))
         res <- pubKeyService.create(readBody.extracted, readBody.asString)
           .map { key => Ok(key) }
@@ -277,7 +275,6 @@ class KeyController @Inject() (
 
   private def handlePubKeyId(pubKeyId: String)(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
-      _ <- Task.delay(logRequestInfo)
       res <- pubKeyService.getByPubKeyId(pubKeyId)
         .map { pks =>
           pks.toList match {
@@ -298,7 +295,6 @@ class KeyController @Inject() (
 
   private def handlePubKeyCurrentHardwareId(hwDeviceId: String)(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
-      _ <- Task.delay(logRequestInfo)
       res <- pubKeyService.getByHardwareId(hwDeviceId)
         .map { pks => Ok(pks) }
         .onErrorHandle {
@@ -315,7 +311,6 @@ class KeyController @Inject() (
 
   private def delete(implicit request: HttpServletRequest) = {
     for {
-      _ <- Task.delay(logRequestInfo)
       readBody <- Task.delay(ReadBody.readJson[PublicKeyDelete](x => x))
       res <- pubKeyService.delete(readBody.extracted)
         .map { dr =>

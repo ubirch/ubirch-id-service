@@ -42,7 +42,6 @@ class CertController @Inject() (
 
     asyncResult { implicit request =>
       for {
-        _ <- Task.delay(logRequestInfo)
         readBody <- Task.delay(ReadBody.readCSR(certService))
         res <- certService.processCSR(readBody.extracted)
           .map(x => Ok(x))
@@ -77,7 +76,6 @@ class CertController @Inject() (
 
     asyncResult { implicit request =>
       for {
-        _ <- Task.delay(logRequestInfo)
         readBody <- Task.delay(ReadBody.readCert(certService))
         res <- certService.processCert(readBody.extracted)
           .map(x => Ok(x))
