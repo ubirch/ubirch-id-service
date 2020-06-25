@@ -1,9 +1,12 @@
 package com.ubirch
 package controllers
 
+import com.typesafe.config.Config
+import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
+import io.prometheus.client.Counter
 import javax.inject._
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -15,6 +18,7 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class CertController @Inject() (
+    config: Config,
     val swagger: Swagger,
     jFormats: Formats,
     certService: CertService
@@ -22,6 +26,20 @@ class CertController @Inject() (
 
   override protected val applicationDescription: String = "Cert Controller"
   override protected implicit val jsonFormats: Formats = jFormats
+
+  val service: String = config.getString(GenericConfPaths.NAME)
+
+  val successCounter: Counter = Counter.build()
+    .name("cert_management_success")
+    .help("Represents the number of cert key management successes")
+    .labelNames("service", "method")
+    .register()
+
+  val errorCounter: Counter = Counter.build()
+    .name("cert_management_failures")
+    .help("Represents the number of cert management failures")
+    .labelNames("service", "method")
+    .register()
 
   before() {
     contentType = formats("json")
@@ -40,7 +58,7 @@ class CertController @Inject() (
 
   post("/v1/csr/register", operation(postCsrRegister)) {
 
-    asyncResult { implicit request =>
+    asyncResult("csr_register") { implicit request =>
       for {
         readBody <- Task.delay(ReadBody.readCSR(certService))
         res <- certService.processCSR(readBody.extracted)
@@ -74,7 +92,7 @@ class CertController @Inject() (
 
   post("/v1/cert/register", operation(postCertRegister)) {
 
-    asyncResult { implicit request =>
+    asyncResult("cert_register") { implicit request =>
       for {
         readBody <- Task.delay(ReadBody.readCert(certService))
         res <- certService.processCert(readBody.extracted)
@@ -96,8 +114,12 @@ class CertController @Inject() (
   }
 
   notFound {
-    logger.info("controller=CertController route_not_found={} query_string={}", requestPath, request.getQueryString)
-    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+    asyncResult("not_found") { _ =>
+      Task {
+        logger.info("controller=CertController route_not_found={} query_string={}", requestPath, request.getQueryString)
+        NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+      }
+    }
   }
 
   error {

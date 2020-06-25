@@ -9,10 +9,11 @@ import com.ubirch.models.NOK
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.key.CertService
 import com.ubirch.services.pm.ProtocolMessageService
+import com.ubirch.util.ServiceMetrics
 import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
 import javax.servlet.{ ReadListener, ServletInputStream }
 import monix.eval.Task
-import monix.execution.Scheduler
+import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.compress.utils.IOUtils
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -40,7 +41,7 @@ class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStr
 
   override def read(): Int = cachedInputStream.read()
   override def read(b: Array[Byte]): Int = read(b, 0, b.length)
-  override def read(b: Array[Byte], off: Int, len: Int) = cachedInputStream.read(b, off, len)
+  override def read(b: Array[Byte], off: Int, len: Int): Int = cachedInputStream.read(b, off, len)
 
 }
 
@@ -79,6 +80,7 @@ abstract class ControllerBase extends ScalatraServlet
   with NativeJsonSupport
   with SwaggerSupport
   with CorsSupport
+  with ServiceMetrics
   with LazyLogging {
 
   def actionResult(body: HttpServletRequest => Task[ActionResult])(implicit request: HttpServletRequest, scheduler: Scheduler): Task[ActionResult] = {
@@ -106,8 +108,12 @@ abstract class ControllerBase extends ScalatraServlet
 
   }
 
-  def asyncResult(body: HttpServletRequest => Task[ActionResult])(implicit request: HttpServletRequest, scheduler: Scheduler): AsyncResult = {
-    new AsyncResult() { override val is = actionResult(body).runToFuture }
+  def asyncResultCore(body: () => CancelableFuture[ActionResult])(implicit request: HttpServletRequest, scheduler: Scheduler): AsyncResult = {
+    new AsyncResult() { override val is = body() }
+  }
+
+  def asyncResult(name: String)(body: HttpServletRequest => Task[ActionResult])(implicit request: HttpServletRequest, scheduler: Scheduler): AsyncResult = {
+    asyncResultCore(() => count(name)(actionResult(body).runToFuture))
   }
 
   def logRequestInfo(implicit request: HttpServletRequest): Unit = {

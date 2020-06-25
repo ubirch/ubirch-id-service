@@ -1,11 +1,14 @@
 package com.ubirch
 package controllers
 
+import com.typesafe.config.Config
+import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.{ DateUtil, TaskHelpers }
+import io.prometheus.client.Counter
 import javax.inject._
 import javax.servlet.http.HttpServletRequest
 import monix.eval.Task
@@ -30,6 +33,7 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class KeyController @Inject() (
+    config: Config,
     val swagger: Swagger,
     jFormats: Formats,
     pubKeyService: PubKeyService,
@@ -38,6 +42,20 @@ class KeyController @Inject() (
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
+
+  val service: String = config.getString(GenericConfPaths.NAME)
+
+  val successCounter: Counter = Counter.build()
+    .name("pubkey_management_success")
+    .help("Represents the number of public key management successes")
+    .labelNames("service", "method")
+    .register()
+
+  val errorCounter: Counter = Counter.build()
+    .name("pubkey_management_failures")
+    .help("Represents the number of public key management failures")
+    .labelNames("service", "method")
+    .register()
 
   before() {
     contentType = formats("json")
@@ -51,7 +69,7 @@ class KeyController @Inject() (
       responseMessages ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Not successful response"))
 
   get("/v1/check", operation(getV1Check)) {
-    asyncResult { _ =>
+    asyncResult("check") { _ =>
       Task.delay(Ok(Simple("I survived a check")))
     }
   }
@@ -65,7 +83,7 @@ class KeyController @Inject() (
 
   get("/v1/deepCheck", operation(getV1DeepCheck)) {
 
-    asyncResult { implicit request =>
+    asyncResult("deep_check") { implicit request =>
       for {
         res <- pubKeyService.getSome()
           //We use a BooleanList Response to keep backwards compatibility with clients
@@ -100,14 +118,14 @@ class KeyController @Inject() (
     * because swagger doesn't support splat parameters.
     */
   get("/v1/pubkey/*") {
-    asyncResult { implicit request =>
+    asyncResult("get_by_pub_key") { implicit request =>
       val pubKey = params.getOrElse("splat", halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
       handlePubKeyId(pubKey)
     }
   }
 
   get("/v1/pubkey/:pubkey", operation(getV1PubKeyPubKey)) {
-    asyncResult { implicit request =>
+    asyncResult("get_by_pub_key") { implicit request =>
       val pubkey = params.getOrElse("pubkey", halt(BadRequest(NOK.pubKeyError("No pubKeyId parameter found in path"))))
       handlePubKeyId(pubkey)
     }
@@ -130,14 +148,14 @@ class KeyController @Inject() (
     * because swagger doesn't support splat parameters.
     */
   get("/v1/pubkey/current/hardwareId/*") {
-    asyncResult { implicit request =>
+    asyncResult("get_by_hardware_id") { implicit request =>
       val hardwareId = params.getOrElse("splat", halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
       handlePubKeyCurrentHardwareId(hardwareId)
     }
   }
 
   get("/v1/pubkey/current/hardwareId/:hardwareId", operation(getV1CurrentHardwareId)) {
-    asyncResult { implicit request =>
+    asyncResult("get_by_hardware_id") { implicit request =>
       val hardwareId = params.getOrElse("hardwareId", halt(BadRequest(NOK.pubKeyError("No hardwareId parameter found in path"))))
       handlePubKeyCurrentHardwareId(hardwareId)
     }
@@ -156,7 +174,7 @@ class KeyController @Inject() (
 
   post("/v1/pubkey", operation(postV1PubKey)) {
 
-    asyncResult { implicit request =>
+    asyncResult("create_by_json") { implicit request =>
 
       for {
         readBody <- Task.delay(ReadBody.readJson[PublicKey](PublicKeyInfo.checkPubKeyId))
@@ -194,7 +212,7 @@ class KeyController @Inject() (
 
   post("/v1/pubkey/mpack", operation(postV1PubKeyMsgPack)) {
 
-    asyncResult { implicit request =>
+    asyncResult("create_by_msg_pack") { implicit request =>
 
       for {
         readBody <- Task.delay(ReadBody.readMsgPack(pmService))
@@ -229,7 +247,7 @@ class KeyController @Inject() (
       ))
 
   delete("/v1/pubkey", operation(deleteV1PubKey)) {
-    asyncResult { implicit request =>
+    asyncResult("delete") { implicit request =>
       delete
     }
   }
@@ -237,14 +255,18 @@ class KeyController @Inject() (
     * This has been added since the delete method cannot be tested with a body.
     */
   patch("/v1/pubkey") {
-    asyncResult { implicit request =>
+    asyncResult("delete") { implicit request =>
       delete
     }
   }
 
   notFound {
-    logger.info("controller=KeyController route_not_found={} query_string={}", requestPath, request.getQueryString)
-    NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+    asyncResult("not_found") { _ =>
+      Task {
+        logger.info("controller=KeyController route_not_found={} query_string={}", requestPath, request.getQueryString)
+        NotFound(NOK.noRouteFound(requestPath + " might exist in another universe"))
+      }
+    }
   }
 
   error {
