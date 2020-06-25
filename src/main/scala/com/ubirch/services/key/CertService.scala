@@ -112,8 +112,7 @@ class DefaultCertService @Inject() (
     }
   }
 
-  override def processCSRPass
-  (csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
+  override def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
     for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
