@@ -11,5 +11,5 @@ fi
 
 echo "=> host: $host"
 
-curl -s -X POST --header "Content-Type:application/octet-stream" --data-binary @registerCert.der $host/api/certs/v1/cert/register | jq .
+curl -s -X POST --header "Content-Type:application/octet-stream" --data-binary @cert2.der $host/api/certs/v1/cert/register | jq .
 

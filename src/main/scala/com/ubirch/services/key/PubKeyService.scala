@@ -3,7 +3,6 @@ package services.key
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
 import com.ubirch.models._
@@ -11,10 +10,9 @@ import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.kafka.KeyAnchoring
 import com.ubirch.util.TaskHelpers
-import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
-import monix.execution.{ CancelableFuture, Scheduler }
+import monix.execution.Scheduler
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
@@ -26,13 +24,12 @@ import scala.util.Try
   * Represents a PubKeyService to work with PublicKeys
   */
 trait PubKeyService {
-  def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey]
-  def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey]
-  def getSome(take: Int = 1): CancelableFuture[Seq[PublicKey]]
-  def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]]
-  def getByPubKeyIdAsTask(pubKeyId: String): Task[Seq[PublicKey]]
-  def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]]
-  def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean]
+  def create(publicKey: PublicKey, rawMessage: String): Task[PublicKey]
+  def create(pm: ProtocolMessage, rawMsgPack: String): Task[PublicKey]
+  def getSome(take: Int = 1): Task[Seq[PublicKey]]
+  def getByPubKeyId(pubKeyId: String): Task[Seq[PublicKey]]
+  def getByHardwareId(hwDeviceId: String): Task[Seq[PublicKey]]
+  def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
   def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])]
   def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey]
@@ -59,23 +56,9 @@ class DefaultPubKeyService @Inject() (
     jsonConverterService: JsonConverterService,
     keyAnchoring: KeyAnchoring
 )(implicit scheduler: Scheduler, jsFormats: Formats)
-  extends PubKeyService with TaskHelpers with ServiceMetrics with LazyLogging {
+  extends PubKeyService with TaskHelpers with LazyLogging {
 
-  val service: String = config.getString(GenericConfPaths.NAME)
-
-  val successCounter: Counter = Counter.build()
-    .name("pubkey_management_success")
-    .help("Represents the number of public key management successes")
-    .labelNames("service", "method")
-    .register()
-
-  val errorCounter: Counter = Counter.build()
-    .name("pubkey_management_failures")
-    .help("Represents the number of public key management failures")
-    .labelNames("service", "method")
-    .register()
-
-  def delete(publicKeyDelete: PublicKeyDelete): CancelableFuture[Boolean] = countWhen[Boolean]("delete")(t => t) {
+  def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean] = {
 
     (for {
       _ <- Task.delay(logger.info("incoming_payload={}", publicKeyDelete.toString))
@@ -97,7 +80,7 @@ class DefaultPubKeyService @Inject() (
       case InvalidKeyVerification(_) => false
       case OperationReturnsNone(_) => false
       case e: Throwable => throw e
-    }.runToFuture
+    }
 
   }
 
@@ -111,8 +94,8 @@ class DefaultPubKeyService @Inject() (
     }
   }
 
-  def getSome(take: Int): CancelableFuture[Seq[PublicKey]] = count("get_some") {
-    (for {
+  def getSome(take: Int): Task[Seq[PublicKey]] = {
+    for {
       pubKeys <- publicKeyDAO
         .getSome(take)
         .map(PublicKey.fromPublicKeyRow)
@@ -120,15 +103,10 @@ class DefaultPubKeyService @Inject() (
 
     } yield {
       pubKeys
-    }).runToFuture
-
+    }
   }
 
-  def getByPubKeyId(pubKeyId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_pub_key") {
-    getByPubKeyIdAsTask(pubKeyId).runToFuture
-  }
-
-  def getByPubKeyIdAsTask(pubKeyId: String): Task[Seq[PublicKey]] = {
+  def getByPubKeyId(pubKeyId: String): Task[Seq[PublicKey]] = {
     for {
       pubKeys <- publicKeyByPubKeyIdDao
         .byPubKeyId(pubKeyId)
@@ -143,11 +121,7 @@ class DefaultPubKeyService @Inject() (
     }
   }
 
-  def getByHardwareId(hwDeviceId: String): CancelableFuture[Seq[PublicKey]] = count("get_by_hardware_id") {
-    getByHardwareIdAsTask(hwDeviceId).runToFuture
-  }
-
-  def getByHardwareIdAsTask(hwDeviceId: String): Task[Seq[PublicKey]] = {
+  def getByHardwareId(hwDeviceId: String): Task[Seq[PublicKey]] = {
     for {
       pubKeys <- publicKeyByHwDeviceIdDao
         .byOwnerId(hwDeviceId)
@@ -169,13 +143,13 @@ class DefaultPubKeyService @Inject() (
       .sortWith { (a, _) => a.prevSignature.isDefined }
   }
 
-  def create(publicKey: PublicKey, rawMessage: String): CancelableFuture[PublicKey] = count("create") {
-    anchorAfter()(() => createFromJson(publicKey, rawMessage)).runToFuture
+  def create(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
+    anchorAfter()(() => createFromJson(publicKey, rawMessage))
   }
 
   private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
     (for {
-      maybePrevKey <- getByHardwareIdAsTask(publicKey.pubKeyInfo.hwDeviceId).map(_.headOption)
+      maybePrevKey <- getByHardwareId(publicKey.pubKeyInfo.hwDeviceId).map(_.headOption)
       _ = if (publicKey.prevSignature.isDefined && maybePrevKey.isEmpty) logger.info("with_prev_sig={} prev_key={}", publicKey.prevSignature, maybePrevKey.toString)
       _ = if (maybePrevKey.isDefined) logger.info("key_found={}", maybePrevKey.toString)
       _ <- earlyResponseIf(maybePrevKey.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
@@ -204,8 +178,8 @@ class DefaultPubKeyService @Inject() (
 
   }
 
-  def create(pm: ProtocolMessage, rawMsgPack: String): CancelableFuture[PublicKey] = count("create_msg_pack") {
-    anchorAfter()(() => createFromMsgPack(pm, rawMsgPack)).runToFuture
+  def create(pm: ProtocolMessage, rawMsgPack: String): Task[PublicKey] = {
+    anchorAfter()(() => createFromMsgPack(pm, rawMsgPack))
   }
 
   private def createFromMsgPack(pm: ProtocolMessage, rawMsgPack: String): Task[PublicKey] = {

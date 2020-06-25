@@ -163,7 +163,7 @@ class DefaultTiger @Inject() (
       }
       .mapEval { ia =>
 
-        Task.defer(Task.fromFuture(certService.activateCert(ia))).doOnFinish { maybeError =>
+        Task.defer(certService.activateCert(ia)).doOnFinish { maybeError =>
           Task {
             maybeError.foreach { x =>
               logger.error("Error processing cert: exception_name={} message={}", x.getClass.getCanonicalName, x.getMessage)

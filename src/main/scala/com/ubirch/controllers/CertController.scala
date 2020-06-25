@@ -5,6 +5,8 @@ import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import javax.inject._
+import monix.eval.Task
+import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupportSyntax }
@@ -16,7 +18,7 @@ class CertController @Inject() (
     val swagger: Swagger,
     jFormats: Formats,
     certService: CertService
-)(implicit val executor: ExecutionContext) extends ControllerBase {
+)(implicit val executor: ExecutionContext, scheduler: Scheduler) extends ControllerBase {
 
   override protected val applicationDescription: String = "Cert Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -38,22 +40,25 @@ class CertController @Inject() (
 
   post("/v1/csr/register", operation(postCsrRegister)) {
 
-    logRequestInfo
+    asyncResult { implicit request =>
+      for {
+        _ <- Task.delay(logRequestInfo)
+        readBody <- Task.delay(ReadBody.readCSR(certService))
+        res <- certService.processCSR(readBody.extracted)
+          .map(x => Ok(x))
+          .onErrorHandle {
+            case e: CertServiceException =>
+              logger.error("1.1 Error registering CSR: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              BadRequest(NOK.crsError("Error registering csr"))
+            case e: Exception =>
+              logger.error("1.2 Error registering CSR: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+          }
+      } yield {
+        res
+      }
 
-    ReadBody.readCSR(certService).async { csr =>
-
-      certService.processCSR(csr)
-        .map(x => Ok(x))
-        .recover {
-          case e: CertServiceException =>
-            logger.error("1.1 Error registering CSR: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            BadRequest(NOK.crsError("Error registering csr"))
-          case e: Exception =>
-            logger.error("1.2 Error registering CSR: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
-        }
-
-    }.run
+    }
 
   }
 
@@ -70,22 +75,25 @@ class CertController @Inject() (
 
   post("/v1/cert/register", operation(postCertRegister)) {
 
-    logRequestInfo
+    asyncResult { implicit request =>
+      for {
+        _ <- Task.delay(logRequestInfo)
+        readBody <- Task.delay(ReadBody.readCert(certService))
+        res <- certService.processCert(readBody.extracted)
+          .map(x => Ok(x))
+          .onErrorHandle {
+            case e: CertServiceException =>
+              logger.error("1.1 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              BadRequest(NOK.certError("Error registering Cert"))
+            case e: Exception =>
+              logger.error("1.2 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.certError("1.2 Sorry, something went wrong on our end"))
+          }
+      } yield {
+        res
+      }
 
-    ReadBody.readCert(certService).async { cert =>
-
-      certService.processCert(cert)
-        .map(x => Ok(x))
-        .recover {
-          case e: CertServiceException =>
-            logger.error("1.1 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            BadRequest(NOK.certError("Error registering Cert"))
-          case e: Exception =>
-            logger.error("1.2 Error registering Cert: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            InternalServerError(NOK.certError("1.2 Sorry, something went wrong on our end"))
-        }
-
-    }.run
+    }
 
   }
 

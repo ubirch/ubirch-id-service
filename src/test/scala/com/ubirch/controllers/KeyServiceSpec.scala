@@ -496,8 +496,23 @@ class KeyServiceSpec
       }
     }
 
+    "wrong body as mpack 2" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey/mpack", body = Array(0)) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
     "wrong body as json" taggedAs Tag("cherimoya") in {
       post("/v1/pubkey", body = "") {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body as json 2 " taggedAs Tag("cherimoya") in {
+      val dataKey1 = """{"pubeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+      post("/v1/pubkey", body = dataKey1) {
         assert(jsonConverter.as[NOK](body).isRight)
         status should equal(400)
       }

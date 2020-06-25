@@ -5,15 +5,17 @@ import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models._
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.services.pm.ProtocolMessageService
-import com.ubirch.util.DateUtil
+import com.ubirch.util.{ DateUtil, TaskHelpers }
 import javax.inject._
 import javax.servlet.http.HttpServletRequest
+import monix.eval.Task
+import monix.execution.Scheduler
 import org.eclipse.jetty.http.BadMessageException
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupportSyntax }
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.ExecutionContext
 
 /**
   * Represents a controller for managing the http requests for pub key management
@@ -32,7 +34,7 @@ class KeyController @Inject() (
     jFormats: Formats,
     pubKeyService: PubKeyService,
     pmService: ProtocolMessageService
-)(implicit val executor: ExecutionContext) extends ControllerBase {
+)(implicit val executor: ExecutionContext, scheduler: Scheduler) extends ControllerBase with TaskHelpers {
 
   override protected val applicationDescription: String = "Key Controller"
   override protected implicit val jsonFormats: Formats = jFormats
@@ -63,16 +65,22 @@ class KeyController @Inject() (
   get("/v1/deepCheck", operation(getV1DeepCheck)) {
 
     asyncResult { implicit request =>
-      logRequestInfo
-      pubKeyService.getSome()
-        //We use a BooleanList Response to keep backwards compatibility with clients
-        .map(_ => BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
-        .recover {
-          case e: Exception =>
-            logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-            InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
-        }
+      for {
+        _ <- Task.delay(logRequestInfo)
+        res <- pubKeyService.getSome()
+          //We use a BooleanList Response to keep backwards compatibility with clients
+          .map(_ => BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+          .onErrorHandle {
+            case e: Exception =>
+              logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+              InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
+          }
+      } yield {
+        res
+      }
+
     }
+
   }
 
   val getV1PubKeyPubKey: SwaggerSupportSyntax.OperationBuilder =
@@ -148,13 +156,14 @@ class KeyController @Inject() (
 
   post("/v1/pubkey", operation(postV1PubKey)) {
 
-    logRequestInfo
+    asyncResult { implicit request =>
 
-    ReadBody.readJson[PublicKey](PublicKeyInfo.checkPubKeyId)
-      .async { case (pk, body) =>
-        pubKeyService.create(pk, body)
+      for {
+        _ <- Task.delay(logRequestInfo)
+        readBody <- Task.delay(ReadBody.readJson[PublicKey](PublicKeyInfo.checkPubKeyId))
+        res <- pubKeyService.create(readBody.extracted, readBody.asString)
           .map { key => Ok(key) }
-          .recover {
+          .onErrorHandle {
             case e: PubKeyServiceException =>
               logger.error("1.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               BadRequest(NOK.pubKeyError("Error creating pub key"))
@@ -162,7 +171,12 @@ class KeyController @Inject() (
               logger.error("1.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("1.2 Sorry, something went wrong on our end"))
           }
-      }.run
+
+      } yield {
+        res
+      }
+
+    }
 
   }
 
@@ -181,13 +195,14 @@ class KeyController @Inject() (
 
   post("/v1/pubkey/mpack", operation(postV1PubKeyMsgPack)) {
 
-    logRequestInfo
+    asyncResult { implicit request =>
 
-    ReadBody.readMsgPack(pmService)
-      .async { up =>
-        pubKeyService.create(up.pm, up.rawProtocolMessage)
+      for {
+        _ <- Task.delay(logRequestInfo)
+        readBody <- Task.delay(ReadBody.readMsgPack(pmService))
+        res <- pubKeyService.create(readBody.extracted, readBody.asString)
           .map { key => Ok(key) }
-          .recover {
+          .onErrorHandle {
             case e: PubKeyServiceException =>
               logger.error("2.1 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               BadRequest(NOK.pubKeyError("Error creating pub key"))
@@ -195,7 +210,12 @@ class KeyController @Inject() (
               logger.error("2.2 Error creating pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
               InternalServerError(NOK.serverError("2.2 Sorry, something went wrong on our end"))
           }
-      }.run
+
+      } yield {
+        res
+      }
+
+    }
 
   }
 
@@ -211,13 +231,17 @@ class KeyController @Inject() (
       ))
 
   delete("/v1/pubkey", operation(deleteV1PubKey)) {
-    delete
+    asyncResult { implicit request =>
+      delete
+    }
   }
   /**
     * This has been added since the delete method cannot be tested with a body.
     */
   patch("/v1/pubkey") {
-    delete
+    asyncResult { implicit request =>
+      delete
+    }
   }
 
   notFound {
@@ -251,9 +275,9 @@ class KeyController @Inject() (
       halt(BadRequest(NOK.serverError("There was an error. Please try again.")))
   }
 
-  private def handlePubKeyId(pubKeyId: String)(implicit request: HttpServletRequest): Future[ActionResult] = {
+  private def handlePubKeyId(pubKeyId: String)(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
-      _ <- Future(logRequestInfo)
+      _ <- Task.delay(logRequestInfo)
       res <- pubKeyService.getByPubKeyId(pubKeyId)
         .map { pks =>
           pks.toList match {
@@ -261,7 +285,7 @@ class KeyController @Inject() (
             case pk :: _ => Ok(pk)
           }
         }
-        .recover {
+        .onErrorHandle {
           case e: PubKeyServiceException =>
             logger.error("1.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
             BadRequest(NOK.pubKeyError("Error retrieving pub key"))
@@ -272,12 +296,12 @@ class KeyController @Inject() (
     } yield res
   }
 
-  private def handlePubKeyCurrentHardwareId(hwDeviceId: String)(implicit request: HttpServletRequest): Future[ActionResult] = {
+  private def handlePubKeyCurrentHardwareId(hwDeviceId: String)(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
-      _ <- Future(logRequestInfo)
+      _ <- Task.delay(logRequestInfo)
       res <- pubKeyService.getByHardwareId(hwDeviceId)
         .map { pks => Ok(pks) }
-        .recover {
+        .onErrorHandle {
           case e: PubKeyServiceException =>
             logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
             BadRequest(NOK.pubKeyError("Error retrieving pub key"))
@@ -290,23 +314,24 @@ class KeyController @Inject() (
   }
 
   private def delete(implicit request: HttpServletRequest) = {
+    for {
+      _ <- Task.delay(logRequestInfo)
+      readBody <- Task.delay(ReadBody.readJson[PublicKeyDelete](x => x))
+      res <- pubKeyService.delete(readBody.extracted)
+        .map { dr =>
+          if (dr) Ok(Simple("Key deleted"))
+          else BadRequest(NOK.deleteKeyError("Failed to delete public key"))
+        }
+        .onErrorRecover {
+          case e: Exception =>
+            logger.error("1.1 Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.1 Sorry, something went wrong on our end"))
+        }
 
-    logRequestInfo
+    } yield {
+      res
+    }
 
-    ReadBody.readJson[PublicKeyDelete](x => x)
-      .async { case (pkd, _) =>
-        pubKeyService.delete(pkd)
-          .map { dr =>
-            if (dr) Ok(Simple("Key deleted"))
-            else BadRequest(NOK.deleteKeyError("Failed to delete public key"))
-          }
-          .recover {
-            case e: Exception =>
-              logger.error("1.1 Error deleting pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
-              InternalServerError(NOK.serverError("1.1 Sorry, something went wrong on our end"))
-          }
-      }
-      .run
   }
 
 }

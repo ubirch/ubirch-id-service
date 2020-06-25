@@ -7,13 +7,11 @@ import java.util.Date
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.models._
 import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
-import io.prometheus.client.Counter
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
-import monix.execution.{ CancelableFuture, Scheduler }
+import monix.execution.Scheduler
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder
 import org.bouncycastle.operator.ContentVerifierProvider
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
@@ -27,9 +25,9 @@ import scala.util.Try
   */
 trait CertService {
   def extractCert(request: Array[Byte]): Try[X509Certificate]
-  def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo]
-  def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo]
-  def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo]
+  def processCert(cert: X509Certificate): Task[PublicKeyInfo]
+  def activateCert(activation: IdentityActivation): Task[PublicKeyInfo]
+  def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo]
   def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest]
 }
 
@@ -47,21 +45,7 @@ class DefaultCertService @Inject() (
     pubKeyService: PubKeyService,
     identitiesDAO: IdentitiesDAO,
     identitiesByStateDAO: IdentityByStateDAO
-)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with ServiceMetrics with LazyLogging {
-
-  val service: String = config.getString(GenericConfPaths.NAME)
-
-  val successCounter: Counter = Counter.build()
-    .name("cert_management_success")
-    .help("Represents the number of cert key management successes")
-    .labelNames("service", "method")
-    .register()
-
-  val errorCounter: Counter = Counter.build()
-    .name("cert_management_failures")
-    .help("Represents the number of cert management failures")
-    .labelNames("service", "method")
-    .register()
+)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
 
   override def extractCert(request: Array[Byte]): Try[X509Certificate] = {
     for {
@@ -72,8 +56,8 @@ class DefaultCertService @Inject() (
     }
   }
 
-  override def processCert(cert: X509Certificate): CancelableFuture[PublicKeyInfo] = count("process_cert_x509") {
-    (for {
+  override def processCert(cert: X509Certificate): Task[PublicKeyInfo] = {
+    for {
       _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
       publicKey <- buildPublicKey(cert)
 
@@ -95,16 +79,16 @@ class DefaultCertService @Inject() (
 
     } yield {
       publicKey.pubKeyInfo
-    }).runToFuture
+    }
   }
 
-  override def activateCert(activation: IdentityActivation): CancelableFuture[PublicKeyInfo] = count("activate_cert_x509") {
-    (for {
+  override def activateCert(activation: IdentityActivation): Task[PublicKeyInfo] = {
+    for {
 
       maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityId(activation.ownerId, activation.identityId).headOptionL
       _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
 
-      keys <- pubKeyService.getByPubKeyIdAsTask(activation.identityId)
+      keys <- pubKeyService.getByPubKeyId(activation.identityId)
       _ <- earlyResponseIf(keys.exists(_.pubKeyInfo.pubKeyId == activation.identityId))(IdentityAlreadyExistsException(activation.toString))
 
       cert <- liftTry(extractCert(Hex.decode(maybeIdentity.get.data)))(EncodingException("Error building cert"))
@@ -124,11 +108,11 @@ class DefaultCertService @Inject() (
 
     } yield {
       publicKey.pubKeyInfo
-    }).runToFuture
+    }
   }
 
-  override def processCSR(csr: JcaPKCS10CertificationRequest): CancelableFuture[PublicKeyInfo] = count("process_csr") {
-    (for {
+  override def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
+    for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
       _ <- earlyResponseIf(!verification)(InvalidCSRVerification(csr))
@@ -159,7 +143,7 @@ class DefaultCertService @Inject() (
 
     } yield {
       PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
-    }).runToFuture
+    }
 
   }
 
