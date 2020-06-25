@@ -81,33 +81,33 @@ abstract class ControllerBase extends ScalatraServlet
   with CorsSupport
   with LazyLogging {
 
-  def asyncResult(body: HttpServletRequest => Task[_])(implicit request: HttpServletRequest, scheduler: Scheduler): AsyncResult = {
-    new AsyncResult() {
-      override val is = {
+  def actionResult(body: HttpServletRequest => Task[ActionResult])(implicit request: HttpServletRequest, scheduler: Scheduler): Task[ActionResult] = {
+    for {
+      _ <- Task.delay(logRequestInfo)
+      res <- Task.defer(body(request))
+        .onErrorHandle {
+          case FailedExtractionException(_, rawBody, e) =>
+            val msg = s"Couldn't parse [$rawBody] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
+            logger.error(msg)
+            BadRequest(NOK.parsingError(msg))
+        }
+        .onErrorHandle { e =>
 
-        (for {
-          _ <- Task.delay(logRequestInfo)
-          res <- Task.defer(body(request))
-            .onErrorHandle {
-              case FailedExtractionException(_, rawBody, e) =>
-                val msg = s"Couldn't parse [$rawBody] due to exception=${e.getClass.getCanonicalName} message=${e.getMessage}"
-                logger.error(msg)
-                BadRequest(NOK.parsingError(msg))
-            }
-            .onErrorHandle { e =>
+          val name = e.getClass.getCanonicalName
+          val cause = Try(e.getCause.getMessage).getOrElse(e.getMessage)
+          logger.error("Error 0.1 ", e)
+          logger.error(s"Error 0.1 exception={} message={}", name, cause)
+          InternalServerError(NOK.serverError("Sorry, something happened"))
 
-              val name = e.getClass.getCanonicalName
-              val cause = Try(e.getCause.getMessage).getOrElse(e.getMessage)
-              logger.error("Error 0.1 ", e)
-              logger.error(s"Error 0.1 exception={} message={}", name, cause)
-              InternalServerError(NOK.serverError("Sorry, something happened"))
-
-            }
-        } yield {
-          res
-        }).runToFuture
-      }
+        }
+    } yield {
+      res
     }
+
+  }
+
+  def asyncResult(body: HttpServletRequest => Task[ActionResult])(implicit request: HttpServletRequest, scheduler: Scheduler): AsyncResult = {
+    new AsyncResult() { override val is = actionResult(body).runToFuture }
   }
 
   def logRequestInfo(implicit request: HttpServletRequest): Unit = {

@@ -52,7 +52,7 @@ class KeyController @Inject() (
 
   get("/v1/check", operation(getV1Check)) {
     asyncResult { _ =>
-      Task.delay(Simple("I survived a check"))
+      Task.delay(Ok(Simple("I survived a check")))
     }
   }
 
@@ -69,7 +69,7 @@ class KeyController @Inject() (
       for {
         res <- pubKeyService.getSome()
           //We use a BooleanList Response to keep backwards compatibility with clients
-          .map(_ => BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString()))
+          .map(_ => Ok(BooleanListResponse.OK("I am alive after a deepCheck @ " + DateUtil.nowUTC.toString())))
           .onErrorHandle {
             case e: Exception =>
               logger.error("1.2 Error retrieving some pub keys: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
