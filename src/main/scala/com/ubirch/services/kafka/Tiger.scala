@@ -15,6 +15,7 @@ import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.util.Hasher
 import javax.inject._
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
@@ -104,13 +105,15 @@ class DefaultTiger @Inject() (
         case Right(identity) => identity
       }
       .flatMap { identity =>
+
+        val row = IdentityRow(identity.ownerId, identity.identityId, Hasher.hash(identity.data), identity.category, identity.data, identity.description)
         identitiesDAO
-          .insertWithStateIfNotExists(IdentityRow.fromIdentity(identity), X509Created)
-          .map(x => (identity, x))
+          .insertWithStateIfNotExists(row, X509Created)
+          .map(x => (identity, row, x))
       }
-      .flatMap { case (identity, c) =>
-        if (c < 1) logger.warn("identity_already_exists={}", identity.toString)
-        else logger.info("identity_inserted={}", identity.toString)
+      .flatMap { case (identity, row, c) =>
+        if (c < 1) logger.warn("identity_already_exists={}", row.toString)
+        else logger.info("identity_inserted={}", row.toString)
         Observable.unit
       }
       .onErrorHandle {
@@ -163,7 +166,7 @@ class DefaultTiger @Inject() (
       }
       .mapEval { ia =>
 
-        Task.defer(Task.fromFuture(certService.activateCert(ia))).doOnFinish { maybeError =>
+        Task.defer(certService.activateCert(ia)).doOnFinish { maybeError =>
           Task {
             maybeError.foreach { x =>
               logger.error("Error processing cert: exception_name={} message={}", x.getClass.getCanonicalName, x.getMessage)

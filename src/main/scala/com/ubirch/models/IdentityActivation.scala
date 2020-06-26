@@ -8,7 +8,7 @@ package com.ubirch.models
   * @param dataHash Represents the hash of the data.
   */
 
-case class IdentityActivation(identityId: String, ownerId: String, dataHash: String) {
+case class IdentityActivation(ownerId: String, identityId: String, dataHash: String) {
   def validate: Boolean = identityId.nonEmpty && ownerId.nonEmpty && dataHash.nonEmpty
 }
 

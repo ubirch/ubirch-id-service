@@ -17,11 +17,11 @@ trait IdentitiesQueries extends TablePointer[IdentityRow] {
 
   implicit val eventSchemaMeta: db.SchemaMeta[IdentityRow] = schemaMeta[IdentityRow]("identities")
 
-  //keys (owner_id, identity_id)
-  def byOwnerIdAndIdentityIdQ(ownerId: String, identityId: String): db.Quoted[db.EntityQuery[IdentityRow]] = quote {
+  def byOwnerIdAndIdentityIdAndDataIdQ(ownerId: String, identityId: String, dataId: String): db.Quoted[db.EntityQuery[IdentityRow]] = quote {
     query[IdentityRow]
       .filter(x => x.ownerId == lift(ownerId))
       .filter(x => x.identityId == lift(identityId))
+      .filter(x => x.dataId == lift(dataId))
       .map(x => x)
   }
 
@@ -54,7 +54,7 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identit
   }
 
   def insertWithStateIfNotExists(identityRow: IdentityRow, state: State): Observable[Int] = {
-    byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId)
+    byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, identityRow.dataId)
       .count
       .flatMap { x =>
         if (x > 0) Observable(0)
@@ -65,6 +65,6 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identit
 
   def selectAll: Observable[IdentityRow] = run(selectAllQ)
 
-  def byOwnerIdAndIdentityId(ownerId: String, identityId: String): Observable[IdentityRow] = run(byOwnerIdAndIdentityIdQ(ownerId, identityId))
+  def byOwnerIdAndIdentityIdAndDataId(ownerId: String, identityId: String, dataId: String): Observable[IdentityRow] = run(byOwnerIdAndIdentityIdAndDataIdQ(ownerId, identityId, dataId))
 
 }
