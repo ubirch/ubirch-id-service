@@ -2,7 +2,7 @@ package com
 
 import java.security.cert.X509Certificate
 
-import com.ubirch.models.PublicKey
+import com.ubirch.models.{ PublicKey, PublicKeyInfo }
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 
 import scala.util.control.NoStackTrace
@@ -46,7 +46,7 @@ package object ubirch {
   case class UnknownCurve(message: String) extends CertServiceException(message)
   case class RecreationException(message: String) extends CertServiceException(message)
   case class EncodingException(message: String) extends CertServiceException(message)
-  case class IdentityAlreadyExistsException(message: String) extends CertServiceException(message)
+  case class IdentityAlreadyExistsException(publicKeyInfo: PublicKeyInfo, message: String) extends CertServiceException(message)
   case class IdentityNotFoundException(message: String) extends CertServiceException(message)
 
   case class FailedKafkaPublish(publicKey: PublicKey, maybeThrowable: Option[Throwable])

@@ -67,7 +67,7 @@ class DefaultCertService @Inject() (
       identityRow = IdentityRow(publicKey.pubKeyInfo.hwDeviceId, publicKey.pubKeyInfo.pubKeyId, dataHashAsId, "X.509", data, publicKey.pubKeyInfo.algorithm + " | " + cert.getSubjectX500Principal.toString)
 
       exists <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, dataHashAsId).headOptionL
-      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identityRow.toString))
+      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(publicKey.pubKeyInfo, identityRow.toString))
 
       res <- identitiesDAO.insertWithState(identityRow, X509Created).headOptionL
       _ = if (res.isEmpty) logger.error("failed_cert_creation={} ", identityRow.toString)
@@ -88,13 +88,13 @@ class DefaultCertService @Inject() (
       maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(activation.ownerId, activation.identityId, activation.dataHash).headOptionL
       _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
 
-      keys <- pubKeyService.getByPubKeyId(activation.identityId)
-      _ <- earlyResponseIf(keys.exists(_.pubKeyInfo.pubKeyId == activation.identityId))(IdentityAlreadyExistsException(activation.toString))
-
       cert <- liftTry(extractCert(Hex.decode(maybeIdentity.get.data)))(EncodingException("Error building cert"))
       _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
 
       publicKey <- buildPublicKey(cert)
+
+      keys <- pubKeyService.getByPubKeyId(activation.identityId)
+      _ <- earlyResponseIf(keys.exists(_.pubKeyInfo.pubKeyId == activation.identityId))(IdentityAlreadyExistsException(publicKey.pubKeyInfo, activation.toString))
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
@@ -113,7 +113,7 @@ class DefaultCertService @Inject() (
   }
 
   override def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
-    for {
+    (for {
       verification <- Task.delay(verifyCSR(csr))
       _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
       _ <- earlyResponseIf(!verification)(InvalidCSRVerification(csr))
@@ -136,8 +136,10 @@ class DefaultCertService @Inject() (
       dataId = Hasher.hash(identifiers)
       identityRow = IdentityRow(uuid.toString, pubKeyAsBase64, dataId, "CSR", data, curve + " | " + identifiers)
 
+      pubkeyInfo = PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
+
       maybeIdentityRow <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, identityRow.dataId).headOptionL
-      _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(identityRow.toString))
+      _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(pubkeyInfo, identityRow.toString))
 
       res <- identitiesDAO.insertWithState(identityRow, CSRCreated).headOptionL
       _ = if (res.isEmpty) logger.error("failed_csr_creation={} ", identityRow.toString)
@@ -145,8 +147,12 @@ class DefaultCertService @Inject() (
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CSR_Insert"))
 
     } yield {
-      PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
-    }
+      pubkeyInfo
+    })
+      .onErrorRecover {
+        case IdentityAlreadyExistsException(publicKey, _) => publicKey
+        case e: Throwable => throw e
+      }
 
   }
 
