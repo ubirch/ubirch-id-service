@@ -8,7 +8,7 @@ import java.util.Date
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models._
-import com.ubirch.util.{ CertUtil, PublicKeyUtil, TaskHelpers }
+import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil, TaskHelpers }
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -63,13 +63,13 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      identity = Identity(publicKey.pubKeyInfo.pubKeyId, publicKey.pubKeyInfo.hwDeviceId, "X.509", data, publicKey.pubKeyInfo.algorithm + " | " + cert.getSubjectX500Principal.toString)
-      identityRow = IdentityRow.fromIdentity(identity)
+      dataHashAsId = Hasher.hash(data)
+      identityRow = IdentityRow(publicKey.pubKeyInfo.hwDeviceId, publicKey.pubKeyInfo.pubKeyId, dataHashAsId, "X.509", data, publicKey.pubKeyInfo.algorithm + " | " + cert.getSubjectX500Principal.toString)
 
-      exists <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
-      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identity.toString))
+      exists <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, dataHashAsId).headOptionL
+      _ <- earlyResponseIf(exists.isDefined)(IdentityAlreadyExistsException(identityRow.toString))
 
-      res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), X509Created).headOptionL
+      res <- identitiesDAO.insertWithState(identityRow, X509Created).headOptionL
       _ = if (res.isEmpty) logger.error("failed_cert_creation={} ", identityRow.toString)
       _ = if (res.isDefined) logger.info("cert_creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
@@ -85,7 +85,7 @@ class DefaultCertService @Inject() (
   override def activateCert(activation: IdentityActivation): Task[PublicKeyInfo] = {
     for {
 
-      maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityId(activation.ownerId, activation.identityId).headOptionL
+      maybeIdentity <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(activation.ownerId, activation.identityId, activation.dataHash).headOptionL
       _ <- earlyResponseIf(maybeIdentity.isEmpty)(IdentityNotFoundException(activation.toString))
 
       keys <- pubKeyService.getByPubKeyId(activation.identityId)
@@ -131,13 +131,15 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
 
-      identity = Identity(pubKeyAsBase64, uuid.toString, "CSR", data, curve + " | " + csr.getSubject.toString)
-      identityRow = IdentityRow.fromIdentity(identity)
+      //We are using the identifiers are key to help narrow the search as the csrs themselves might changes as the signing key could be different
+      identifiers = CertUtil.identifiers(csr.getSubject).map { case (a, b) => s"$a=$b" }.mkString(",")
+      dataId = Hasher.hash(identifiers)
+      identityRow = IdentityRow(uuid.toString, pubKeyAsBase64, dataId, "CSR", data, curve + " | " + identifiers)
 
-      maybeIdentityRow <- identitiesDAO.byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId).headOptionL
-      _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(identity.toString))
+      maybeIdentityRow <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, identityRow.dataId).headOptionL
+      _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(identityRow.toString))
 
-      res <- identitiesDAO.insertWithState(IdentityRow.fromIdentity(identity), CSRCreated).headOptionL
+      res <- identitiesDAO.insertWithState(identityRow, CSRCreated).headOptionL
       _ = if (res.isEmpty) logger.error("failed_csr_creation={} ", identityRow.toString)
       _ = if (res.isDefined) logger.info("csr_creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CSR_Insert"))

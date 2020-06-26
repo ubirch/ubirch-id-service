@@ -15,6 +15,7 @@ import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import com.ubirch.models._
 import com.ubirch.services.key.CertService
 import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.util.Hasher
 import javax.inject._
 import monix.eval.Task
 import monix.execution.{ CancelableFuture, Scheduler }
@@ -105,7 +106,7 @@ class DefaultTiger @Inject() (
       }
       .flatMap { identity =>
 
-        val row = IdentityRow.fromIdentity(identity)
+        val row = IdentityRow(identity.ownerId, identity.identityId, Hasher.hash(identity.data), identity.category, identity.data, identity.description)
         identitiesDAO
           .insertWithStateIfNotExists(row, X509Created)
           .map(x => (identity, row, x))

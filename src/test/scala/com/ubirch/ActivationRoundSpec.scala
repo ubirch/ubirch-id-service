@@ -7,7 +7,7 @@ import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.ConfPaths.{ AnchoringProducerConfPaths, TigerConsumerConfPaths, TigerProducerConfPaths }
 import com.ubirch.controllers.CertController
 import com.ubirch.kafka.util.PortGiver
-import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityActivation, IdentityByStateDAO, PublicKeyInfo }
+import com.ubirch.models._
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.kafka.Tiger
@@ -16,7 +16,7 @@ import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.bouncycastle.jcajce.BCFKSLoadStoreParameter.SignatureAlgorithm
-import org.scalatest.{ BeforeAndAfterEach, Tag }
+import org.scalatest.BeforeAndAfterEach
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.concurrent.duration._
@@ -59,17 +59,18 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
       val algo = SignatureAlgorithm.SHA512withECDSA
       val (kp, _, id) = CertUtil.createCert(UUID.fromString("03120206-0912-4020-9202-000017df4c73"))(keyPairGenerator, algo)
-
       val csr = CertUtil.createCSR(UUID.fromString("03120206-0912-4020-9202-000017df4c73"))(kp, algo)
 
       val curve = PublicKeyUtil.associateCurve(algo.name()).get
       val pubKey = pubKeyService.recreatePublicKey(kp.getPublic.getEncoded, curve).get
-      val identity = id.copy(id = Base64.getEncoder.encodeToString(pubKey.getRawPublicKey))
-      val identityAsString = jsonConverter.toString[Identity](identity).getOrElse(throw new Exception("Not able to parse to string"))
 
       withRunningKafka {
 
-        //Publish identity
+        //Publish identity := simulates import
+
+        val identity = id.copy(identityId = Base64.getEncoder.encodeToString(pubKey.getRawPublicKey))
+        val identityAsString = jsonConverter.toString[Identity](identity).getOrElse(throw new Exception("Not able to parse to string"))
+
         publishStringMessageToKafka(importTopic, identityAsString)
 
         val tiger = Injector.get[Tiger]
@@ -82,11 +83,11 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
         assert(identity.ownerId == presentIds.map(_.ownerId).get)
         assert(identity.description == presentIds.map(_.description).get)
         assert(identity.data == presentIds.map(_.data).get)
-        assert(identity.id == presentIds.map(_.identityId).get)
+        assert(identity.identityId == presentIds.map(_.identityId).get)
 
-        //Activation
+        //Activation: Creates key out of import data.
 
-        val activation = IdentityActivation(identity.id, identity.ownerId, Hasher.hash(identity.data))
+        val activation = IdentityActivation(identity.ownerId, identity.identityId, Hasher.hash(identity.data))
         val activationAsString = jsonConverter.toString[IdentityActivation](activation).getOrElse(throw new Exception("Not able to parse to string"))
 
         publishStringMessageToKafka(activationTopic, activationAsString)
@@ -96,6 +97,8 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
         val states = await(identitiesByStateDAO.selectAll, 5 seconds)
 
         assert(states.size == 2)
+
+        //Creates CSR
 
         post("/v1/csr/register", body = csr.getEncoded) {
           assert(jsonConverter.as[PublicKeyInfo](body).isRight)

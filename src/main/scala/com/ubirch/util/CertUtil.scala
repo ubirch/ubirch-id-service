@@ -24,9 +24,20 @@ import scala.util.Try
   */
 object CertUtil {
 
+  def getRDNs(x500Name: X500Name): List[RDN] = x500Name.getRDNs.toList
   def getCN(x500Name: X500Name): RDN = x500Name.getRDNs(BCStyle.CN)(0)
 
   def rdnToString(rdn: RDN): String = IETFUtils.valueToString(rdn.getFirst.getValue)
+
+  def identifiers(x500Name: X500Name): List[(String, String)] = {
+    CertUtil
+      .getRDNs(x500Name)
+      .map(x => X500Name.getDefaultStyle.oidToDisplayName(x.getFirst.getType))
+      .zip(CertUtil
+        .getRDNs(x500Name)
+        .map(x => CertUtil.rdnToString(x)))
+      .sortBy(_._1)
+  }
 
   def buildUUID(uuid: String): Try[UUID] = {
     Try(UUID.fromString(uuid)).recover {
@@ -67,13 +78,7 @@ object CertUtil {
 
     val encodedCert: String = Hex.encodeHexString(xCert.getEncoded)
 
-    (kp, xCert, Identity(
-      id = Base64.getEncoder.encodeToString(kp.getPublic.getEncoded),
-      ownerId = uuid.toString,
-      category = "X.509",
-      data = encodedCert,
-      description = "This is a description for " + uuid
-    ))
+    (kp, xCert, Identity(ownerId = uuid.toString, identityId = Base64.getEncoder.encodeToString(kp.getPublic.getEncoded), category = "X.509", data = encodedCert, description = "This is a description for " + uuid))
 
   }
 

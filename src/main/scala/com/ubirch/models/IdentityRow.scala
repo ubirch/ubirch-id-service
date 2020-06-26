@@ -2,8 +2,6 @@ package com.ubirch.models
 
 import java.util.Date
 
-import com.ubirch.util.Hasher
-
 /**
   * Represents the identity data access object
   * @param ownerId the id of the identity
@@ -16,7 +14,7 @@ import com.ubirch.util.Hasher
 case class IdentityRow(
     ownerId: String,
     identityId: String,
-    dataHash: String,
+    dataId: String,
     category: String,
     created: Date,
     data: String,
@@ -27,8 +25,9 @@ case class IdentityRow(
   * Represents a convenience object for the Identity Row object.
   */
 object IdentityRow {
-  def fromIdentity(identity: Identity): IdentityRow = {
-    IdentityRow(identity.ownerId, identity.id, Hasher.hash(identity.data), identity.category, new Date(), identity.data, identity.description)
-  }
+
+  def apply(ownerId: String, identityId: String, dataId: String, category: String, data: String, description: String): IdentityRow =
+    new IdentityRow(ownerId, identityId, dataId, category, new Date, data, description)
+
 }
 

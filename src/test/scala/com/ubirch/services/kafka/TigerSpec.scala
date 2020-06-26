@@ -59,7 +59,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     }
 
     val invalidIdentities = (1 to batch).map { _ =>
-      val id = Identity("", ownerId.toString, "sim_import", "", "this is a description")
+      val id = Identity(ownerId.toString, "", "sim_import", "", "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
@@ -110,13 +110,13 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     }
 
     val invalidIdentities = (1 to batch).map { _ =>
-      val id = Identity("", ownerId.toString, "sim_import", "", "this is a description")
+      val id = Identity(ownerId.toString, "", "sim_import", "", "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
 
     val validIdentityActivations = validIdentities.map { case (id, _) =>
-      val activation = IdentityActivation(id.id, id.ownerId, Hasher.hash(id.data))
+      val activation = IdentityActivation(id.ownerId, id.identityId, Hasher.hash(id.data))
       val activationAsString = jsonConverter.toString[IdentityActivation](activation).getOrElse(throw new Exception("Not able to parse to string"))
       (activation, activationAsString)
     }
