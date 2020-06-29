@@ -1,17 +1,15 @@
 package com.ubirch.controllers
 
-import java.nio.file.{ Files, Paths }
 import java.util.{ Base64, UUID }
 
-import com.github.nosan.embedded.cassandra.api.cql.CqlScript
-import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.models.{ PublicKey, PublicKeyDelete, PublicKeyInfo }
+import com.ubirch.kafka.util.PortGiver
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete }
 import com.ubirch.services.formats.JsonConverterService
-import com.ubirch.util.{ DateUtil, PublicKeyUtil }
-import com.ubirch.{ Binder, EmbeddedCassandra, InjectorHelper }
-import net.manub.embeddedkafka.EmbeddedKafka
-import org.joda.time.DateTime
-import org.scalatest.Tag
+import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
+import com.ubirch.{ EmbeddedCassandra, _ }
+import io.prometheus.client.CollectorRegistry
+import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
+import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.language.postfixOps
@@ -20,47 +18,17 @@ import scala.util.Try
 /**
   * Test for the Key Controller
   */
-class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka {
+class KeyServiceSpec
+  extends ScalatraWordSpec
+  with EmbeddedCassandra
+  with EmbeddedKafka
+  with WithFixtures
+  with BeforeAndAfterEach {
 
-  def loadFixture(resource: String) = {
-    Files.readAllBytes(Paths.get(resource))
-  }
+  implicit lazy val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
 
-  def getPublicKey(
-      curveName: String,
-      created: DateTime,
-      validNotAfter: Option[DateTime],
-      validNotBefore: DateTime,
-      hardwareDeviceId: UUID = UUID.randomUUID()
-  ) = {
-
-    val curve = PublicKeyUtil.associateCurve(curveName)
-    val newPrivKey = GeneratorKeyFactory.getPrivKey(curve)
-    val newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-
-    val pubKeyInfo = PublicKeyInfo(
-      algorithm = curveName,
-      created = created.toDate,
-      hwDeviceId = hardwareDeviceId.toString,
-      pubKey = newPublicKey,
-      pubKeyId = newPublicKey,
-      validNotAfter = validNotAfter.map(_.toDate),
-      validNotBefore = validNotBefore.toDate
-    )
-
-    for {
-      publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
-      signatureAsBytes <- Try(newPrivKey.sign(publicKeyInfoAsString.getBytes)).toEither
-      signature <- Try(Base64.getEncoder.encodeToString(signatureAsBytes)).toEither
-      publicKey = PublicKey(pubKeyInfo, signature)
-      publicKeyAsString <- jsonConverter.toString[PublicKey](publicKey)
-    } yield {
-      (publicKey, publicKeyAsString, signatureAsBytes, signature, newPrivKey)
-    }
-
-  }
-
-  lazy val Injector = new InjectorHelper(List(new Binder)) {}
+  lazy val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
+  lazy val Injector = new InjectorHelperImpl(bootstrapServers) {}
 
   val jsonConverter = Injector.get[JsonConverterService]
 
@@ -139,7 +107,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     "get public key object when data exists by hardware id when / is present" taggedAs Tag("lychee") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -151,14 +119,14 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         body should equal("[" + dataKey1 + "]")
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="},{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}]"""
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)
@@ -206,13 +174,45 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
     }
 
-    "create key using the json endpoint" taggedAs Tag("orange") in {
+    "create key using the json endpoint when same key" taggedAs Tag("date_fruit") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
       val validNotBefore = created
+      val hardwareDeviceId: String = UUID.randomUUID().toString
 
-      getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId) match {
+
+        case Right((_, pkAsString, _, _, _)) =>
+
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+
+        case Left(e) =>
+          fail(e)
+
+      }
+
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
+      assert(anchors.nonEmpty)
+
+    }
+
+    "create key using the json endpoint when diff key" taggedAs Tag("figs") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareDeviceId: String = UUID.randomUUID().toString
+
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -222,8 +222,28 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           fail(e)
 
       }
-      getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
-        case Right((pk, pkAsString, _, _, _)) =>
+
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId) match {
+        case Right((_, pkAsString, _, _, _)) =>
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(400)
+            body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+          }
+        case Left(e) =>
+          fail(e)
+
+      }
+
+    }
+
+    "create key using the json endpoint" taggedAs Tag("orange") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
+        case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
             body should equal(pkAsString)
@@ -232,6 +252,19 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           fail(e)
 
       }
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, validNotBefore) match {
+        case Right((_, pkAsString, _, _, _)) =>
+          post("/v1/pubkey", body = pkAsString) {
+            status should equal(200)
+            body should equal(pkAsString)
+          }
+        case Left(e) =>
+          fail(e)
+
+      }
+
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
+      assert(anchors.nonEmpty)
 
     }
 
@@ -246,12 +279,35 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
         body should equal(expected)
       }
 
+      val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 1)
+      assert(anchors.nonEmpty)
+
     }
 
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
+
       val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
       post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
+        status should equal(200)
+      }
+
+    }
+
+    "create key twice using the mpack endpoint with same data" taggedAs Tag("jackfruit") in {
+
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
+
+      val bytes = loadFixture("src/main/resources/fixtures/7_MsgPackKeyService.mpack")
+      post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
+        status should equal(200)
+      }
+
+      post("/v1/pubkey/mpack", body = bytes) {
+        body should equal(expectedBody)
         status should equal(200)
       }
 
@@ -302,7 +358,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val validNotAfter = None
       val validNotBefore = created
 
-      getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -312,7 +368,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           fail(e)
 
       }
-      getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, created) match {
+      PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.EDDSA, created, validNotAfter, created) match {
         case Right((_, pkAsString, _, _, _)) =>
           post("/v1/pubkey", body = pkAsString) {
             status should equal(200)
@@ -332,7 +388,7 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val validNotBefore = created
 
       (for {
-        res <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore)
+        res <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore)
         (pk, pkAsString, _, _, pkr) = res
         signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
         signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
@@ -359,28 +415,43 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
       val validNotBefore = created
-      val hardwareDeviceId: UUID = UUID.randomUUID()
+      val hardwareDeviceId: String = UUID.randomUUID().toString
 
       (for {
-        res1 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        res1 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
         (pk1, pkAsString1, _, _, pkr1) = res1
+
         signature1 <- Try(pkr1.sign(pkr1.getRawPublicKey)).toEither
         signatureAsString1 <- Try(Base64.getEncoder.encodeToString(signature1)).toEither
         pubDelete1 = PublicKeyDelete(pk1.pubKeyInfo.pubKeyId, signatureAsString1)
         pubDeleteAsString1 <- jsonConverter.toString[PublicKeyDelete](pubDelete1)
 
-        res2 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
-        (pk2, pkAsString2, _, _, pkr2) = res2
+        res2 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk2, _, _, _, pkr2) = res2
+
+        signed2 <- PublicKeyCreationHelpers.sign(pk2.pubKeyInfo, pkr1)
+        (_, signature2, _) = signed2
+
+        pk2WithPrevSign = pk2.copy(prevSignature = Option(signature2))
+        pk2WithPrevSignAsString <- jsonConverter.toString[PublicKey](pk2WithPrevSign)
+
         signature2 <- Try(pkr2.sign(pkr2.getRawPublicKey)).toEither
         signatureAsString2 <- Try(Base64.getEncoder.encodeToString(signature2)).toEither
-        pubDelete2 = PublicKeyDelete(pk2.pubKeyInfo.pubKeyId, signatureAsString2)
+        pubDelete2 = PublicKeyDelete(pk2WithPrevSign.pubKeyInfo.pubKeyId, signatureAsString2)
         pubDeleteAsString2 <- jsonConverter.toString[PublicKeyDelete](pubDelete2)
 
-        res3 <- getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
-        (pk3, pkAsString3, _, _, pkr3) = res3
+        res3 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk3, _, _, _, pkr3) = res3
+
+        signed3 <- PublicKeyCreationHelpers.sign(pk3.pubKeyInfo, pkr2)
+        (_, signature3, _) = signed3
+
+        pk3WithPrevSign = pk3.copy(prevSignature = Option(signature3))
+        pk3WithPrevSignAsString <- jsonConverter.toString[PublicKey](pk3WithPrevSign)
+
         signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
         signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
-        pubDelete3 = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
+        _ = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
 
       } yield {
 
@@ -389,14 +460,14 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
           body should equal(pkAsString1)
         }
 
-        post("/v1/pubkey", body = pkAsString2) {
+        post("/v1/pubkey", body = pk2WithPrevSignAsString) {
           status should equal(200)
-          body should equal(pkAsString2)
+          body should equal(pk2WithPrevSignAsString)
         }
 
-        post("/v1/pubkey", body = pkAsString3) {
+        post("/v1/pubkey", body = pk3WithPrevSignAsString) {
           status should equal(200)
-          body should equal(pkAsString3)
+          body should equal(pk3WithPrevSignAsString)
         }
 
         patch("/v1/pubkey", body = pubDeleteAsString1) {
@@ -411,13 +482,95 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
         get("/v1/pubkey/current/hardwareId/" + hardwareDeviceId) {
           status should equal(200)
-          body should equal(s"[$pkAsString3]")
+          body should equal(s"[$pk3WithPrevSignAsString]")
         }
 
       }).getOrElse(fail())
 
     }
 
+    "wrong body as mpack" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey/mpack", body = Array.empty) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body as mpack 2" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey/mpack", body = Array(0)) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body as json" taggedAs Tag("cherimoya") in {
+      post("/v1/pubkey", body = "") {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "wrong body as json 2 " taggedAs Tag("cherimoya") in {
+      val dataKey1 = """{"pubeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+      post("/v1/pubkey", body = dataKey1) {
+        assert(jsonConverter.as[NOK](body).isRight)
+        status should equal(400)
+      }
+    }
+
+    "create a second key when signed by the previous key -json-" taggedAs Tag("soursop") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(200)
+        body should equal(dataKey2)
+      }
+
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal(expectedKeys)
+      }
+
+    }
+
+    "second key should not be created if not signed -json-" taggedAs Tag("sapote") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(400)
+        body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+      }
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal("[" + dataKey1 + "]")
+      }
+
+    }
+
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
+    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(connection.execute _))
   }
 
   protected override def afterAll(): Unit = {
@@ -428,73 +581,13 @@ class KeyServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embedd
 
   protected override def beforeAll(): Unit = {
 
+    CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
     cassandra.start()
 
     lazy val keyController = Injector.get[KeyController]
 
     addServlet(keyController, "/*")
-
-    List(
-      CqlScript.ofString("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
-      CqlScript.ofString("USE identity_system;"),
-      CqlScript.ofString("drop table if exists keys;"),
-      CqlScript.ofString(
-        """
-          |create table if not exists keys(
-          |    pub_key          text,
-          |    pub_key_id       text,
-          |    hw_device_id     text,
-          |    algorithm        text,
-          |    valid_not_after  timestamp,
-          |    valid_not_before timestamp,
-          |    signature         text,
-          |    raw               text,
-          |    category          text,
-          |    created           timestamp,
-          |    PRIMARY KEY (pub_key_id, hw_device_id)
-          |);
-        """.stripMargin
-      ),
-      CqlScript.ofString("drop MATERIALIZED VIEW IF exists keys_hw_device_id;"),
-      CqlScript.ofString(
-        """
-          |CREATE MATERIALIZED VIEW keys_hw_device_id AS
-          |SELECT *
-          |FROM keys
-          |WHERE hw_device_id is not null
-          |    and pub_key         is not null
-          |    and pub_key_id       is not null
-          |    and algorithm        is not null
-          |    and valid_not_after  is not null
-          |    and valid_not_before is not null
-          |    and signature        is not null
-          |    and raw              is not null
-          |    and category         is not null
-          |    and created          is not null
-          |PRIMARY KEY (hw_device_id, pub_key_id);
-          |""".stripMargin
-      ),
-      CqlScript.ofString("drop MATERIALIZED VIEW IF exists keys_pub_key_id;"),
-      CqlScript.ofString(
-        """
-          |CREATE MATERIALIZED VIEW keys_pub_key_id AS
-          |SELECT *
-          |FROM keys
-          |WHERE pub_key_id is not null
-          |    and pub_key         is not null
-          |    and hw_device_id     is not null
-          |    and algorithm        is not null
-          |    and valid_not_after  is not null
-          |    and valid_not_before is not null
-          |    and signature        is not null
-          |    and raw              is not null
-          |    and category         is not null
-          |    and created          is not null
-          |PRIMARY KEY (pub_key_id, hw_device_id);
-          |""".stripMargin
-      )
-    ).foreach(x => x.forEachStatement(connection.execute _))
 
     super.beforeAll()
   }

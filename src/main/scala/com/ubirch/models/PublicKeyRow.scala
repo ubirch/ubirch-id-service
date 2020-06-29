@@ -8,7 +8,7 @@ import io.getquill.Embedded
   *  Represents the Row that is inserted in the DB
   * @param algorithm Represents the algorithm that the key supports
   * @param created Represents the creation time for the key. This is value is set by the user.
-  * @param hwDeviceId Represents the hardware id of the device
+  * @param ownerId Represents the owner id of the
   * @param pubKey Represents the public key
   * @param pubKeyId Represents the public key id. If not provided, it is set as the pubKey.
   * @param validNotAfter Represents when in the future the key should not be valid anymore.
@@ -17,7 +17,7 @@ import io.getquill.Embedded
 case class PublicKeyInfoRow(
     algorithm: String,
     created: Date,
-    hwDeviceId: String,
+    ownerId: String,
     pubKey: String,
     pubKeyId: String,
     validNotAfter: Option[Date],
@@ -48,7 +48,7 @@ object PublicKeyInfoRow {
   * @param signature Represents the signature of the pubKeyInfo
   * @param raw Represents the raw request.
   */
-case class PublicKeyRow(pubKeyInfoRow: PublicKeyInfoRow, category: String, signature: String, raw: String)
+case class PublicKeyRow(pubKeyInfoRow: PublicKeyInfoRow, category: String, signature: String, prevSignature: Option[String], raw: String)
 
 /**
   * Represents a companion object for the PublicKeyRow
@@ -62,6 +62,7 @@ object PublicKeyRow {
     PublicKeyInfoRow.fromPublicKeyInfo(publicKey.pubKeyInfo),
     category,
     publicKey.signature,
+    publicKey.prevSignature,
     raw
   )
 

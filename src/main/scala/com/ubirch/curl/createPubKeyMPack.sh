@@ -11,5 +11,5 @@ fi
 
 echo "=> host: $host"
 
-curl -s -X POST --data-binary @packet3.mpack $host/api/keyService/v1/pubkey/mpack
+curl -s -X POST --data-binary @packet3.mpack $host/api/keyService/v1/pubkey/mpack | jq .
 

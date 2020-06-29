@@ -1,5 +1,5 @@
 import com.ubirch.Service
-import com.ubirch.controllers.{ InfoController, KeyController, ResourcesController }
+import com.ubirch.controllers.{ CertController, InfoController, KeyController, ResourcesController }
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
@@ -10,6 +10,7 @@ class ScalatraBootstrap extends LifeCycle {
 
   lazy val infoController: InfoController = Service.get[InfoController]
   lazy val keyController: KeyController = Service.get[KeyController]
+  lazy val certController: CertController = Service.get[CertController]
   lazy val resourceController: ResourcesController = Service.get[ResourcesController]
 
   override def init(context: ServletContext) {
@@ -22,7 +23,11 @@ class ScalatraBootstrap extends LifeCycle {
       urlPattern = "/",
       name = "Info"
     )
-
+    context.mount(
+      handler = certController,
+      urlPattern = "/api/certs",
+      name = "Certificates"
+    )
     context.mount(
       handler = keyController,
       urlPattern = "/api/keyService",
