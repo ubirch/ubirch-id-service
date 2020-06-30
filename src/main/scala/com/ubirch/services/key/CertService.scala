@@ -109,9 +109,9 @@ class DefaultCertService @Inject() (
 
   override def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
     (for {
-      verification <- Task.delay(verifyCSR(csr))
-      _ = if (!verification) logger.error("failed_verification_for={}", csr.toString)
-      _ <- earlyResponseIf(!verification)(InvalidCSRVerification(csr))
+      verificationSignature <- Task.delay(verifySignatureCSR(csr))
+      _ = if (!verificationSignature) logger.error("failed_signature_verification_for={}", csr.toString)
+      _ <- earlyResponseIf(!verificationSignature)(InvalidCSRVerification(csr))
 
       cn <- lift(CertUtil.getCN(csr.getSubject))(InvalidCN(csr))
       cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
@@ -160,7 +160,7 @@ class DefaultCertService @Inject() (
     }
   }
 
-  private def verifyCSR(jcaRequest: JcaPKCS10CertificationRequest): Boolean = {
+  private def verifySignatureCSR(jcaRequest: JcaPKCS10CertificationRequest): Boolean = {
     val provider = new org.bouncycastle.jce.provider.BouncyCastleProvider()
     val key = jcaRequest.getPublicKey
     val verifierProvider: ContentVerifierProvider =
