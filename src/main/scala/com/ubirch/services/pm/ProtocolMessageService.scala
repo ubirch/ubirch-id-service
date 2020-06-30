@@ -36,6 +36,7 @@ class DefaultProtocolMessageService extends ProtocolMessageService with LazyLogg
     })
 
   def unpackFromBytes(bytes: Array[Byte]): Try[UnPacked] = {
+    require(bytes.nonEmpty, "zero bytes found")
     (for {
 
       _ <- earlyResponseIf(bytes.isEmpty)(new Exception("Body can't be empty"))

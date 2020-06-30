@@ -43,6 +43,7 @@ class DefaultCertService @Inject() (
 ) extends CertService with TaskHelpers with LazyLogging {
 
   override def extractCert(request: Array[Byte]): Try[X509Certificate] = {
+    require(request.nonEmpty, "zero bytes found")
     for {
       cert <- materializeCert(request).toTry
       _ = logger.info("cert_extracted={}", cert.toString)
@@ -109,29 +110,24 @@ class DefaultCertService @Inject() (
 
   override def processCSR(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
     (for {
+
       verificationSignature <- Task.delay(verifySignatureCSR(csr))
-      _ = if (!verificationSignature) logger.error("failed_signature_verification_for={}", csr.toString)
+      _ = if (!verificationSignature) logger.error("failed_signature_verification_for={}", csr.getSubject.toString)
       _ <- earlyResponseIf(!verificationSignature)(InvalidCSRVerification(csr))
 
-      cn <- lift(CertUtil.getCN(csr.getSubject))(InvalidCN(csr))
-      cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
-      uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))
+      pubkeyInfo <- buildPublicKey(csr)
 
-      alg <- lift(CertUtil.algorithmName(csr.getSignatureAlgorithm)
-        .getOrElse(csr.getPublicKey.getAlgorithm))(UnknownSignatureAlgorithm("Unknown Algorithm"))
-      curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
-
-      pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
-      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
+      keys <- pubKeyService.getByPubKeyId(pubkeyInfo.pubKeyId)
+      existenceValidation = keys.exists(_.pubKeyInfo.pubKeyId == pubkeyInfo.pubKeyId)
+      _ = if (!existenceValidation) logger.error("failed_existence_verification_for={}", csr.getSubject.toString)
+      _ <- earlyResponseIf(!existenceValidation)(NoPublicKeyFoundForCSR(csr))
 
       data <- liftTry(Try(Hex.toHexString(csr.getEncoded)))(EncodingException("Error encoding data_id"))
 
       //We are using the identifiers are key to help narrow the search as the csrs themselves might changes as the signing key could be different
       identifiers = CertUtil.identifiers(csr.getSubject).map { case (a, b) => s"$a=$b" }.mkString(",")
       dataId = Hasher.hash(identifiers)
-      identityRow = IdentityRow(uuid.toString, pubKeyAsBase64, dataId, "CSR", data, curve + " | " + identifiers)
-
-      pubkeyInfo = PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
+      identityRow = IdentityRow(pubkeyInfo.hwDeviceId, pubkeyInfo.pubKeyId, dataId, "CSR", data, pubkeyInfo.algorithm + " | " + identifiers)
 
       maybeIdentityRow <- identitiesDAO.byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, identityRow.dataId).headOptionL
       _ <- earlyResponseIf(maybeIdentityRow.isDefined)(IdentityAlreadyExistsException(pubkeyInfo, identityRow.toString))
@@ -152,6 +148,7 @@ class DefaultCertService @Inject() (
   }
 
   override def extractCRS(request: Array[Byte]): Try[JcaPKCS10CertificationRequest] = {
+    require(request.nonEmpty, "zero bytes found")
     for {
       csr <- materializeCRS(request).toTry
       _ = logger.info("crs_extracted={}", csr.getSubject.toString)
@@ -179,10 +176,27 @@ class DefaultCertService @Inject() (
     }).toEither
   }
 
+  def buildPublicKey(csr: JcaPKCS10CertificationRequest): Task[PublicKeyInfo] = {
+    for {
+      cn <- lift(CertUtil.getCN(csr.getSubject))(InvalidCN(csr))
+      cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCN(csr))
+      uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))
+
+      alg <- lift(CertUtil.algorithmName(csr.getSignatureAlgorithm)
+        .getOrElse(csr.getPublicKey.getAlgorithm))(UnknownSignatureAlgorithm("Unknown Algorithm"))
+      curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
+
+      pubKey <- liftTry(pubKeyService.recreatePublicKey(csr.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
+      pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
+
+    } yield {
+      PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
+    }
+
+  }
+
   private def buildPublicKey(cert: X509Certificate): Task[PublicKey] = {
     for {
-      _ <- lift(cert.checkValidity())(InvalidCertVerification(cert))
-
       cn <- lift(CertUtil.getCN(new JcaX509CertificateHolder(cert).getSubject))(InvalidCertCN(cert))
       cnAsString <- lift(CertUtil.rdnToString(cn))(InvalidCertCN(cert))
       uuid <- liftTry(CertUtil.buildUUID(cnAsString))(InvalidUUID(cnAsString))

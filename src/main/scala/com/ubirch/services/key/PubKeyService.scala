@@ -250,6 +250,7 @@ class DefaultPubKeyService @Inject() (
   }
 
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey] = {
+    require(encoded.nonEmpty, "zero bytes found")
 
     def recreate(bytes: Array[Byte]) = Try(GeneratorKeyFactory.getPubKey(bytes, curve))
 

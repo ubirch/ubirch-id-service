@@ -37,6 +37,7 @@ package object ubirch {
   case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
   case class InvalidPreSignature(publicKey: String) extends PubKeyServiceException("Invalid Prev Signature Found")
 
+  case class NoPublicKeyFoundForCSR(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
   case class InvalidCSRVerification(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
   case class InvalidCertVerification(csr: X509Certificate) extends CertServiceException("Invalid cert verification")
   case class InvalidCN(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid Common Name in CSR")
