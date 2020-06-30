@@ -5,13 +5,11 @@ import java.io.ByteArrayInputStream
 import java.security.cert.{ CertificateFactory, X509Certificate }
 import java.util.Date
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models._
 import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil, TaskHelpers }
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
-import monix.execution.Scheduler
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder
 import org.bouncycastle.operator.ContentVerifierProvider
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
@@ -34,18 +32,15 @@ trait CertService {
 /**
   * Default implementation of a CertService
   *
-  * @param config Represents a config object
   * @param pubKeyService Service for managing public keys
   * @param identitiesDAO DAO for the identities
-  * @param scheduler Executor Scheduler.
   */
 @Singleton
 class DefaultCertService @Inject() (
-    config: Config,
     pubKeyService: PubKeyService,
     identitiesDAO: IdentitiesDAO,
     identitiesByStateDAO: IdentityByStateDAO
-)(implicit scheduler: Scheduler) extends CertService with TaskHelpers with LazyLogging {
+) extends CertService with TaskHelpers with LazyLogging {
 
   override def extractCert(request: Array[Byte]): Try[X509Certificate] = {
     for {

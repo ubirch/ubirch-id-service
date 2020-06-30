@@ -111,7 +111,7 @@ class DefaultTiger @Inject() (
           .insertWithStateIfNotExists(row, X509Created)
           .map(x => (identity, row, x))
       }
-      .flatMap { case (identity, row, c) =>
+      .flatMap { case (_, row, c) =>
         if (c < 1) logger.warn("identity_already_exists={}", row.toString)
         else logger.info("identity_inserted={}", row.toString)
         Observable.unit

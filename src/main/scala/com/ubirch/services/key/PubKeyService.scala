@@ -1,7 +1,6 @@
 package com.ubirch
 package services.key
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
@@ -12,7 +11,6 @@ import com.ubirch.services.kafka.KeyAnchoring
 import com.ubirch.util.TaskHelpers
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
-import monix.execution.Scheduler
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
@@ -37,26 +35,22 @@ trait PubKeyService {
 
 /**
   * Represents a default implementation of the PubKeyService
-  * @param config Represents a configuration object
   * @param publicKeyDAO Represents the DAO for basic pub key queries
   * @param publicKeyByHwDeviceIdDao Represents the DAO for publicKeyByHwDeviceId queries
   * @param publicKeyByPubKeyIdDao Represents the DAO for publicKeyByPubKeyId queries
   * @param verification Represents the verification component.
   * @param jsonConverterService Represents a json converter convenience
-  * @param scheduler Represents the scheduler async processes
   * @param jsFormats Represents the json formats
   */
 @Singleton
 class DefaultPubKeyService @Inject() (
-    config: Config,
     publicKeyDAO: PublicKeyRowDAO,
     publicKeyByHwDeviceIdDao: PublicKeyRowByOwnerIdDAO,
     publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService,
     keyAnchoring: KeyAnchoring
-)(implicit scheduler: Scheduler, jsFormats: Formats)
-  extends PubKeyService with TaskHelpers with LazyLogging {
+)(implicit jsFormats: Formats) extends PubKeyService with TaskHelpers with LazyLogging {
 
   def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean] = {
 

@@ -14,7 +14,6 @@ import com.ubirch.services.lifeCycle.Lifecycle
 import com.ubirch.util.TaskHelpers
 import javax.inject._
 import monix.eval.Task
-import monix.execution.Scheduler
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.{ ByteArraySerializer, Serializer, StringSerializer }
 import org.json4s.{ DefaultFormats, Formats }
@@ -31,7 +30,7 @@ trait KeyAnchoring {
   def publicKeyToAnchor(value: PublicKey): Try[PublicKeyToAnchor]
 }
 
-abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)(implicit scheduler: Scheduler)
+abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)
   extends KeyAnchoring
   with ExpressProducer[String, Array[Byte]]
   with WithProducerShutdownHook
@@ -94,7 +93,7 @@ abstract class KeyAnchoringImpl(config: Config, lifecycle: Lifecycle, jsonConver
 }
 
 @Singleton
-class DefaultKeyAnchoring @Inject() (config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)(implicit scheduler: Scheduler)
+class DefaultKeyAnchoring @Inject() (config: Config, lifecycle: Lifecycle, jsonConverterService: JsonConverterService)
   extends KeyAnchoringImpl(config, lifecycle, jsonConverterService) {
 
   implicit val formats: Formats = DefaultFormats
