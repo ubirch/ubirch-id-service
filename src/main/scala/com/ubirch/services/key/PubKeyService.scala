@@ -258,7 +258,9 @@ class DefaultPubKeyService @Inject() (
     for {
       bytesToUse <- Try {
         //We are slicing as only the latest 64 bytes are needed to recreate the key.
-        if (curve == Curve.PRIME256V1) encoded.slice(bytesLength - 64, bytesLength) else encoded
+        if (curve == Curve.PRIME256V1) encoded.slice(bytesLength - 64, bytesLength)
+        else if (curve == Curve.Ed25519) encoded.slice(bytesLength - 32, bytesLength)
+        else encoded
       }
       pubKey <- recreate(bytesToUse)
     } yield {

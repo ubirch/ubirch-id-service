@@ -66,13 +66,21 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
       }
     }
 
-    //    "register CSR with Ed25519" taggedAs Tag("durian") in {
-    //      val bytes = loadFixture("src/main/resources/fixtures/3_CSR_Ed25519.der")
-    //      post("/v1/csr/register", body = bytes) {
-    //        assert(jsonConverter.as[PublicKeyInfo](body).isRight)
-    //        status should equal(200)
-    //      }
-    //    }
+    "register CSR with Ed25519" taggedAs Tag("durian") in {
+
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ED25519","created":"2020-07-01T06:13:01.333Z","hwDeviceId":"a0d1f73c-8819-4a97-b96b-49cabd3eba47","pubKey":"DxRWvEGJ5Dih861Kww/jYfGnLqV6oXwbE/aKLxFgiAk=","pubKeyId":"DxRWvEGJ5Dih861Kww/jYfGnLqV6oXwbE/aKLxFgiAk=","validNotAfter":"2021-01-01T06:13:01.333Z","validNotBefore":"2020-07-01T06:13:01.333Z"},"signature":"Ck2sUmbYk6rQmJEx6x2un0B9gfn5wIJWkgLtXDNc+rtD6+OKez5R2z2OPAzMhYLdXAKR06BgUIJBvie5nHQLCQ=="}""".stripMargin
+
+      post("/key/v1/pubkey", body = expectedBody) {
+        status should equal(200)
+        body should equal(expectedBody)
+      }
+
+      val bytes = loadFixture("src/main/resources/fixtures/3_CSR_Ed25519.der")
+      post("/v1/csr/register", body = bytes) {
+        assert(jsonConverter.as[PublicKeyInfo](body).isRight)
+        status should equal(200)
+      }
+    }
 
     "wrong uuid CSR" taggedAs Tag("carambola") in {
       val bytes = loadFixture("src/main/resources/fixtures/2_CSR_Wrong_UUID.der")
