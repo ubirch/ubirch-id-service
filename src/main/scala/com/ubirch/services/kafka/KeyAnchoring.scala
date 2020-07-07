@@ -98,5 +98,5 @@ class DefaultKeyAnchoring @Inject() (config: Config, lifecycle: Lifecycle, jsonC
 
   implicit val formats: Formats = DefaultFormats
 
-  override def production: ProducerRunner[String, Array[Byte]] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
+  override lazy val production: ProducerRunner[String, Array[Byte]] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
 }
