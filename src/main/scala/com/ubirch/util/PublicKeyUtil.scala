@@ -30,6 +30,14 @@ object PublicKeyUtil extends LazyLogging {
     }
   }
 
+  def normalize(algorithm: String): Try[String] = {
+    algorithm.toLowerCase match {
+      case a if ECDSA_names.map(_.toLowerCase).contains(a) => Success("ecdsa-p256v1")
+      case a if EDDSA_names.map(_.toLowerCase).contains(a) => Success("ECC_ED25519")
+      case _ => Failure(NoCurveException(s"No matching curve for $algorithm"))
+    }
+  }
+
   def pubKey(pubKeyBytes: Array[Byte], curve: Curve): PubKey = GeneratorKeyFactory.getPubKey(pubKeyBytes, curve)
 
   def provider = new BouncyCastleProvider

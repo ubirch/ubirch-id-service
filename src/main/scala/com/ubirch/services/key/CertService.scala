@@ -203,11 +203,12 @@ class DefaultCertService @Inject() (
 
       alg = cert.getSigAlgName
       curve <- liftTry(PublicKeyUtil.associateCurve(alg))(UnknownCurve("Unknown curve for " + alg))
+      normalizedAlgName <- liftTry(PublicKeyUtil.normalize(alg))(UnknownCurve("Unknown curve for " + alg))
 
       pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
-      pubKeyInfo = PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
+      pubKeyInfo = PublicKeyInfo(normalizedAlgName, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
     } yield {
