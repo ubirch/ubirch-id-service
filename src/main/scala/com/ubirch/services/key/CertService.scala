@@ -94,7 +94,7 @@ class DefaultCertService @Inject() (
 
       data <- liftTry(Try(Hex.toHexString(cert.getEncoded)))(EncodingException("Error encoding data"))
 
-      state = IdentityByStateRow.fromIdentityRow(maybeIdentity.get, CSRActivated)
+      state = IdentityByStateRow.fromIdentityRow(maybeIdentity.get, X509KeyActivated)
       res <- identitiesByStateDAO.insert(state).headOptionL
       _ = if (res.isEmpty) logger.error("failed_state_creation={} ", state.toString)
       _ = if (res.isDefined) logger.info("state_creation_succeeded={}", state.toString)
