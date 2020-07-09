@@ -318,10 +318,7 @@ class KeyController @Inject() (
   private def handlePubKeyCurrentHardwareId(hwDeviceId: String)(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
       res <- pubKeyService.getByHardwareId(hwDeviceId)
-        .map {
-          case Nil => NotFound(Nil)
-          case pks => Ok(pks)
-        }
+        .map { pks => Ok(pks) }
         .onErrorHandle {
           case e: PubKeyServiceException =>
             logger.error("2.1 Error retrieving pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
