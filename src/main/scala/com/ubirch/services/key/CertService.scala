@@ -70,7 +70,7 @@ class DefaultCertService @Inject() (
       _ = if (res.isDefined) logger.info("cert_creation_succeeded={}", identityRow.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
-      _ <- pubKeyService.createRow(publicKey, data)
+      _ <- pubKeyService.createRow(publicKey, Raw(CERT, data))
       _ <- pubKeyService.anchorAfter()(() => Task.delay(publicKey))
 
     } yield {
@@ -100,7 +100,7 @@ class DefaultCertService @Inject() (
       _ = if (res.isDefined) logger.info("state_creation_succeeded={}", state.toString)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("CERT_Insert"))
 
-      _ <- pubKeyService.createRow(publicKey, data)
+      _ <- pubKeyService.createRow(publicKey, Raw(CERT, data))
       _ <- pubKeyService.anchorAfter()(() => Task.delay(publicKey))
 
     } yield {

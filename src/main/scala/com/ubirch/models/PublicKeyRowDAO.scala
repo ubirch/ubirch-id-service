@@ -22,12 +22,6 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
       .map(x => x)
   }
 
-  def byHwDeviceIdQ(hwDeviceId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.ownerId == lift(hwDeviceId))
-      .map(x => x)
-  }
-
   def insertQ(publicKeyRow: PublicKeyRow): db.Quoted[db.Insert[PublicKeyRow]] = quote {
     query[PublicKeyRow].insert(lift(publicKeyRow))
   }
@@ -59,8 +53,6 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) exten
   def byPubKeyId(pubKeyId: String): Observable[PublicKeyRow] = run(byPubKeyIdQ(pubKeyId))
 
   def insert(publicKeyRow: PublicKeyRow): Observable[Unit] = run(insertQ(publicKeyRow))
-
-  def byHwDeviceId(hwDeviceId: String): Observable[PublicKeyRow] = run(byHwDeviceIdQ(hwDeviceId))
 
   def delete(pubKeyId: String): Observable[Unit] = run(deleteQ(pubKeyId))
 

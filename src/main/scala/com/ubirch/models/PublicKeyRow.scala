@@ -55,19 +55,20 @@ case class PublicKeyRow(pubKeyInfoRow: PublicKeyInfoRow, category: String, signa
   */
 object PublicKeyRow {
 
-  val JSON = 'JSON
-  val MSG_PACK = 'MSG_PACK
-
-  def fromPublicKey(category: String, publicKey: PublicKey, raw: String): PublicKeyRow = PublicKeyRow(
+  def fromPublicKey(publicKey: PublicKey, raw: Raw): PublicKeyRow = PublicKeyRow(
     PublicKeyInfoRow.fromPublicKeyInfo(publicKey.pubKeyInfo),
-    category,
+    raw.category.toString,
     publicKey.signature,
     publicKey.prevSignature,
-    raw
+    raw.data
   )
 
-  def fromPublicKeyAsJson(publicKey: PublicKey, raw: String): PublicKeyRow = fromPublicKey(JSON.name, publicKey, raw)
-
-  def fromPublicKeyAsMsgPack(publicKey: PublicKey, raw: String): PublicKeyRow = fromPublicKey(MSG_PACK.name, publicKey, raw)
-
 }
+
+case class Raw(category: RAWCategory, data: String)
+
+sealed trait RAWCategory
+
+case object JSON extends RAWCategory
+case object MSG_PACK extends RAWCategory
+case object CERT extends RAWCategory
