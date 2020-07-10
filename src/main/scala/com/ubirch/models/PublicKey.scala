@@ -16,15 +16,7 @@ import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
   * @param validNotAfter Represents when in the future the key should not be valid anymore.
   * @param validNotBefore Represents when in the future the key should be valid from.
   */
-case class PublicKeyInfo(
-    algorithm: String,
-    created: Date,
-    hwDeviceId: String,
-    pubKey: String,
-    pubKeyId: String,
-    validNotAfter: Option[Date] = None,
-    validNotBefore: Date = new Date()
-)
+case class PublicKeyInfo(algorithm: String, created: Date, hwDeviceId: String, pubKey: String, pubKeyId: String, prevPubKeyId: Option[String], validNotAfter: Option[Date] = None, validNotBefore: Date = new Date())
 
 /**
   * Companion object for PublicKeyInfo
@@ -71,15 +63,7 @@ object PublicKeyInfo {
   }
 
   def fromPublicKeyInfoRow(publicKeyInfoRow: PublicKeyInfoRow): PublicKeyInfo = {
-    PublicKeyInfo(
-      publicKeyInfoRow.algorithm,
-      publicKeyInfoRow.created,
-      publicKeyInfoRow.ownerId,
-      publicKeyInfoRow.pubKey,
-      publicKeyInfoRow.pubKeyId,
-      publicKeyInfoRow.validNotAfter,
-      publicKeyInfoRow.validNotBefore
-    )
+    PublicKeyInfo(publicKeyInfoRow.algorithm, publicKeyInfoRow.created, publicKeyInfoRow.ownerId, publicKeyInfoRow.pubKey, publicKeyInfoRow.pubKeyId, None, publicKeyInfoRow.validNotAfter, publicKeyInfoRow.validNotBefore)
   }
 }
 

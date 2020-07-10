@@ -168,15 +168,7 @@ object PublicKeyCreationHelpers extends LazyLogging {
       curve <- PublicKeyUtil.associateCurve(curveName).toEither
       newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
       newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-      pubKeyInfo = PublicKeyInfo(
-        algorithm = curveName,
-        created = created.toDate,
-        hwDeviceId = hardwareDeviceId,
-        pubKey = newPublicKey,
-        pubKeyId = pubKeyId.getOrElse(newPublicKey),
-        validNotAfter = validNotAfter.map(_.toDate),
-        validNotBefore = validNotBefore.toDate
-      )
+      pubKeyInfo = PublicKeyInfo(algorithm = curveName, created = created.toDate, hwDeviceId = hardwareDeviceId, pubKey = newPublicKey, pubKeyId = pubKeyId.getOrElse(newPublicKey), None, validNotAfter = validNotAfter.map(_.toDate), validNotBefore = validNotBefore.toDate)
       signed <- sign(pubKeyInfo, newPrivKey)
       (_, signature, signatureAsBytes) = signed
       publicKey = PublicKey(pubKeyInfo, signature)
@@ -200,15 +192,7 @@ object PublicKeyCreationHelpers extends LazyLogging {
     for {
       newPrivKey <- Try(privKey).toEither
       newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-      pubKeyInfo = PublicKeyInfo(
-        algorithm = curveName,
-        created = created.toDate,
-        hwDeviceId = hardwareDeviceId,
-        pubKey = newPublicKey,
-        pubKeyId = pubKeyId.getOrElse(newPublicKey),
-        validNotAfter = validNotAfter.map(_.toDate),
-        validNotBefore = validNotBefore.toDate
-      )
+      pubKeyInfo = PublicKeyInfo(algorithm = curveName, created = created.toDate, hwDeviceId = hardwareDeviceId, pubKey = newPublicKey, pubKeyId = pubKeyId.getOrElse(newPublicKey), None, validNotAfter = validNotAfter.map(_.toDate), validNotBefore = validNotBefore.toDate)
       signed <- sign(pubKeyInfo, newPrivKey)
       (_, signature, signatureAsBytes) = signed
       publicKey = PublicKey(pubKeyInfo, signature)
