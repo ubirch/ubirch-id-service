@@ -6,7 +6,6 @@ import com.ubirch.controllers.concerns.{ ControllerBase, SwaggerElements }
 import com.ubirch.models.{ NOK, Simple }
 import io.prometheus.client.Counter
 import javax.inject._
-import javax.servlet.http.HttpServletRequest
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -89,7 +88,7 @@ class InfoController @Inject() (config: Config, val swagger: Swagger, jFormats: 
     }
   }
 
-  private def hello(implicit request: HttpServletRequest): ActionResult = {
+  private def hello: ActionResult = {
     contentType = formats("txt")
     val data =
       """

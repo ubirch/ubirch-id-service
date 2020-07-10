@@ -26,5 +26,5 @@ sealed trait State
 
 case object CSRCreated extends State
 case object X509Created extends State
-case object CSRActivated extends State
+case object X509KeyActivated extends State
 

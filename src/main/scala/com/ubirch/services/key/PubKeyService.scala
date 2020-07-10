@@ -1,7 +1,6 @@
 package com.ubirch
 package services.key
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PubKey }
@@ -12,7 +11,6 @@ import com.ubirch.services.kafka.KeyAnchoring
 import com.ubirch.util.TaskHelpers
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
-import monix.execution.Scheduler
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
@@ -31,32 +29,28 @@ trait PubKeyService {
   def getByHardwareId(hwDeviceId: String): Task[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
-  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])]
+  def createRow(publicKey: PublicKey, raw: Raw): Task[(PublicKeyRow, Option[Unit])]
   def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey]
 }
 
 /**
   * Represents a default implementation of the PubKeyService
-  * @param config Represents a configuration object
   * @param publicKeyDAO Represents the DAO for basic pub key queries
   * @param publicKeyByHwDeviceIdDao Represents the DAO for publicKeyByHwDeviceId queries
   * @param publicKeyByPubKeyIdDao Represents the DAO for publicKeyByPubKeyId queries
   * @param verification Represents the verification component.
   * @param jsonConverterService Represents a json converter convenience
-  * @param scheduler Represents the scheduler async processes
   * @param jsFormats Represents the json formats
   */
 @Singleton
 class DefaultPubKeyService @Inject() (
-    config: Config,
     publicKeyDAO: PublicKeyRowDAO,
     publicKeyByHwDeviceIdDao: PublicKeyRowByOwnerIdDAO,
     publicKeyByPubKeyIdDao: PublicKeyRowByPubKeyIdDAO,
     verification: PubKeyVerificationService,
     jsonConverterService: JsonConverterService,
     keyAnchoring: KeyAnchoring
-)(implicit scheduler: Scheduler, jsFormats: Formats)
-  extends PubKeyService with TaskHelpers with LazyLogging {
+)(implicit jsFormats: Formats) extends PubKeyService with TaskHelpers with LazyLogging {
 
   def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean] = {
 
@@ -169,7 +163,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      _ <- createRow(publicKey, rawMessage)
+      _ <- createRow(publicKey, Raw(JSON, rawMessage))
 
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
@@ -210,7 +204,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      _ <- createRow(publicKey, rawMsgPack)
+      _ <- createRow(publicKey, Raw(MSG_PACK, rawMsgPack))
 
     } yield publicKey)
       .onErrorRecover {
@@ -219,9 +213,9 @@ class DefaultPubKeyService @Inject() (
       }
   }
 
-  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])] = {
+  def createRow(publicKey: PublicKey, raw: Raw): Task[(PublicKeyRow, Option[Unit])] = {
     for {
-      row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsg))
+      row <- Task(PublicKeyRow.fromPublicKey(publicKey, raw))
       res <- createRow(row)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("PubKey_Insert"))
     } yield {
@@ -256,6 +250,7 @@ class DefaultPubKeyService @Inject() (
   }
 
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey] = {
+    require(encoded.nonEmpty, "zero bytes found")
 
     def recreate(bytes: Array[Byte]) = Try(GeneratorKeyFactory.getPubKey(bytes, curve))
 
@@ -263,7 +258,9 @@ class DefaultPubKeyService @Inject() (
     for {
       bytesToUse <- Try {
         //We are slicing as only the latest 64 bytes are needed to recreate the key.
-        if (curve == Curve.PRIME256V1) encoded.slice(bytesLength - 64, bytesLength) else encoded
+        if (curve == Curve.PRIME256V1) encoded.slice(bytesLength - 64, bytesLength)
+        else if (curve == Curve.Ed25519) encoded.slice(bytesLength - 32, bytesLength)
+        else encoded
       }
       pubKey <- recreate(bytesToUse)
     } yield {

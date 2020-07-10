@@ -3,7 +3,6 @@ package com.ubirch.models
 import com.ubirch.services.cluster.ConnectionService
 import io.getquill.{ CassandraStreamContext, SnakeCase }
 import javax.inject.Inject
-import monix.execution.Scheduler
 import monix.reactive.Observable
 
 /**
@@ -28,9 +27,8 @@ trait IdentitiesByStateQueries extends TablePointer[IdentityByStateRow] {
 /**
   * Represents the Data Access Object for the Identity By State Queries
   * @param connectionService Represents the Connection to Cassandra
-  * @param scheduler Represents the execution context scheduler.
   */
-class IdentityByStateDAO @Inject() (val connectionService: ConnectionService)(implicit scheduler: Scheduler) extends IdentitiesByStateQueries {
+class IdentityByStateDAO @Inject() (val connectionService: ConnectionService) extends IdentitiesByStateQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._

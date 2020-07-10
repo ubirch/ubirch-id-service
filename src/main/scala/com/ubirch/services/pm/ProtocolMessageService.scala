@@ -11,7 +11,6 @@ import com.ubirch.protocol.{ ProtocolException, ProtocolMessage, ProtocolVerifie
 import com.ubirch.services.pm.ProtocolMessageService.UnPacked
 import javax.inject._
 import org.apache.commons.codec.binary.Hex
-import org.json4s.Formats
 
 import scala.util.{ Failure, Success, Try }
 
@@ -22,10 +21,9 @@ trait ProtocolMessageService {
 
 /**
   * Represents a component for managing Protocol Messages
-  * @param formats Represents the json formats for the system
   */
 @Singleton
-class DefaultProtocolMessageService @Inject() (implicit formats: Formats) extends ProtocolMessageService with LazyLogging {
+class DefaultProtocolMessageService extends ProtocolMessageService with LazyLogging {
 
   import ProtocolMessageService._
 
@@ -38,6 +36,7 @@ class DefaultProtocolMessageService @Inject() (implicit formats: Formats) extend
     })
 
   def unpackFromBytes(bytes: Array[Byte]): Try[UnPacked] = {
+    require(bytes.nonEmpty, "zero bytes found")
     (for {
 
       _ <- earlyResponseIf(bytes.isEmpty)(new Exception("Body can't be empty"))

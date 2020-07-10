@@ -38,9 +38,9 @@
     <logger name="io.netty" level="ERROR"/>
     <logger name="io.getquill.CassandraStreamContext" level="ERROR"/>
 
-    <logger name="com.ubirch" level="DEBUG"/>
+    <logger name="com.ubirch" level="ERROR"/>
 
-    <root level="INFO">
+    <root level="ERROR">
         <appender-ref ref="STDERR"/>
     </root>
 
