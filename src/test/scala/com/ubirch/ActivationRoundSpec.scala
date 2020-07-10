@@ -50,6 +50,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
       val identitiesDAO = Injector.get[IdentitiesDAO]
       val identitiesByStateDAO = Injector.get[IdentityByStateDAO]
+      val publicKeyRowDAO = Injector.get[PublicKeyRowDAO]
       val jsonConverter = Injector.get[JsonConverterService]
       val pubKeyService = Injector.get[PubKeyService]
       val certController = Injector.get[CertController]
@@ -58,8 +59,9 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
       val keyPairGenerator = PublicKeyUtil.keyPairGenerator
 
       val algo = SignatureAlgorithm.SHA512withECDSA
-      val (kp, _, id) = CertUtil.createCert(UUID.fromString("03120206-0912-4020-9202-000017df4c73"))(keyPairGenerator, algo)
-      val csr = CertUtil.createCSR(UUID.fromString("03120206-0912-4020-9202-000017df4c73"))(kp, algo)
+      val ownerId = "03120206-0912-4020-9202-000017df4c73"
+      val (kp, _, id) = CertUtil.createCert(UUID.fromString(ownerId))(keyPairGenerator, algo)
+      val csr = CertUtil.createCSR(UUID.fromString(ownerId))(kp, algo)
 
       val curve = PublicKeyUtil.associateCurve(algo.name()).get
       val pubKey = pubKeyService.recreatePublicKey(kp.getPublic.getEncoded, curve).get
@@ -68,7 +70,9 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
         //Publish identity := simulates import
 
-        val identity = id.copy(identityId = Base64.getEncoder.encodeToString(pubKey.getRawPublicKey))
+        val identityId = Base64.getEncoder.encodeToString(pubKey.getRawPublicKey)
+
+        val identity = id.copy(identityId = identityId)
         val identityAsString = jsonConverter.toString[Identity](identity).getOrElse(throw new Exception("Not able to parse to string"))
 
         publishStringMessageToKafka(importTopic, identityAsString)
@@ -96,7 +100,17 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
         val states = await(identitiesByStateDAO.selectAll, 5 seconds)
 
+        assert(states.exists(_.state == X509Created.toString))
+        assert(states.exists(_.state == X509KeyActivated.toString))
+
         assert(states.size == 2)
+
+        val keys = await(publicKeyRowDAO.selectAll, 5 seconds)
+
+        assert(keys.exists(_.pubKeyInfoRow.ownerId == ownerId))
+        assert(keys.exists(_.pubKeyInfoRow.pubKey == identityId))
+        assert(keys.exists(_.category == CERT.toString))
+        assert(keys.exists(_.pubKeyInfoRow.algorithm == PublicKeyUtil.normalize(algo.name()).get))
 
         //Creates CSR
 
@@ -104,6 +118,16 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
           assert(jsonConverter.as[PublicKeyInfo](body).isRight)
           status should equal(200)
         }
+
+        Thread.sleep(5000)
+
+        val states2 = await(identitiesByStateDAO.selectAll, 5 seconds)
+
+        assert(states2.exists(_.state == X509Created.toString))
+        assert(states2.exists(_.state == X509KeyActivated.toString))
+        assert(states2.exists(_.state == CSRCreated.toString))
+
+        assert(states2.size == 3)
 
       }
 

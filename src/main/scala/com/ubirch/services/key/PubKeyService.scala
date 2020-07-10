@@ -29,7 +29,7 @@ trait PubKeyService {
   def getByHardwareId(hwDeviceId: String): Task[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
-  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])]
+  def createRow(publicKey: PublicKey, raw: Raw): Task[(PublicKeyRow, Option[Unit])]
   def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey]
 }
 
@@ -175,7 +175,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      _ <- createRow(publicKey, rawMessage)
+      _ <- createRow(publicKey, Raw(JSON, rawMessage))
 
     } yield publicKey).onErrorRecover {
       case KeyExists(publicKey) => publicKey
@@ -216,7 +216,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(publicKey))
 
-      _ <- createRow(publicKey, rawMsgPack)
+      _ <- createRow(publicKey, Raw(MSG_PACK, rawMsgPack))
 
     } yield publicKey)
       .onErrorRecover {
@@ -225,9 +225,9 @@ class DefaultPubKeyService @Inject() (
       }
   }
 
-  def createRow(publicKey: PublicKey, rawMsg: String): Task[(PublicKeyRow, Option[Unit])] = {
+  def createRow(publicKey: PublicKey, raw: Raw): Task[(PublicKeyRow, Option[Unit])] = {
     for {
-      row <- Task(PublicKeyRow.fromPublicKeyAsMsgPack(publicKey, rawMsg))
+      row <- Task(PublicKeyRow.fromPublicKey(publicKey, raw))
       res <- createRow(row)
       _ <- earlyResponseIf(res.isEmpty)(OperationReturnsNone("PubKey_Insert"))
     } yield {
