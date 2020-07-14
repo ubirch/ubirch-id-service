@@ -128,7 +128,6 @@ class KeyServiceSpec
       val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:51.087Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","pubKeyId":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","prevPubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:51.087Z","validNotBefore":"2020-07-14T12:37:51.087Z"},"signature":"fgRNKLxrf7CN1CCjPsDFIKfu3rrCzdlQTx4BllBrjk9zJrYABO/zPS+GiEnGKFmG2csVvSX5OiuL/+Fcvu4yCw==","prevSignature":"3PjuBswPKGcJ7UC7dKLvleDrMHnBG5JPZBIuNJlWdAX1e+MwP1Eu9nBNR/aLVe4B40pr5rcTu/NqjXwwK6izAA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:49.592Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","pubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:49.592Z","validNotBefore":"2020-07-14T12:37:49.592Z"},"signature":"HDdQvZh43YaPEEfZYwAjNyuL+55RsS8D1r97uaif8uTykmpjqOMjUoDLotCwRxai0vCajYKnfFM+5y7xgEkKDw=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
-        println(expectedKeys)
         status should equal(200)
         body should equal(expectedKeys)
       }
