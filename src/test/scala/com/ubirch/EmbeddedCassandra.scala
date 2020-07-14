@@ -64,8 +64,8 @@ object EmbeddedCassandra {
         |SELECT *
         |FROM keys
         |WHERE pub_key_id is not null
-        |  and pub_key         is not null
-        |  and owner_id     is not null
+        |  and pub_key          is not null
+        |  and owner_id         is not null
         |  and algorithm        is not null
         |  and valid_not_after  is not null
         |  and valid_not_before is not null
@@ -105,6 +105,7 @@ object EmbeddedCassandra {
         |);
         |""".stripMargin
     ),
-    CqlScript.statements("alter table keys add prev_signature text;")
+    CqlScript.statements("alter table keys add prev_signature text;"),
+    CqlScript.statements("alter table keys add prev_pub_key_id text;")
   )
 }

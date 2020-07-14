@@ -106,7 +106,7 @@ class KeyServiceSpec
 
     "get public key object when data exists by hardware id when / is present" taggedAs Tag("lychee") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:49.592Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","pubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:49.592Z","validNotBefore":"2020-07-14T12:37:49.592Z"},"signature":"HDdQvZh43YaPEEfZYwAjNyuL+55RsS8D1r97uaif8uTykmpjqOMjUoDLotCwRxai0vCajYKnfFM+5y7xgEkKDw=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -118,16 +118,17 @@ class KeyServiceSpec
         body should equal("[" + dataKey1 + "]")
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:51.087Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","pubKeyId":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","prevPubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:51.087Z","validNotBefore":"2020-07-14T12:37:51.087Z"},"signature":"fgRNKLxrf7CN1CCjPsDFIKfu3rrCzdlQTx4BllBrjk9zJrYABO/zPS+GiEnGKFmG2csVvSX5OiuL/+Fcvu4yCw==","prevSignature":"3PjuBswPKGcJ7UC7dKLvleDrMHnBG5JPZBIuNJlWdAX1e+MwP1Eu9nBNR/aLVe4B40pr5rcTu/NqjXwwK6izAA=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:51.087Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","pubKeyId":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","prevPubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:51.087Z","validNotBefore":"2020-07-14T12:37:51.087Z"},"signature":"fgRNKLxrf7CN1CCjPsDFIKfu3rrCzdlQTx4BllBrjk9zJrYABO/zPS+GiEnGKFmG2csVvSX5OiuL/+Fcvu4yCw==","prevSignature":"3PjuBswPKGcJ7UC7dKLvleDrMHnBG5JPZBIuNJlWdAX1e+MwP1Eu9nBNR/aLVe4B40pr5rcTu/NqjXwwK6izAA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:49.592Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","pubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:49.592Z","validNotBefore":"2020-07-14T12:37:49.592Z"},"signature":"HDdQvZh43YaPEEfZYwAjNyuL+55RsS8D1r97uaif8uTykmpjqOMjUoDLotCwRxai0vCajYKnfFM+5y7xgEkKDw=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        println(expectedKeys)
         status should equal(200)
         body should equal(expectedKeys)
       }
@@ -425,7 +426,14 @@ class KeyServiceSpec
         pubDelete1 = PublicKeyDelete(pk1.pubKeyInfo.pubKeyId, signatureAsString1)
         pubDeleteAsString1 <- jsonConverter.toString[PublicKeyDelete](pubDelete1)
 
-        res2 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        res2 <- PublicKeyCreationHelpers.getPublicKey(
+          curveName = PublicKeyUtil.ECDSA,
+          created = created,
+          validNotAfter = validNotAfter,
+          validNotBefore = validNotBefore,
+          hardwareDeviceId = hardwareDeviceId,
+          prevPubKeyId = Some(pk1.pubKeyInfo.pubKeyId)
+        )
         (pk2, _, _, _, pkr2) = res2
 
         signed2 <- PublicKeyCreationHelpers.sign(pk2.pubKeyInfo, pkr1)
@@ -439,7 +447,14 @@ class KeyServiceSpec
         pubDelete2 = PublicKeyDelete(pk2WithPrevSign.pubKeyInfo.pubKeyId, signatureAsString2)
         pubDeleteAsString2 <- jsonConverter.toString[PublicKeyDelete](pubDelete2)
 
-        res3 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        res3 <- PublicKeyCreationHelpers.getPublicKey(
+          curveName = PublicKeyUtil.ECDSA,
+          created = created,
+          validNotAfter = validNotAfter,
+          validNotBefore = validNotBefore,
+          hardwareDeviceId = hardwareDeviceId,
+          prevPubKeyId = Some(pk2.pubKeyInfo.pubKeyId)
+        )
         (pk3, _, _, _, pkr3) = res3
 
         signed3 <- PublicKeyCreationHelpers.sign(pk3.pubKeyInfo, pkr2)
@@ -519,21 +534,29 @@ class KeyServiceSpec
 
     "create a second key when signed by the previous key -json-" taggedAs Tag("soursop") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:11.793Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","pubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:11.793Z","validNotBefore":"2020-07-14T13:07:11.793Z"},"signature":"z83MCPDeyXvC9pMVLlWzrqnYiv9/31i+cEnim0oPKN05mqHfq56Ef+1x3VeWLun9DcVy344BZMEsDQ+DY1biDQ=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:12.584Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","pubKeyId":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","prevPubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:12.584Z","validNotBefore":"2020-07-14T13:07:12.584Z"},"signature":"SgrLuxboucGeZ4MMUh37ekW3WV/zK9+nmm4tShkpcCVwc3VbXIPXnaZ1lUX+vz0pWrfKvinAIahEGp0C7QXxAw==","prevSignature":"90NTvcpEctUrZTXmw6it6GNKwKHpWeViOt3oOHXJYoOxonkunWagcdDEdI4FxeZEfOht0JiDWrUF3pccwx+3Bg=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+      //This key is not connected to any existing key
+      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:12:50.691Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"oZn3G+F8AtL55el2IU1aeY/wGQzKQGiHKFdTydhau3g=","pubKeyId":"oZn3G+F8AtL55el2IU1aeY/wGQzKQGiHKFdTydhau3g=","prevPubKeyId":"BKP2hedGpWPyqjMcoTPb33YoE639nDpoKJkcZlCtqWA=","validNotAfter":"2021-01-14T13:12:50.691Z","validNotBefore":"2020-07-14T13:12:50.691Z"},"signature":"get9v2IXCcGmeqQRuPHpC+twzuesoE3EkzEcw3p4G1/py+BPdmgUbtg38sBQNzJ3EJZEu18WGMc03cZNCFofAQ==","prevSignature":"W5fiqTytjAFg1Y+yHIXgGFCg9gil9392505MWkz6s4M4tQ55NCvyHI+wFGyBfAn8GAZMOseR0de/Hj8FV+EuCw=="}"""
+
+      post("/v1/pubkey", body = dataKey3) {
+        status should equal(400)
+        body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+      }
+
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:12.584Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","pubKeyId":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","prevPubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:12.584Z","validNotBefore":"2020-07-14T13:07:12.584Z"},"signature":"SgrLuxboucGeZ4MMUh37ekW3WV/zK9+nmm4tShkpcCVwc3VbXIPXnaZ1lUX+vz0pWrfKvinAIahEGp0C7QXxAw==","prevSignature":"90NTvcpEctUrZTXmw6it6GNKwKHpWeViOt3oOHXJYoOxonkunWagcdDEdI4FxeZEfOht0JiDWrUF3pccwx+3Bg=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:11.793Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","pubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:11.793Z","validNotBefore":"2020-07-14T13:07:11.793Z"},"signature":"z83MCPDeyXvC9pMVLlWzrqnYiv9/31i+cEnim0oPKN05mqHfq56Ef+1x3VeWLun9DcVy344BZMEsDQ+DY1biDQ=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)

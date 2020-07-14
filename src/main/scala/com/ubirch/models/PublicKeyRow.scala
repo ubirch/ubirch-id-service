@@ -20,6 +20,7 @@ case class PublicKeyInfoRow(
     ownerId: String,
     pubKey: String,
     pubKeyId: String,
+    prevPubKeyId: Option[String],
     validNotAfter: Option[Date],
     validNotBefore: Date
 ) extends Embedded
@@ -35,6 +36,7 @@ object PublicKeyInfoRow {
       publicKeyInfo.hwDeviceId,
       publicKeyInfo.pubKey,
       publicKeyInfo.pubKeyId,
+      publicKeyInfo.prevPubKeyId,
       publicKeyInfo.validNotAfter,
       publicKeyInfo.validNotBefore
     )

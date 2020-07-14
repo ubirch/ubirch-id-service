@@ -143,23 +143,29 @@ class DefaultPubKeyService @Inject() (
 
   private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
     (for {
-      //Check if already exists
-      maybePubKeyExists <- getByPubKeyId(publicKey.pubKeyInfo.pubKeyId).map(_.headOption)
+      existingPubKeys <- getByHardwareId(publicKey.pubKeyInfo.hwDeviceId)
+
+      maybePubKeyExists <- Task.delay(existingPubKeys.find(x => x.pubKeyInfo.pubKeyId == publicKey.pubKeyInfo.pubKeyId))
       _ = if (maybePubKeyExists.isDefined) logger.info("key_found={}", maybePubKeyExists.toString)
       _ <- earlyResponseIf(maybePubKeyExists.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
 
-
-      maybePrevKey <- getByPubKeyId(publicKey.pubKeyInfo.prevPubKeyId.getOrElse("")).map(_.headOption)
+      maybePrevKey <- publicKey.pubKeyInfo.prevPubKeyId.map(x => getByPubKeyId(x)).getOrElse(Task.delay(Nil)).map(_.headOption)
       _ = if (maybePrevKey.isDefined) logger.info("prev_key_found={}", maybePrevKey.toString)
 
-      initialVerification = !(
-        publicKey.prevSignature.exists(_.nonEmpty) && maybePrevKey.isDefined &&
-        publicKey.pubKeyInfo.prevPubKeyId.exists(_.nonEmpty) &&
-        Option(publicKey.pubKeyInfo.hwDeviceId) == maybePrevKey.map(_.pubKeyInfo.hwDeviceId)
-        )
+      withPrevKey = maybePrevKey.isDefined &&
+        maybePrevKey.map(_.pubKeyInfo.hwDeviceId).contains(publicKey.pubKeyInfo.hwDeviceId) &&
+        publicKey.prevSignature.exists(_.nonEmpty) &&
+        publicKey.pubKeyInfo.prevPubKeyId.exists(_.nonEmpty)
 
-      _ = if (initialVerification) logger.error("failed_init_verification_for={}", publicKey.toString)
-      _ <- earlyResponseIf(initialVerification)(InvalidKeyVerification(publicKey))
+      noPrevKey = maybePrevKey.isEmpty &&
+        publicKey.prevSignature.isEmpty &&
+        publicKey.pubKeyInfo.prevPubKeyId.isEmpty &&
+        existingPubKeys.isEmpty
+
+      initialVerification = withPrevKey || noPrevKey
+
+      _ = if (!initialVerification) logger.error("failed_init_verification_for={}", publicKey.toString)
+      _ <- earlyResponseIf(!initialVerification)(InvalidKeyVerification(publicKey))
 
       prevSignatureVerification <- Task.delay(maybePrevKey.forall(verification.validate(_, publicKey)))
       _ = if (!prevSignatureVerification) logger.error("failed_prev_verification_for={}", publicKey.toString)
