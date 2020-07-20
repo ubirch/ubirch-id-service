@@ -67,10 +67,4 @@ object PublicKeyRow {
 
 }
 
-case class Raw(category: RAWCategory, data: String)
 
-sealed trait RAWCategory
-
-case object JSON extends RAWCategory
-case object MSG_PACK extends RAWCategory
-case object CERT extends RAWCategory
