@@ -4,6 +4,7 @@ import java.util.{ Base64, Date }
 
 import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.util.DateUtil
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
 
 /**
@@ -24,7 +25,8 @@ case class PublicKeyInfo(
     pubKeyId: String,
     prevPubKeyId: Option[String],
     validNotAfter: Option[Date] = None,
-    validNotBefore: Date = new Date()
+    validNotBefore: Date = new Date(),
+    revokedAt: Option[Date] = None
 )
 
 /**
@@ -80,7 +82,8 @@ object PublicKeyInfo {
       publicKeyInfoRow.pubKeyId,
       publicKeyInfoRow.prevPubKeyId,
       publicKeyInfoRow.validNotAfter,
-      publicKeyInfoRow.validNotBefore
+      publicKeyInfoRow.validNotBefore,
+      publicKeyInfoRow.revokedAt
     )
   }
 }
@@ -90,22 +93,60 @@ object PublicKeyInfo {
   * @param pubKeyInfo Represents a Data Transfer Object for the Public Key
   * @param signature Represents the signature of the pubKeyInfo
   */
-case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, prevSignature: Option[String] = None)
+case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, prevSignature: Option[String] = None) {
+  def validateTime: Boolean = {
+    val now = DateTime.now(DateTimeZone.UTC)
+    val validNotBefore = new DateTime(pubKeyInfo.validNotBefore)
+    val validNotAfter = pubKeyInfo.validNotAfter.map(x => new DateTime(x))
+    validNotBefore.isBefore(now) && validNotAfter.forall(_.isAfter(now))
+  }
+
+  def isNotRevoked: Boolean = pubKeyInfo.revokedAt.isEmpty
+  def isRevoked: Boolean = !isNotRevoked
+
+}
 
 /**
   * Companion for the PublicKey Container
   */
 object PublicKey {
+
   def fromPublicKeyRow(publicKeyRow: PublicKeyRow): PublicKey = PublicKey(
     PublicKeyInfo.fromPublicKeyInfoRow(publicKeyRow.pubKeyInfoRow),
     publicKeyRow.signature,
     publicKeyRow.prevSignature
   )
+
+  def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
+    publicKeys
+      .sortWith((a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created))
+      .sortWith((a, _) => a.prevSignature.isDefined)
+  }
+
+  def filter(publicKeys: Seq[PublicKey])(p: PublicKey => Boolean, p2: (PublicKey => Boolean)*): Seq[PublicKey] = {
+    publicKeys.filter { k =>
+      (p +: p2).forall(x => x(k))
+    }
+  }
+
+  def filterNot(publicKeys: Seq[PublicKey])(p: PublicKey => Boolean, p2: (PublicKey => Boolean)*): Seq[PublicKey] = {
+    publicKeys.filterNot { k =>
+      (p +: p2).forall(x => x(k))
+    }
+  }
+
 }
 
 /**
-  * Represents a Deletion Requests.
+  * Represents a Deletion Request.
   * @param publicKey Represents the public key.
   * @param signature Represents the signature of the publicKey
   */
 case class PublicKeyDelete(publicKey: String, signature: String)
+
+/**
+  * Represents a Public Key Revoke Request.
+  * @param publicKey Represents the public key.
+  * @param signature Represents the signature of the publicKey
+  */
+case class PublicKeyRevoke(publicKey: String, signature: String)

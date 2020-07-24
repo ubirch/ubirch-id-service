@@ -22,7 +22,8 @@ case class PublicKeyInfoRow(
     pubKeyId: String,
     prevPubKeyId: Option[String],
     validNotAfter: Option[Date],
-    validNotBefore: Date
+    validNotBefore: Date,
+    revokedAt: Option[Date]
 ) extends Embedded
 
 /**
@@ -38,7 +39,8 @@ object PublicKeyInfoRow {
       publicKeyInfo.pubKeyId,
       publicKeyInfo.prevPubKeyId,
       publicKeyInfo.validNotAfter,
-      publicKeyInfo.validNotBefore
+      publicKeyInfo.validNotBefore,
+      publicKeyInfo.revokedAt
     )
   }
 }
@@ -66,5 +68,4 @@ object PublicKeyRow {
   )
 
 }
-
 

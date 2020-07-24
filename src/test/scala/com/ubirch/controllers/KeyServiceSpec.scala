@@ -396,6 +396,8 @@ class KeyServiceSpec
 
       } yield {
 
+        println(pkAsString)
+        println(pubDeleteAsString)
         post("/v1/pubkey", body = pkAsString) {
           status should equal(200)
           body should equal(pkAsString)

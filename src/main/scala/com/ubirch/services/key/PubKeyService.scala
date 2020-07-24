@@ -28,6 +28,7 @@ trait PubKeyService {
   def getByPubKeyId(pubKeyId: String): Task[Seq[PublicKey]]
   def getByHardwareId(hwDeviceId: String): Task[Seq[PublicKey]]
   def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean]
+  def revoke(publicKeyRevoke: PublicKeyRevoke): Task[Boolean]
   def recreatePublicKey(encoded: Array[Byte], curve: Curve): Try[PubKey]
   def createRow(publicKey: PublicKey, raw: Raw): Task[(PublicKeyRow, Option[Unit])]
   def anchorAfter(timeout: FiniteDuration = 10 seconds)(fk: () => Task[PublicKey]): Task[PublicKey]
@@ -51,6 +52,38 @@ class DefaultPubKeyService @Inject() (
     jsonConverterService: JsonConverterService,
     keyAnchoring: KeyAnchoring
 )(implicit jsFormats: Formats) extends PubKeyService with TaskHelpers with LazyLogging {
+
+  override def revoke(publicKeyRevoke: PublicKeyRevoke): Task[Boolean] = {
+
+    (for {
+      _ <- Task.delay(logger.info("incoming_payload={}", publicKeyRevoke.toString))
+      maybeKey <- publicKeyDAO.byPubKeyId(publicKeyRevoke.publicKey).headOptionL
+      _ = if (maybeKey.isEmpty) logger.error("key_not_found={}", publicKeyRevoke.publicKey)
+      _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyRevoke.publicKey))
+      alreadyRevoked = maybeKey.flatMap(_.pubKeyInfoRow.revokedAt).isDefined
+      _ = if (alreadyRevoked) logger.error("key_already_revoked={}", publicKeyRevoke.publicKey)
+      _ <- earlyResponseIf(alreadyRevoked)(KeyAlreadyRevoked(publicKeyRevoke.publicKey))
+
+      key = maybeKey.get
+      pubKeyInfo = key.pubKeyInfoRow
+      curve <- Task.fromTry(verification.getCurve(pubKeyInfo.algorithm))
+      verification <- Task.delay(verification.validateFromBase64(publicKeyRevoke.publicKey, publicKeyRevoke.signature, curve))
+      _ = if (!verification) logger.error("invalid_signature_on_key_revoke={}", publicKeyRevoke)
+      _ <- earlyResponseIf(!verification)(InvalidKeyVerification(PublicKey.fromPublicKeyRow(key)))
+
+      revoke <- publicKeyDAO.revoke(key.pubKeyInfoRow.pubKeyId, key.pubKeyInfoRow.ownerId).headOptionL
+      _ = if (revoke.isEmpty) logger.error("failed_key_revoke={}", publicKeyRevoke.publicKey)
+      _ = if (revoke.isDefined) logger.info("key_revoke_succeeded={}", publicKeyRevoke.publicKey)
+
+    } yield revoke.isDefined).onErrorRecover {
+      case KeyAlreadyRevoked(_) => false
+      case KeyNotExists(_) => false
+      case InvalidKeyVerification(_) => false
+      case OperationReturnsNone(_) => false
+      case e: Throwable => throw e
+    }
+
+  }
 
   def delete(publicKeyDelete: PublicKeyDelete): Task[Boolean] = {
 
@@ -107,7 +140,7 @@ class DefaultPubKeyService @Inject() (
         .map(PublicKey.fromPublicKeyRow)
         .toListL
 
-      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime)).map(sort)
+      validPubKeys <- Task.delay(filterAndSortInValidPubkeys(pubKeys))
       _ = logger.info("keys_found={} valid_keys_found={} pub_key_id={}", pubKeys.size, validPubKeys.size, pubKeyId)
 
     } yield {
@@ -116,25 +149,42 @@ class DefaultPubKeyService @Inject() (
   }
 
   def getByHardwareId(hwDeviceId: String): Task[Seq[PublicKey]] = {
+    getByHardwareIdFull(hwDeviceId).map { case (_, _, validPubKeys) => validPubKeys }
+  }
+
+  def getByHardwareIdFull(hwDeviceId: String): Task[(List[PublicKey], List[PublicKey], List[PublicKey])] = {
     for {
-      pubKeys <- publicKeyByHwDeviceIdDao
+      unfilteredPubKeys <- publicKeyByHwDeviceIdDao
         .byOwnerId(hwDeviceId)
         .map(PublicKey.fromPublicKeyRow)
         .toListL
 
-      validPubKeys <- Task.delay(pubKeys.filter(verification.validateTime)).map(sort)
+      validPubKeys <- Task.delay(filterAndSortValidPubkeys(unfilteredPubKeys))
+      invalidPubKeys <- Task.delay(filterAndSortInValidPubkeys(unfilteredPubKeys))
 
-      _ = logger.info("keys_found={} valid_keys_found={} hardware_id={}", pubKeys.size, validPubKeys.size, hwDeviceId)
+      _ = logger.info("keys_found={} valid_keys_found={} invalid_keys={} hardware_id={}", unfilteredPubKeys.size, validPubKeys.size, invalidPubKeys.size, hwDeviceId)
 
     } yield {
-      validPubKeys
+      (unfilteredPubKeys, invalidPubKeys, validPubKeys)
     }
   }
 
-  def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
-    publicKeys
-      .sortWith { (a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created) }
-      .sortWith { (a, _) => a.prevSignature.isDefined }
+  private def filterAndSortValidPubkeys(pubKeys: List[PublicKey]): List[PublicKey] = {
+    PublicKey.sort {
+      PublicKey.filter(pubKeys)(
+        _.validateTime,
+        _.isNotRevoked
+      )
+    }.toList
+  }
+
+  private def filterAndSortInValidPubkeys(pubKeys: List[PublicKey]): List[PublicKey] = {
+    PublicKey.sort {
+      PublicKey.filterNot(pubKeys)(
+        _.validateTime,
+        _.isNotRevoked
+      )
+    }.toList
   }
 
   def create(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
@@ -143,9 +193,14 @@ class DefaultPubKeyService @Inject() (
 
   private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
     (for {
-      existingPubKeys <- getByHardwareId(publicKey.pubKeyInfo.hwDeviceId)
+      fullPubKeys <- getByHardwareIdFull(publicKey.pubKeyInfo.hwDeviceId)
+      (_, invalidPubKeys, existingValidPubKeys) = fullPubKeys
 
-      maybePubKeyExists <- Task.delay(existingPubKeys.find(x => x.pubKeyInfo.pubKeyId == publicKey.pubKeyInfo.pubKeyId))
+      maybeInvalidPubKeyExists <- Task.delay(invalidPubKeys.find(x => x.pubKeyInfo.pubKeyId == publicKey.pubKeyInfo.pubKeyId))
+      _ = if (maybeInvalidPubKeyExists.isDefined) logger.info("invalid_key_found={}", maybeInvalidPubKeyExists.toString)
+      _ <- earlyResponseIf(maybeInvalidPubKeyExists.isDefined)(InvalidKeyVerification(publicKey))
+
+      maybePubKeyExists <- Task.delay(existingValidPubKeys.find(x => x.pubKeyInfo.pubKeyId == publicKey.pubKeyInfo.pubKeyId))
       _ = if (maybePubKeyExists.isDefined) logger.info("key_found={}", maybePubKeyExists.toString)
       _ <- earlyResponseIf(maybePubKeyExists.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
 
@@ -160,7 +215,7 @@ class DefaultPubKeyService @Inject() (
       noPrevKey = maybePrevKey.isEmpty &&
         publicKey.prevSignature.isEmpty &&
         publicKey.pubKeyInfo.prevPubKeyId.isEmpty &&
-        existingPubKeys.isEmpty
+        existingValidPubKeys.isEmpty
 
       initialVerification = withPrevKey || noPrevKey
 
@@ -206,7 +261,7 @@ class DefaultPubKeyService @Inject() (
 
       maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey)
         .headOptionL
-        .map(_.filter(x => verification.validateTime(PublicKey.fromPublicKeyRow(x))))
+        .map(_.filter(x => PublicKey.fromPublicKeyRow(x).validateTime))
       _ = if (maybeKey.isDefined) logger.info("key_found={} ", maybeKey)
 
       publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature)))
