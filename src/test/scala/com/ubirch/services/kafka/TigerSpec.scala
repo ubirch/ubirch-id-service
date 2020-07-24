@@ -11,9 +11,10 @@ import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityActivation, PublicKeyRowDAO }
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.JsonConverterService
-import com.ubirch.util.{ CertUtil, PublicKeyUtil }
+import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
+import org.scalatest.Tag
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -47,18 +48,18 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     val jsonConverter = Injector.get[JsonConverterService]
     val identitiesDAO = Injector.get[IdentitiesDAO]
 
-    val provider = PublicKeyUtil.provider
+    val provider = PublicKeyUtil.keyPairGenerator
 
     val batch = 50
     def ownerId = UUID.randomUUID()
     val validIdentities = (1 to batch).map { _ =>
-      val id = CertUtil.createCert(ownerId)(provider)
+      val (_, _, id) = CertUtil.createCert(ownerId)(provider)
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
 
     val invalidIdentities = (1 to batch).map { _ =>
-      val id = Identity("", ownerId.toString, "sim_import", "", "this is a description")
+      val id = Identity(ownerId.toString, "", "sim_import", "", "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
@@ -85,7 +86,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
   }
 
-  "read and process identity activations with success and errors" in {
+  "read and process identity activations with success and errors" taggedAs Tag("mango") in {
 
     implicit val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
 
@@ -98,24 +99,24 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     val identitiesDAO = Injector.get[IdentitiesDAO]
     val publicKeyRowDAO = Injector.get[PublicKeyRowDAO]
 
-    val provider = PublicKeyUtil.provider
+    val provider = PublicKeyUtil.keyPairGenerator
 
     val batch = 50
     def ownerId = UUID.randomUUID()
     val validIdentities = (1 to batch).map { _ =>
-      val id = CertUtil.createCert(ownerId)(provider)
+      val (_, _, id) = CertUtil.createCert(ownerId)(provider)
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
 
     val invalidIdentities = (1 to batch).map { _ =>
-      val id = Identity("", ownerId.toString, "sim_import", "", "this is a description")
+      val id = Identity(ownerId.toString, "", "sim_import", "", "this is a description")
       val idAsString = jsonConverter.toString[Identity](id).getOrElse(throw new Exception("Not able to parse to string"))
       (id, idAsString)
     }
 
     val validIdentityActivations = validIdentities.map { case (id, _) =>
-      val activation = IdentityActivation(id.id, id.ownerId)
+      val activation = IdentityActivation(id.ownerId, id.identityId, Hasher.hash(id.data))
       val activationAsString = jsonConverter.toString[IdentityActivation](activation).getOrElse(throw new Exception("Not able to parse to string"))
       (activation, activationAsString)
     }
@@ -142,7 +143,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
         publishStringMessageToKafka(activationTopic, activation)
       }
 
-      Thread.sleep(7000)
+      Thread.sleep(9000)
 
       val presentKeys = await(publicKeyRowDAO.selectAll, 5 seconds)
 

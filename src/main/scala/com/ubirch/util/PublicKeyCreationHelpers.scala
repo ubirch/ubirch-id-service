@@ -4,6 +4,7 @@ import java.util.{ Base64, UUID }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.client.protocol.DefaultProtocolSigner
+import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
 import com.ubirch.models.{ PublicKey, PublicKeyInfo }
 import com.ubirch.protocol.ProtocolMessage
@@ -53,8 +54,23 @@ object PublicKeyCreationHelpers extends LazyLogging {
         logger.error(value.getMessage)
     }*/
 
-    println(randomPublicKeyWithPrevSignature)
+    //println(randomPublicKeyWithPrevSignature)
 
+    val t = Base64.getDecoder.decode("MC4CAQAwBQYDK2VwBCIEIBYmyz0/gPl/BgrQQQK3br/FvcumTsqTBIIBPr+7DNEo")
+
+    val privKey = GeneratorKeyFactory.getPrivKey(t.slice(t.length - 32, t.length), Curve.Ed25519)
+
+    val created = DateUtil.nowUTC
+    val validNotAfter = Some(created.plusMonths(6))
+    val validNotBefore = created
+    val hardwareDeviceId: String = "a0d1f73c-8819-4a97-b96b-49cabd3eba47"
+
+    println(Base64.getEncoder.encodeToString(privKey.getPublicKey.getEncoded))
+    println(Base64.getEncoder.encodeToString(privKey.getRawPublicKey))
+
+    val (a, b, c, d, e) = PublicKeyCreationHelpers.getPublicKey2(privKey, "ED25519", created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareDeviceId).toTry.get
+    //val csr = CertUtil.createCSR2(UUID.fromString(hardwareDeviceId))(new KeyPair(e.getPublicKey, e.getPrivateKey), "ED25519")
+    println(b)
   }
 
   def randomPublicKeyWithPrevSignature = {
@@ -146,11 +162,43 @@ object PublicKeyCreationHelpers extends LazyLogging {
       validNotBefore: DateTime,
       hardwareDeviceId: String = UUID.randomUUID().toString,
       pubKeyId: Option[String] = None
-  ) = {
+  ): Either[Throwable, (PublicKey, String, Array[Byte], String, PrivKey)] = {
 
     for {
       curve <- PublicKeyUtil.associateCurve(curveName).toEither
       newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
+      newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
+      pubKeyInfo = PublicKeyInfo(
+        algorithm = curveName,
+        created = created.toDate,
+        hwDeviceId = hardwareDeviceId,
+        pubKey = newPublicKey,
+        pubKeyId = pubKeyId.getOrElse(newPublicKey),
+        validNotAfter = validNotAfter.map(_.toDate),
+        validNotBefore = validNotBefore.toDate
+      )
+      signed <- sign(pubKeyInfo, newPrivKey)
+      (_, signature, signatureAsBytes) = signed
+      publicKey = PublicKey(pubKeyInfo, signature)
+      publicKeyAsString <- jsonConverter.toString[PublicKey](publicKey)
+    } yield {
+      (publicKey, publicKeyAsString, signatureAsBytes, signature, newPrivKey)
+    }
+
+  }
+
+  def getPublicKey2(
+      privKey: PrivKey,
+      curveName: String,
+      created: DateTime,
+      validNotAfter: Option[DateTime],
+      validNotBefore: DateTime,
+      hardwareDeviceId: String = UUID.randomUUID().toString,
+      pubKeyId: Option[String] = None
+  ): Either[Throwable, (PublicKey, String, Array[Byte], String, PrivKey)] = {
+
+    for {
+      newPrivKey <- Try(privKey).toEither
       newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
       pubKeyInfo = PublicKeyInfo(
         algorithm = curveName,

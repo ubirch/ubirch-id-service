@@ -3,7 +3,6 @@ package com.ubirch.models
 import com.ubirch.services.cluster.ConnectionService
 import io.getquill.{ CassandraStreamContext, SnakeCase }
 import javax.inject.Inject
-import monix.execution.Scheduler
 import monix.reactive.Observable
 
 /**
@@ -17,11 +16,11 @@ trait IdentitiesQueries extends TablePointer[IdentityRow] {
 
   implicit val eventSchemaMeta: db.SchemaMeta[IdentityRow] = schemaMeta[IdentityRow]("identities")
 
-  //keys (owner_id, identity_id)
-  def byOwnerIdAndIdentityIdQ(ownerId: String, identityId: String): db.Quoted[db.EntityQuery[IdentityRow]] = quote {
+  def byOwnerIdAndIdentityIdAndDataIdQ(ownerId: String, identityId: String, dataId: String): db.Quoted[db.EntityQuery[IdentityRow]] = quote {
     query[IdentityRow]
       .filter(x => x.ownerId == lift(ownerId))
       .filter(x => x.identityId == lift(identityId))
+      .filter(x => x.dataId == lift(dataId))
       .map(x => x)
   }
 
@@ -36,14 +35,11 @@ trait IdentitiesQueries extends TablePointer[IdentityRow] {
 /**
   * Represents the Data Access Object for the Identity Queries
   * @param connectionService Represents the Connection to Cassandra
-  * @param scheduler Represents the execution context scheduler.
   */
-class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identityByStateDAO: IdentityByStateDAO)(implicit scheduler: Scheduler) extends IdentitiesQueries {
+class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identityByStateDAO: IdentityByStateDAO) extends IdentitiesQueries {
   val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
 
   import db._
-
-  def insert(identityRow: IdentityRow): Observable[Unit] = run(insertQ(identityRow))
 
   def insertWithState(identityRow: IdentityRow, state: State): Observable[Unit] = {
 
@@ -56,7 +52,7 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identit
   }
 
   def insertWithStateIfNotExists(identityRow: IdentityRow, state: State): Observable[Int] = {
-    byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId)
+    byOwnerIdAndIdentityIdAndDataId(identityRow.ownerId, identityRow.identityId, identityRow.dataId)
       .count
       .flatMap { x =>
         if (x > 0) Observable(0)
@@ -65,18 +61,8 @@ class IdentitiesDAO @Inject() (val connectionService: ConnectionService, identit
 
   }
 
-  def insertIfNotExists(identityRow: IdentityRow): Observable[Int] = {
-    byOwnerIdAndIdentityId(identityRow.ownerId, identityRow.identityId)
-      .count
-      .flatMap { x =>
-        if (x > 0) Observable(0)
-        else run(insertQ(identityRow)).map(_ => 1)
-      }
-
-  }
-
   def selectAll: Observable[IdentityRow] = run(selectAllQ)
 
-  def byOwnerIdAndIdentityId(ownerId: String, identityId: String): Observable[IdentityRow] = run(byOwnerIdAndIdentityIdQ(ownerId, identityId))
+  def byOwnerIdAndIdentityIdAndDataId(ownerId: String, identityId: String, dataId: String): Observable[IdentityRow] = run(byOwnerIdAndIdentityIdAndDataIdQ(ownerId, identityId, dataId))
 
 }

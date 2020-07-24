@@ -15,10 +15,11 @@ import javax.inject._
 @Singleton
 class IdentitySystem @Inject() (tiger: Tiger, restService: RestService, keyAnchoring: KeyAnchoring) extends LazyLogging {
 
-  def start = {
+  def start: Unit = {
 
     restService.start
     tiger.start()
+    val _ = keyAnchoring
 
     val cd = new CountDownLatch(1)
     cd.await()

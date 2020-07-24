@@ -2,7 +2,7 @@ package com
 
 import java.security.cert.X509Certificate
 
-import com.ubirch.models.PublicKey
+import com.ubirch.models.{ PublicKey, PublicKeyInfo }
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 
 import scala.util.control.NoStackTrace
@@ -37,6 +37,7 @@ package object ubirch {
   case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
   case class InvalidPreSignature(publicKey: String) extends PubKeyServiceException("Invalid Prev Signature Found")
 
+  case class NoPublicKeyFoundForCSR(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
   case class InvalidCSRVerification(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
   case class InvalidCertVerification(csr: X509Certificate) extends CertServiceException("Invalid cert verification")
   case class InvalidCN(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid Common Name in CSR")
@@ -46,7 +47,7 @@ package object ubirch {
   case class UnknownCurve(message: String) extends CertServiceException(message)
   case class RecreationException(message: String) extends CertServiceException(message)
   case class EncodingException(message: String) extends CertServiceException(message)
-  case class IdentityAlreadyExistsException(message: String) extends CertServiceException(message)
+  case class IdentityAlreadyExistsException(publicKeyInfo: PublicKeyInfo, message: String) extends CertServiceException(message)
   case class IdentityNotFoundException(message: String) extends CertServiceException(message)
 
   case class FailedKafkaPublish(publicKey: PublicKey, maybeThrowable: Option[Throwable])

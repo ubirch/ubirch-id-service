@@ -14,6 +14,7 @@ import java.util.Date
 case class IdentityRow(
     ownerId: String,
     identityId: String,
+    dataId: String,
     category: String,
     created: Date,
     data: String,
@@ -24,8 +25,9 @@ case class IdentityRow(
   * Represents a convenience object for the Identity Row object.
   */
 object IdentityRow {
-  def fromIdentity(identity: Identity): IdentityRow = {
-    IdentityRow(identity.ownerId, identity.id, identity.category, new Date(), identity.data, identity.description)
-  }
+
+  def apply(ownerId: String, identityId: String, dataId: String, category: String, data: String, description: String): IdentityRow =
+    new IdentityRow(ownerId, identityId, dataId, category, new Date, data, description)
+
 }
 
