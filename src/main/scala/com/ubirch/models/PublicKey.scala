@@ -22,6 +22,7 @@ case class PublicKeyInfo(
     hwDeviceId: String,
     pubKey: String,
     pubKeyId: String,
+    prevPubKeyId: Option[String],
     validNotAfter: Option[Date] = None,
     validNotBefore: Date = new Date()
 )
@@ -39,7 +40,7 @@ object PublicKeyInfo {
   final val VALID_NOT_AFTER = "validNotAfter"
   final val VALID_NOT_BEFORE = "validNotBefore"
 
-  def fixValuesFomMsgPack(jv: JValue) = {
+  def fixValuesFomMsgPack(jv: JValue): JValue = {
     def formatter(time: Long) = DateUtil.ISOFormatter.print(time.toLong * 1000)
     jv.mapField {
       case (x @ PublicKeyInfo.ALGORITHM, JString(value)) => (x, JString(new String(Base64.getDecoder.decode(value))))
@@ -51,7 +52,7 @@ object PublicKeyInfo {
     }
   }
 
-  def checkPubKeyId(jv: JValue) = {
+  def checkPubKeyId(jv: JValue): JValue = {
     val pk = jv.findField {
       case (PublicKeyInfo.PUB_KEY, _) => true
       case _ => false
@@ -77,6 +78,7 @@ object PublicKeyInfo {
       publicKeyInfoRow.ownerId,
       publicKeyInfoRow.pubKey,
       publicKeyInfoRow.pubKeyId,
+      publicKeyInfoRow.prevPubKeyId,
       publicKeyInfoRow.validNotAfter,
       publicKeyInfoRow.validNotBefore
     )
