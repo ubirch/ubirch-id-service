@@ -1,12 +1,12 @@
 {
   "pubKeyInfo": {
     "algorithm": "ed25519-sha-512",
-    "created": "2020-06-09T07:36:17.170Z",
-    "hwDeviceId": "17f675f9-8e2e-4e71-b788-edb42414aa6e",
-    "pubKey": "LsfyIiTyW3wD3caE9m8ZTKs/fy13DYALn0jzvpPRVRA=",
-    "pubKeyId": "61f0249a-f35c-4e39-996b-6a884c0495cd",
-    "validNotAfter": "2020-12-09T07:36:17.170Z",
-    "validNotBefore": "2020-06-09T07:36:17.170Z"
+    "created": "2020-07-14T12:37:49.592Z",
+    "hwDeviceId": "6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==",
+    "pubKey": "M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=",
+    "pubKeyId": "M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=",
+    "validNotAfter": "2021-01-14T12:37:49.592Z",
+    "validNotBefore": "2020-07-14T12:37:49.592Z"
   },
-  "signature": "TiHUsW5l7vcMSb/P5HwnqAlm6i8evbMx8OLJXZEfKt/EBHWJ754a+6vArt4dgnj1Eh0UhrJvguCscr2e4xRXBw=="
+  "signature": "HDdQvZh43YaPEEfZYwAjNyuL+55RsS8D1r97uaif8uTykmpjqOMjUoDLotCwRxai0vCajYKnfFM+5y7xgEkKDw=="
 }

@@ -39,15 +39,7 @@ class PublicKeySpec extends TestBase {
           curve <- PublicKeyUtil.associateCurve(curveName).toEither
           newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
           newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-          pubKeyInfo = PublicKeyInfo(
-            algorithm = curveName,
-            created = now.toDate,
-            hwDeviceId = hardwareDeviceId.toString,
-            pubKey = newPublicKey,
-            pubKeyId = pubKeyUUID.toString,
-            validNotAfter = Some(inSixMonths.toDate),
-            validNotBefore = now.toDate
-          )
+          pubKeyInfo = PublicKeyInfo(algorithm = curveName, created = now.toDate, hwDeviceId = hardwareDeviceId.toString, pubKey = newPublicKey, pubKeyId = pubKeyUUID.toString, None, validNotAfter = Some(inSixMonths.toDate), validNotBefore = now.toDate)
 
           publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
           signature <- Try(Base64.getEncoder.encodeToString(newPrivKey.sign(publicKeyInfoAsString.getBytes))).toEither
