@@ -56,6 +56,7 @@ object PublicKeyCreationHelpers extends LazyLogging {
     val r = randomPublicKeyWithPrevSignature
     println(r.map(_._1))
     println(r.map(_._2))
+    println(r.map(_._3))
 
     //    val t = Base64.getDecoder.decode("MC4CAQAwBQYDK2VwBCIEIBYmyz0/gPl/BgrQQQK3br/FvcumTsqTBIIBPr+7DNEo")
     //
@@ -77,16 +78,32 @@ object PublicKeyCreationHelpers extends LazyLogging {
   def randomPublicKeyWithPrevSignature = {
     for {
       hardwareDeviceId <- Try("6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==").toEither // Try("7cf5b4c3-ac93-4c8f-95b3-ff44a02b43d3").toEither
+
+      ///
       random1 <- randomPublicKey(PublicKeyUtil.EDDSA, hardwareDeviceId)
       (publicKey1, publicKey1AsString, _, _, prevPrivKey) = random1
+
       random2 <- randomPublicKey(curve = PublicKeyUtil.EDDSA, hardwareDeviceId = hardwareDeviceId, prevPubKeyId = Some(publicKey1.pubKeyInfo.pubKeyId))
-      (pk2, _, _, _, _) = random2
+      (pk2, _, _, _, prevPrivKey2) = random2
+
       signed <- sign(pk2.pubKeyInfo, prevPrivKey)
       (_, prevSignature, _) = signed
+
       publicKey2 = pk2.copy(prevSignature = Option(prevSignature))
       publicKey2AsString <- jsonConverter.toString[PublicKey](publicKey2)
+
+      random3 <- randomPublicKey(curve = PublicKeyUtil.EDDSA, hardwareDeviceId = hardwareDeviceId, prevPubKeyId = Some(publicKey2.pubKeyInfo.pubKeyId))
+      (pk3, _, _, _, _) = random3
+
+      signed <- sign(pk3.pubKeyInfo, prevPrivKey2)
+      (_, prevSignature, _) = signed
+
+      publicKey3 = pk3.copy(prevSignature = Option(prevSignature))
+
+      publicKey3AsString <- jsonConverter.toString[PublicKey](publicKey3)
+
     } yield {
-      (publicKey1AsString, publicKey2AsString)
+      (publicKey1AsString, publicKey2AsString, publicKey3AsString)
     }
   }
 
