@@ -218,7 +218,7 @@ class KeyServiceSpec
 
     }
 
-    "create key using the json endpoint when same key" taggedAs Tag("date_fruit") in {
+    "create key using the json endpoint when same key" taggedAs Tag("mulberries") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -396,7 +396,7 @@ class KeyServiceSpec
 
     }
 
-    "create key using the mpack endpoint from trackle message" taggedAs Tag("date_fruit") in {
+    "create key using the mpack endpoint from trackle message from hex" taggedAs Tag("date_fruit") in {
 
       val bytes1 = Hex.decodeHex("95cd0012b0 4746b40290a3182f4aab5f14da0166f2 0186a9616c676f726974686dab4543435f45443235353139a763726561746564ce5f23f255aa68774465766963654964b04746b40290a3182f4aab5f14da0166f2a67075624b6579da0020c8904a680a964ca7a35fe308e55042019b3c8638698b320253bc1363d5494851ad76616c69644e6f744166746572ce62e65955ae76616c69644e6f744265666f7265ce5f23f255da00404d5512cb93ebc3a09170f3bde5530c90942a009d076f90854265c2d9a27494ea5c95804c47d11eb08350b36dead1383981cc65177ca5699d00b601741bcf540c")
 
