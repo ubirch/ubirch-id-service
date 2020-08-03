@@ -20,6 +20,7 @@ case class PublicKeyInfoRow(
     ownerId: String,
     pubKey: String,
     pubKeyId: String,
+    prevPubKeyId: Option[String],
     validNotAfter: Option[Date],
     validNotBefore: Date
 ) extends Embedded
@@ -35,6 +36,7 @@ object PublicKeyInfoRow {
       publicKeyInfo.hwDeviceId,
       publicKeyInfo.pubKey,
       publicKeyInfo.pubKeyId,
+      publicKeyInfo.prevPubKeyId,
       publicKeyInfo.validNotAfter,
       publicKeyInfo.validNotBefore
     )
@@ -65,10 +67,3 @@ object PublicKeyRow {
 
 }
 
-case class Raw(category: RAWCategory, data: String)
-
-sealed trait RAWCategory
-
-case object JSON extends RAWCategory
-case object MSG_PACK extends RAWCategory
-case object CERT extends RAWCategory

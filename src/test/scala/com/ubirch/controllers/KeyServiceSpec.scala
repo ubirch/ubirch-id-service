@@ -9,6 +9,7 @@ import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import com.ubirch.{ EmbeddedCassandra, _ }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
+import org.apache.commons.codec.binary.Hex
 import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
@@ -106,7 +107,7 @@ class KeyServiceSpec
 
     "get public key object when data exists by hardware id when / is present" taggedAs Tag("lychee") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:49.592Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","pubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:49.592Z","validNotBefore":"2020-07-14T12:37:49.592Z"},"signature":"HDdQvZh43YaPEEfZYwAjNyuL+55RsS8D1r97uaif8uTykmpjqOMjUoDLotCwRxai0vCajYKnfFM+5y7xgEkKDw=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -118,14 +119,58 @@ class KeyServiceSpec
         body should equal("[" + dataKey1 + "]")
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:51.087Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","pubKeyId":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","prevPubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:51.087Z","validNotBefore":"2020-07-14T12:37:51.087Z"},"signature":"fgRNKLxrf7CN1CCjPsDFIKfu3rrCzdlQTx4BllBrjk9zJrYABO/zPS+GiEnGKFmG2csVvSX5OiuL/+Fcvu4yCw==","prevSignature":"3PjuBswPKGcJ7UC7dKLvleDrMHnBG5JPZBIuNJlWdAX1e+MwP1Eu9nBNR/aLVe4B40pr5rcTu/NqjXwwK6izAA=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:51.087Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","pubKeyId":"JoyQ2qtnHgaZ4G12P4WujjgtrmkiUI3l636p5gs2vlo=","prevPubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:51.087Z","validNotBefore":"2020-07-14T12:37:51.087Z"},"signature":"fgRNKLxrf7CN1CCjPsDFIKfu3rrCzdlQTx4BllBrjk9zJrYABO/zPS+GiEnGKFmG2csVvSX5OiuL/+Fcvu4yCw==","prevSignature":"3PjuBswPKGcJ7UC7dKLvleDrMHnBG5JPZBIuNJlWdAX1e+MwP1Eu9nBNR/aLVe4B40pr5rcTu/NqjXwwK6izAA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T12:37:49.592Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","pubKeyId":"M/+XARYp4NsBaRdaJ/Eugrcgvr0mLsjiUBJoI2Na78E=","validNotAfter":"2021-01-14T12:37:49.592Z","validNotBefore":"2020-07-14T12:37:49.592Z"},"signature":"HDdQvZh43YaPEEfZYwAjNyuL+55RsS8D1r97uaif8uTykmpjqOMjUoDLotCwRxai0vCajYKnfFM+5y7xgEkKDw=="}]""".stripMargin
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal(expectedKeys)
+      }
+
+    }
+
+    "create when signed by previous" taggedAs Tag("breadfruit") in {
+
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:20:31.527Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"8HnM8Cc7Az2zEkyMZy+OxNgis4miNxF6aOYxKRkOqtw=","pubKeyId":"8HnM8Cc7Az2zEkyMZy+OxNgis4miNxF6aOYxKRkOqtw=","validNotAfter":"2021-01-27T15:20:31.527Z","validNotBefore":"2020-07-27T15:20:31.527Z"},"signature":"drlkRqoP+A5kz08tp+MvCf4OiSJ6v5cA5LAV5/m0JFJgceUo2NtMRc0Voi5p1LPJqt4gHNSq2chG0gtcIojWDg=="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey1) {
+        status should equal(200)
+        body should equal(dataKey1)
+      }
+
+      get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
+        status should equal(200)
+        body should equal("[" + dataKey1 + "]")
+      }
+
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:20:32.966Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"CxvssKUuiJLab+EgpfHesVqxE7JUbm7uxXB8h7uTdCE=","pubKeyId":"CxvssKUuiJLab+EgpfHesVqxE7JUbm7uxXB8h7uTdCE=","prevPubKeyId":"8HnM8Cc7Az2zEkyMZy+OxNgis4miNxF6aOYxKRkOqtw=","validNotAfter":"2021-01-27T15:20:32.966Z","validNotBefore":"2020-07-27T15:20:32.966Z"},"signature":"Iv1Bh3eUAQlRKVw9iFcYqX42JT/1prEqwQzwytKv0vmhvHjpqbaSlcB+AvDLu1+eAvGeFTz9rN4Z4x9RLiVBDQ==","prevSignature":"NILz1+VHpJP5xutrS5llPLXv+MhYmgU4/0B1W1wvCVzzJu22cZpEcwDvMkJHnwMrn6pqjyrkst9OWd7nien1AA=="}"""
+
+      post("/v1/pubkey", body = dataKey2) {
+        status should equal(200)
+        body should equal(dataKey2)
+      }
+
+      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:20:32.996Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HlbuIVf920Zp4sARsymxcPLiDaTsUdpDtgx8PzIaQSc=","pubKeyId":"HlbuIVf920Zp4sARsymxcPLiDaTsUdpDtgx8PzIaQSc=","prevPubKeyId":"CxvssKUuiJLab+EgpfHesVqxE7JUbm7uxXB8h7uTdCE=","validNotAfter":"2021-01-27T15:20:32.996Z","validNotBefore":"2020-07-27T15:20:32.996Z"},"signature":"Tl1PWCokKANtzZg8H82n6oev2432EBDAz5Tas0OmZtuAz7GPlrbY8M2SDVf85flOHvQetc4hKx5L2v9rvDdOAA==","prevSignature":"FPl9rPJABABpF80QNSrZbhiDavtIm9RK7721gwSSm2G13xoswJ7e1tjvx4oIS31kNDaQr3z4j61AIgk36jp3Cg=="}"""
+
+      post("/v1/pubkey", body = dataKey3) {
+        status should equal(200)
+        body should equal(dataKey3)
+      }
+
+      val dataKey4 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:21:41.499Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"qhMLEsHjd/Dxsgp0bahwf9plmAeruN7D3i5GcTpmAOo=","pubKeyId":"qhMLEsHjd/Dxsgp0bahwf9plmAeruN7D3i5GcTpmAOo=","validNotAfter":"2021-01-27T15:21:41.499Z","validNotBefore":"2020-07-27T15:21:41.499Z"},"signature":"nixHHeuueYuehNwHw9r0ye1/3HG2nej2kIHb+hIgyPd9lQ4+glwoENKT7WrNrPaVClsw3qsch8vszQBJa8NLCw=="}""".stripMargin
+
+      post("/v1/pubkey", body = dataKey4) {
+        status should equal(400)
+        body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+      }
+
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:20:32.966Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"CxvssKUuiJLab+EgpfHesVqxE7JUbm7uxXB8h7uTdCE=","pubKeyId":"CxvssKUuiJLab+EgpfHesVqxE7JUbm7uxXB8h7uTdCE=","prevPubKeyId":"8HnM8Cc7Az2zEkyMZy+OxNgis4miNxF6aOYxKRkOqtw=","validNotAfter":"2021-01-27T15:20:32.966Z","validNotBefore":"2020-07-27T15:20:32.966Z"},"signature":"Iv1Bh3eUAQlRKVw9iFcYqX42JT/1prEqwQzwytKv0vmhvHjpqbaSlcB+AvDLu1+eAvGeFTz9rN4Z4x9RLiVBDQ==","prevSignature":"NILz1+VHpJP5xutrS5llPLXv+MhYmgU4/0B1W1wvCVzzJu22cZpEcwDvMkJHnwMrn6pqjyrkst9OWd7nien1AA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:20:32.996Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HlbuIVf920Zp4sARsymxcPLiDaTsUdpDtgx8PzIaQSc=","pubKeyId":"HlbuIVf920Zp4sARsymxcPLiDaTsUdpDtgx8PzIaQSc=","prevPubKeyId":"CxvssKUuiJLab+EgpfHesVqxE7JUbm7uxXB8h7uTdCE=","validNotAfter":"2021-01-27T15:20:32.996Z","validNotBefore":"2020-07-27T15:20:32.996Z"},"signature":"Tl1PWCokKANtzZg8H82n6oev2432EBDAz5Tas0OmZtuAz7GPlrbY8M2SDVf85flOHvQetc4hKx5L2v9rvDdOAA==","prevSignature":"FPl9rPJABABpF80QNSrZbhiDavtIm9RK7721gwSSm2G13xoswJ7e1tjvx4oIS31kNDaQr3z4j61AIgk36jp3Cg=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-27T15:20:31.527Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"8HnM8Cc7Az2zEkyMZy+OxNgis4miNxF6aOYxKRkOqtw=","pubKeyId":"8HnM8Cc7Az2zEkyMZy+OxNgis4miNxF6aOYxKRkOqtw=","validNotAfter":"2021-01-27T15:20:31.527Z","validNotBefore":"2020-07-27T15:20:31.527Z"},"signature":"drlkRqoP+A5kz08tp+MvCf4OiSJ6v5cA5LAV5/m0JFJgceUo2NtMRc0Voi5p1LPJqt4gHNSq2chG0gtcIojWDg=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)
@@ -173,7 +218,7 @@ class KeyServiceSpec
 
     }
 
-    "create key using the json endpoint when same key" taggedAs Tag("date_fruit") in {
+    "create key using the json endpoint when same key" taggedAs Tag("mulberries") in {
 
       val created = DateUtil.nowUTC
       val validNotAfter = Some(created.plusMonths(6))
@@ -351,6 +396,16 @@ class KeyServiceSpec
 
     }
 
+    "create key using the mpack endpoint from trackle message from hex" taggedAs Tag("date_fruit") in {
+
+      val bytes1 = Hex.decodeHex("95cd0012b04746b40290a3182f4aab5f14da0166f20186a9616c676f726974686dab4543435f45443235353139a763726561746564ce5f23f255aa68774465766963654964b04746b40290a3182f4aab5f14da0166f2a67075624b6579da0020c8904a680a964ca7a35fe308e55042019b3c8638698b320253bc1363d5494851ad76616c69644e6f744166746572ce62e65955ae76616c69644e6f744265666f7265ce5f23f255da00404d5512cb93ebc3a09170f3bde5530c90942a009d076f90854265c2d9a27494ea5c95804c47d11eb08350b36dead1383981cc65177ca5699d00b601741bcf540c")
+
+      post("/v1/pubkey/mpack", body = bytes1) {
+        status should equal(200)
+      }
+
+    }
+
     "create key using the json endpoint when no validNotAfter is provided" taggedAs Tag("watermelon") in {
 
       val created = DateUtil.nowUTC
@@ -425,7 +480,14 @@ class KeyServiceSpec
         pubDelete1 = PublicKeyDelete(pk1.pubKeyInfo.pubKeyId, signatureAsString1)
         pubDeleteAsString1 <- jsonConverter.toString[PublicKeyDelete](pubDelete1)
 
-        res2 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        res2 <- PublicKeyCreationHelpers.getPublicKey(
+          curveName = PublicKeyUtil.ECDSA,
+          created = created,
+          validNotAfter = validNotAfter,
+          validNotBefore = validNotBefore,
+          hardwareDeviceId = hardwareDeviceId,
+          prevPubKeyId = Some(pk1.pubKeyInfo.pubKeyId)
+        )
         (pk2, _, _, _, pkr2) = res2
 
         signed2 <- PublicKeyCreationHelpers.sign(pk2.pubKeyInfo, pkr1)
@@ -439,7 +501,14 @@ class KeyServiceSpec
         pubDelete2 = PublicKeyDelete(pk2WithPrevSign.pubKeyInfo.pubKeyId, signatureAsString2)
         pubDeleteAsString2 <- jsonConverter.toString[PublicKeyDelete](pubDelete2)
 
-        res3 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        res3 <- PublicKeyCreationHelpers.getPublicKey(
+          curveName = PublicKeyUtil.ECDSA,
+          created = created,
+          validNotAfter = validNotAfter,
+          validNotBefore = validNotBefore,
+          hardwareDeviceId = hardwareDeviceId,
+          prevPubKeyId = Some(pk2.pubKeyInfo.pubKeyId)
+        )
         (pk3, _, _, _, pkr3) = res3
 
         signed3 <- PublicKeyCreationHelpers.sign(pk3.pubKeyInfo, pkr2)
@@ -519,21 +588,29 @@ class KeyServiceSpec
 
     "create a second key when signed by the previous key -json-" taggedAs Tag("soursop") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:11.793Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","pubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:11.793Z","validNotBefore":"2020-07-14T13:07:11.793Z"},"signature":"z83MCPDeyXvC9pMVLlWzrqnYiv9/31i+cEnim0oPKN05mqHfq56Ef+1x3VeWLun9DcVy344BZMEsDQ+DY1biDQ=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:12.584Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","pubKeyId":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","prevPubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:12.584Z","validNotBefore":"2020-07-14T13:07:12.584Z"},"signature":"SgrLuxboucGeZ4MMUh37ekW3WV/zK9+nmm4tShkpcCVwc3VbXIPXnaZ1lUX+vz0pWrfKvinAIahEGp0C7QXxAw==","prevSignature":"90NTvcpEctUrZTXmw6it6GNKwKHpWeViOt3oOHXJYoOxonkunWagcdDEdI4FxeZEfOht0JiDWrUF3pccwx+3Bg=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.990Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","pubKeyId":"6MKCPw0iyAEBeW1qaK/qK+y86bzkiFb3SvC8uk3bIRk=","validNotAfter":"2020-12-09T09:50:26.990Z","validNotBefore":"2020-06-09T09:50:26.990Z"},"signature":"VcvUGzPBKsicQ2doqECSTrV+rmbJ992caBWwdJaKtu9sBtz2ukk8E7YlSELshYs1Slcw//GCVTXr8BjS5wl0DQ==","prevSignature":"JAwWDwkiNlpnNkzr7v3WSqgKXcG5j7XqFUU8N+8+F4Lk4T+vVd/4+uywoOzrpmlFnYlA+QbWciII81L2E/ZKDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-06-09T09:50:26.083Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","pubKeyId":"Zk8/Lb9UKdFI07rTxAqrqmlQfEZH9w+2lAAXWUPIUYk=","validNotAfter":"2020-12-09T09:50:26.083Z","validNotBefore":"2020-06-09T09:50:26.083Z"},"signature":"Pqi2Tfs9sFsoWKzfAkUK6RYl+IkisHNpLcFju9nOS7IMQ/pJW0PFlUorz+NeA2EZThSCUaCAmQoywA/nMGABAA=="}]"""
+      //This key is not connected to any existing key
+      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:12:50.691Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"oZn3G+F8AtL55el2IU1aeY/wGQzKQGiHKFdTydhau3g=","pubKeyId":"oZn3G+F8AtL55el2IU1aeY/wGQzKQGiHKFdTydhau3g=","prevPubKeyId":"BKP2hedGpWPyqjMcoTPb33YoE639nDpoKJkcZlCtqWA=","validNotAfter":"2021-01-14T13:12:50.691Z","validNotBefore":"2020-07-14T13:12:50.691Z"},"signature":"get9v2IXCcGmeqQRuPHpC+twzuesoE3EkzEcw3p4G1/py+BPdmgUbtg38sBQNzJ3EJZEu18WGMc03cZNCFofAQ==","prevSignature":"W5fiqTytjAFg1Y+yHIXgGFCg9gil9392505MWkz6s4M4tQ55NCvyHI+wFGyBfAn8GAZMOseR0de/Hj8FV+EuCw=="}"""
+
+      post("/v1/pubkey", body = dataKey3) {
+        status should equal(400)
+        body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+      }
+
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:12.584Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","pubKeyId":"HpVU+CDweEhEqajOfyBltAMg8XkfrUjlcZAddQcf5TA=","prevPubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:12.584Z","validNotBefore":"2020-07-14T13:07:12.584Z"},"signature":"SgrLuxboucGeZ4MMUh37ekW3WV/zK9+nmm4tShkpcCVwc3VbXIPXnaZ1lUX+vz0pWrfKvinAIahEGp0C7QXxAw==","prevSignature":"90NTvcpEctUrZTXmw6it6GNKwKHpWeViOt3oOHXJYoOxonkunWagcdDEdI4FxeZEfOht0JiDWrUF3pccwx+3Bg=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-07-14T13:07:11.793Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","pubKeyId":"1g+pL87spzPirEN223IicvBXCVo4VMtOrXNLFBJMrus=","validNotAfter":"2021-01-14T13:07:11.793Z","validNotBefore":"2020-07-14T13:07:11.793Z"},"signature":"z83MCPDeyXvC9pMVLlWzrqnYiv9/31i+cEnim0oPKN05mqHfq56Ef+1x3VeWLun9DcVy344BZMEsDQ+DY1biDQ=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)

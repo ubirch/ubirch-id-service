@@ -190,7 +190,7 @@ class DefaultCertService @Inject() (
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
     } yield {
-      PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, new Date())
+      PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, None, new Date())
     }
 
   }
@@ -208,7 +208,7 @@ class DefaultCertService @Inject() (
       pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
-      pubKeyInfo = PublicKeyInfo(normalizedAlgName, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, Option(cert.getNotAfter), cert.getNotBefore)
+      pubKeyInfo = PublicKeyInfo(normalizedAlgName, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, Option(cert.getNotAfter), cert.getNotBefore)
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
     } yield {

@@ -143,21 +143,33 @@ class DefaultPubKeyService @Inject() (
 
   private def createFromJson(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
     (for {
-      maybePrevKey <- getByHardwareId(publicKey.pubKeyInfo.hwDeviceId).map(_.headOption)
-      _ = if (publicKey.prevSignature.isDefined && maybePrevKey.isEmpty) logger.info("with_prev_sig={} prev_key={}", publicKey.prevSignature, maybePrevKey.toString)
-      _ = if (maybePrevKey.isDefined) logger.info("key_found={}", maybePrevKey.toString)
-      _ <- earlyResponseIf(maybePrevKey.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
-      _ <- earlyResponseIf(publicKey.prevSignature.exists(_.isEmpty) && maybePrevKey.isDefined)(InvalidKeyVerification(publicKey))
+      existingPubKeys <- getByHardwareId(publicKey.pubKeyInfo.hwDeviceId)
 
-      prevSignatureVerification <- Task.delay(maybePrevKey.forall(x => verification.validate(x, publicKey)))
+      maybePubKeyExists <- Task.delay(existingPubKeys.find(x => x.pubKeyInfo.pubKeyId == publicKey.pubKeyInfo.pubKeyId))
+      _ = if (maybePubKeyExists.isDefined) logger.info("key_found={}", maybePubKeyExists.toString)
+      _ <- earlyResponseIf(maybePubKeyExists.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
+
+      maybePrevKey <- Task.delay(existingPubKeys.find(x => Option(x.pubKeyInfo.pubKeyId) == publicKey.pubKeyInfo.prevPubKeyId))
+      _ = if (maybePrevKey.isDefined) logger.info("prev_key_found={}", maybePrevKey.toString)
+
+      withPrevKey = maybePrevKey.isDefined &&
+        maybePrevKey.map(_.pubKeyInfo.hwDeviceId).contains(publicKey.pubKeyInfo.hwDeviceId) &&
+        publicKey.prevSignature.exists(_.nonEmpty) &&
+        publicKey.pubKeyInfo.prevPubKeyId.exists(_.nonEmpty)
+
+      noPrevKey = maybePrevKey.isEmpty &&
+        publicKey.prevSignature.isEmpty &&
+        publicKey.pubKeyInfo.prevPubKeyId.isEmpty &&
+        existingPubKeys.isEmpty
+
+      initialVerification = withPrevKey || noPrevKey
+
+      _ = if (!initialVerification) logger.error("failed_init_verification_for={}", publicKey.toString)
+      _ <- earlyResponseIf(!initialVerification)(InvalidKeyVerification(publicKey))
+
+      prevSignatureVerification <- Task.delay(maybePrevKey.forall(verification.validate(_, publicKey)))
       _ = if (!prevSignatureVerification) logger.error("failed_prev_verification_for={}", publicKey.toString)
       _ <- earlyResponseIf(!prevSignatureVerification)(InvalidKeyVerification(publicKey))
-
-      maybeKey <- publicKeyDAO.byPubKeyId(publicKey.pubKeyInfo.pubKey)
-        .headOptionL
-        .map(_.filter(x => verification.validateTime(PublicKey.fromPublicKeyRow(x))))
-      _ = if (maybeKey.isDefined) logger.info("key_found={}", maybeKey.toString)
-      _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey))
       _ = if (!verification) logger.error("failed_verification_for={}", publicKey.toString)
@@ -192,12 +204,15 @@ class DefaultPubKeyService @Inject() (
         case e: Exception => throw ParsingError(e.getMessage)
       }
 
-      maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey)
-        .headOptionL
-        .map(_.filter(x => verification.validateTime(PublicKey.fromPublicKeyRow(x))))
+      existingPubKeys <- getByHardwareId(pubKeyInfo.hwDeviceId)
+      maybeKey <- Task.delay(existingPubKeys.find(x => x.pubKeyInfo.pubKeyId == pubKeyInfo.pubKeyId))
+        .map(_.filter(x => verification.validateTime(x)))
       _ = if (maybeKey.isDefined) logger.info("key_found={} ", maybeKey)
 
       publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature)))
+      maybeOthers = existingPubKeys.filterNot(x => x.pubKeyInfo.pubKeyId == pubKeyInfo.pubKeyId)
+      _ = if (maybeOthers.nonEmpty) logger.error("existence_failed_verification_for={}", publicKey.toString)
+      _ <- earlyResponseIf(maybeOthers.nonEmpty)(InvalidKeyVerification(publicKey))
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
