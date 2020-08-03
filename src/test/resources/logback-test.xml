@@ -33,14 +33,14 @@
     <logger name="kafka" level="ERROR"/>
     <logger name="org.apache.kafka" level="ERROR"/>
     <logger name="org.apache.zookeeper" level="ERROR"/>
-    <logger name="com.github.nosan.embedded.cassandra" level="ERROR"/>
+    <logger name="com.github.nosan.embedded.cassandra" level="INFO"/>
     <logger name="com.datastax.driver" level="ERROR"/>
     <logger name="io.netty" level="ERROR"/>
     <logger name="io.getquill.CassandraStreamContext" level="ERROR"/>
 
     <logger name="com.ubirch" level="ERROR"/>
 
-    <root level="ERROR">
+    <root level="INFO">
         <appender-ref ref="STDERR"/>
     </root>
 
