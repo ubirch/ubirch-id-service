@@ -107,6 +107,7 @@ object EmbeddedCassandra {
         |);
         |""".stripMargin
     ),
-    CqlScript.ofString("alter table keys add prev_signature text;")
+    CqlScript.ofString("alter table keys add prev_signature text;"),
+    CqlScript.ofString("alter table keys add prev_pub_key_id text;")
   )
 }
