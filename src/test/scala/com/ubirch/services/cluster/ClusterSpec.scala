@@ -9,6 +9,8 @@ import com.ubirch.{ Binder, EmbeddedCassandra, TestBase }
   */
 class ClusterSpec extends TestBase with EmbeddedCassandra {
 
+  val cassandra = new CassandraTest
+
   lazy val serviceInjector = Guice.createInjector(new Binder())
 
   "Cluster and Cassandra Context" must {
@@ -65,6 +67,6 @@ class ClusterSpec extends TestBase with EmbeddedCassandra {
       CqlScript.ofString(
         "insert into identities (id, category, cert) values ('522f3e64-6ee5-470c-8b66-9edb0cfbf3b1', 'MYID', 'This is a cert');".stripMargin
       )
-    ).foreach(x => x.forEachStatement(connection.execute _))
+    ).foreach(x => x.forEachStatement(cassandra.connection.execute _))
   }
 }

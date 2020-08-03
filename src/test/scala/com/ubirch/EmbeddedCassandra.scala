@@ -1,10 +1,12 @@
 package com.ubirch
 
-import java.nio.file.{ Files, Path, Paths }
+import java.io.File
+import java.nio.file.{Files, Path, Paths}
+import java.util.Date
 
 import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory
 import com.github.nosan.embedded.cassandra.api.Cassandra
-import com.github.nosan.embedded.cassandra.api.connection.{ CassandraConnection, DefaultCassandraConnectionFactory }
+import com.github.nosan.embedded.cassandra.api.connection.{CassandraConnection, DefaultCassandraConnectionFactory}
 import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 
 import collection.JavaConverters._
@@ -15,12 +17,31 @@ import scala.util.Random
   */
 trait EmbeddedCassandra {
   //https://nosan.github.io/embedded-cassandra/
-  val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
-  factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx2000m").asJava)
 
-  val cassandra: Cassandra = factory.create()
-  lazy val cassandraConnectionFactory: DefaultCassandraConnectionFactory = new DefaultCassandraConnectionFactory
-  lazy val connection: CassandraConnection = cassandraConnectionFactory.create(cassandra)
+  class CassandraTest {
+
+    @volatile var cassandra: Cassandra = _
+    @volatile var cassandraConnectionFactory: DefaultCassandraConnectionFactory = _
+    @volatile var connection: CassandraConnection = _
+
+    def start(): Unit = {
+      val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
+      factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx2000m").asJava)
+      val folder = Files.createDirectory(Paths.get(new File(".").getCanonicalPath + "/apache-cassandra-" + new Date().getTime))
+      factory.setWorkingDirectory(folder)
+
+      cassandra = factory.create()
+      cassandra.start()
+      cassandraConnectionFactory = new DefaultCassandraConnectionFactory
+      connection = cassandraConnectionFactory.create(cassandra)
+
+    }
+
+    def stop(): Unit = {
+      cassandra.stop()
+    }
+
+  }
 
 }
 

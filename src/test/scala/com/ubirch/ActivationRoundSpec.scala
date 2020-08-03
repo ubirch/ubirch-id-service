@@ -24,6 +24,8 @@ import scala.language.postfixOps
 
 class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach with Awaits with ExecutionContextsTests {
 
+  val cassandra = new CassandraTest
+
   def FakeInjector(bootstrapServers: String, importTopic: String, activationTopic: String) = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(new ConfigProvider {
       override def conf: Config = super.conf
@@ -136,7 +138,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(connection.execute _))
+    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
   }
 
   protected override def afterAll(): Unit = {
@@ -145,9 +147,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
   }
 
   protected override def beforeAll(): Unit = {
-
     cassandra.start()
-
     super.beforeAll()
   }
 

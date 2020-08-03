@@ -25,6 +25,8 @@ class KeyServiceSpec
   with WithFixtures
   with BeforeAndAfterEach {
 
+  val cassandra = new CassandraTest
+
   implicit lazy val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
 
   lazy val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
@@ -646,7 +648,7 @@ class KeyServiceSpec
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(connection.execute _))
+    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
   }
 
   protected override def afterAll(): Unit = {

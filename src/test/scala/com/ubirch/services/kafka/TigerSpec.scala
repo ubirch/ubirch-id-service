@@ -24,6 +24,8 @@ import scala.language.postfixOps
   */
 class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
+  val cassandra = new CassandraTest
+
   def FakeInjector(bootstrapServers: String, importTopic: String, activationTopic: String) = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(new ConfigProvider {
       override def conf: Config = super.conf
@@ -158,7 +160,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
     CollectorRegistry.defaultRegistry.clear()
     CqlScript
       .ofString("truncate identity_system.identities;")
-      .forEachStatement(connection.execute _)
+      .forEachStatement(cassandra.connection.execute _)
 
   }
 
@@ -169,7 +171,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   protected override def beforeAll(): Unit = {
 
     cassandra.start()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(connection.execute _))
+    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
 
   }
 
