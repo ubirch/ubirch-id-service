@@ -1,12 +1,12 @@
 package com.ubirch
 
 import java.io.File
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{ Files, Path, Paths }
 import java.util.Date
 
 import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory
 import com.github.nosan.embedded.cassandra.api.Cassandra
-import com.github.nosan.embedded.cassandra.api.connection.{CassandraConnection, DefaultCassandraConnectionFactory}
+import com.github.nosan.embedded.cassandra.api.connection.{ CassandraConnection, DefaultCassandraConnectionFactory }
 import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 
 import collection.JavaConverters._
@@ -27,6 +27,7 @@ trait EmbeddedCassandra {
     def start(): Unit = {
       val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
       factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx2000m").asJava)
+      factory.setJmxLocalPort(0);
       val folder = Files.createDirectory(Paths.get(new File(".").getCanonicalPath + "/apache-cassandra-" + new Date().getTime))
       factory.setWorkingDirectory(folder)
 
