@@ -1,11 +1,14 @@
 package com.ubirch
 
+import java.nio.file.{ Files, Path, Paths }
+
 import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory
 import com.github.nosan.embedded.cassandra.api.Cassandra
 import com.github.nosan.embedded.cassandra.api.connection.{ CassandraConnection, DefaultCassandraConnectionFactory }
 import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 
 import collection.JavaConverters._
+import scala.util.Random
 
 /**
   * Tool for embedding cassandra
@@ -13,7 +16,7 @@ import collection.JavaConverters._
 trait EmbeddedCassandra {
   //https://nosan.github.io/embedded-cassandra/
   val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
-  factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx512m").asJava)
+  factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx2000m").asJava)
 
   val cassandra: Cassandra = factory.create()
   lazy val cassandraConnectionFactory: DefaultCassandraConnectionFactory = new DefaultCassandraConnectionFactory
