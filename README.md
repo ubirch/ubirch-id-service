@@ -3,6 +3,9 @@
 This service knows about public keys and about certs. It is a service that can help devices or user create crypto-identities. It doesn't control 
 private keys. It's a system to administer public keys and certificates. 
 
+# Tests
+
+They don't run via Idea, but in the console e.g. 'mvn -Dtest=KeyServiceSpec test'.
 
 # Quick Dev Start-Up
 

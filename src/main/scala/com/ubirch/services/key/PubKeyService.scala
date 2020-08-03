@@ -149,7 +149,7 @@ class DefaultPubKeyService @Inject() (
       _ = if (maybePubKeyExists.isDefined) logger.info("key_found={}", maybePubKeyExists.toString)
       _ <- earlyResponseIf(maybePubKeyExists.map(_.pubKeyInfo).contains(publicKey.pubKeyInfo))(KeyExists(publicKey))
 
-      maybePrevKey <- publicKey.pubKeyInfo.prevPubKeyId.map(x => getByPubKeyId(x)).getOrElse(Task.delay(Nil)).map(_.headOption)
+      maybePrevKey <- Task.delay(existingPubKeys.find(x => Option(x.pubKeyInfo.pubKeyId) == publicKey.pubKeyInfo.prevPubKeyId))
       _ = if (maybePrevKey.isDefined) logger.info("prev_key_found={}", maybePrevKey.toString)
 
       withPrevKey = maybePrevKey.isDefined &&
@@ -204,12 +204,15 @@ class DefaultPubKeyService @Inject() (
         case e: Exception => throw ParsingError(e.getMessage)
       }
 
-      maybeKey <- publicKeyDAO.byPubKeyId(pubKeyInfo.pubKey)
-        .headOptionL
-        .map(_.filter(x => verification.validateTime(PublicKey.fromPublicKeyRow(x))))
+      existingPubKeys <- getByHardwareId(pubKeyInfo.hwDeviceId)
+      maybeKey <- Task.delay(existingPubKeys.find(x => x.pubKeyInfo.pubKeyId == pubKeyInfo.pubKeyId))
+        .map(_.filter(x => verification.validateTime(x)))
       _ = if (maybeKey.isDefined) logger.info("key_found={} ", maybeKey)
 
       publicKey <- Task.delay(PublicKey(pubKeyInfo, Hex.encodeHexString(pm.getSignature)))
+      maybeOthers = existingPubKeys.filterNot(x => x.pubKeyInfo.pubKeyId == pubKeyInfo.pubKeyId)
+      _ = if (maybeOthers.nonEmpty) logger.error("existence_failed_verification_for={}", publicKey.toString)
+      _ <- earlyResponseIf(maybeOthers.nonEmpty)(InvalidKeyVerification(publicKey))
       _ <- earlyResponseIf(maybeKey.isDefined)(KeyExists(publicKey))
 
       verification <- Task.delay(verification.validate(publicKey.pubKeyInfo, pm))
