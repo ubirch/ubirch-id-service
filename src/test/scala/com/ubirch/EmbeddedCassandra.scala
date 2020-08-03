@@ -5,12 +5,16 @@ import com.github.nosan.embedded.cassandra.api.Cassandra
 import com.github.nosan.embedded.cassandra.api.connection.{ CassandraConnection, DefaultCassandraConnectionFactory }
 import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 
+import collection.JavaConverters._
+
 /**
   * Tool for embedding cassandra
   */
 trait EmbeddedCassandra {
   //https://nosan.github.io/embedded-cassandra/
   val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
+  factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx512m").asJava)
+
   val cassandra: Cassandra = factory.create()
   lazy val cassandraConnectionFactory: DefaultCassandraConnectionFactory = new DefaultCassandraConnectionFactory
   lazy val connection: CassandraConnection = cassandraConnectionFactory.create(cassandra)
