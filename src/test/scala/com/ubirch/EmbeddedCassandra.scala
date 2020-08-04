@@ -27,7 +27,7 @@ trait EmbeddedCassandra {
     def start(): Unit = {
       val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
       factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx2000m").asJava)
-      factory.setJmxLocalPort(0);
+      factory.setRootAllowed(true)
       val folder = Files.createDirectory(Paths.get(new File(".").getCanonicalPath + "/apache-cassandra-" + new Date().getTime))
       factory.setWorkingDirectory(folder)
 
