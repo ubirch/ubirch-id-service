@@ -1,13 +1,14 @@
 package com.ubirch
 
 import java.io.File
-import java.nio.file.{ Files, Path, Paths }
+import java.nio.file.{Files, Path, Paths}
 import java.util.Date
 
 import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory
 import com.github.nosan.embedded.cassandra.api.Cassandra
-import com.github.nosan.embedded.cassandra.api.connection.{ CassandraConnection, DefaultCassandraConnectionFactory }
+import com.github.nosan.embedded.cassandra.api.connection.{CassandraConnection, DefaultCassandraConnectionFactory}
 import com.github.nosan.embedded.cassandra.api.cql.CqlScript
+import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
 import scala.util.Random
@@ -16,9 +17,8 @@ import scala.util.Random
   * Tool for embedding cassandra
   */
 trait EmbeddedCassandra {
-  //https://nosan.github.io/embedded-cassandra/
 
-  class CassandraTest {
+  class CassandraTest extends LazyLogging {
 
     @volatile var cassandra: Cassandra = _
     @volatile var cassandraConnectionFactory: DefaultCassandraConnectionFactory = _
@@ -39,7 +39,13 @@ trait EmbeddedCassandra {
     }
 
     def stop(): Unit = {
+      if (connection != null) try connection.close()
+      catch {
+        case ex: Throwable =>
+          logger.error("CassandraConnection '" + connection + "' is not closed", ex)
+      }
       cassandra.stop()
+      if (cassandra != null) cassandra.stop()
     }
 
   }
