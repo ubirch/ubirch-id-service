@@ -26,10 +26,7 @@ trait EmbeddedCassandra {
 
     def start(): Unit = {
       val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
-      factory.getJvmOptions.addAll(List("-Xms512m", "-Xmx2000m").asJava)
-      factory.setRegisterShutdownHook(false)
-      val folder = Files.createDirectory(Paths.get(new File(".").getCanonicalPath + "/apache-cassandra-" + new Date().getTime))
-      factory.setWorkingDirectory(folder)
+      factory.getJvmOptions.addAll(List("-Xms1000m", "-Xmx2000m").asJava)
 
       cassandra = factory.create()
       cassandra.start()
