@@ -28,6 +28,8 @@ trait EmbeddedCassandra {
       val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
       factory.getJvmOptions.addAll(List("-Xms1000m", "-Xmx2000m").asJava)
       factory.setRootAllowed(false)
+      factory.setDaemon(false)
+      factory.setRegisterShutdownHook(false)
 
       cassandra = factory.create()
       cassandra.start()
