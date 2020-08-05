@@ -656,6 +656,8 @@ class KeyServiceSpec
         signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
         pubRevoke = PublicKeyRevoke(pk.pubKeyInfo.pubKeyId, signatureAsString)
         pubRevokeAsString <- jsonConverter.toString[PublicKeyRevoke](pubRevoke)
+        pubDelete = PublicKeyDelete(pk.pubKeyInfo.pubKeyId, signatureAsString)
+        pubDeleteAsString <- jsonConverter.toString[PublicKeyDelete](pubDelete)
 
       } yield {
 
@@ -693,6 +695,11 @@ class KeyServiceSpec
           println(body)
           status should equal(400)
           body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+        }
+
+        patch("/v1/pubkey", body = pubDeleteAsString) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
         }
 
       }).getOrElse(fail())

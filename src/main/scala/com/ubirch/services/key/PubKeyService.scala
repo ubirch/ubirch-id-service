@@ -11,6 +11,7 @@ import com.ubirch.services.kafka.KeyAnchoring
 import com.ubirch.util.TaskHelpers
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
+import monix.reactive.Observable
 import org.apache.commons.codec.binary.Hex
 import org.json4s.Formats
 
@@ -134,19 +135,8 @@ class DefaultPubKeyService @Inject() (
   }
 
   def getByPubKeyId(pubKeyId: String): Task[Seq[PublicKey]] = {
-    for {
-      unfilteredPubKeys <- publicKeyByPubKeyIdDao
-        .byPubKeyId(pubKeyId)
-        .map(PublicKey.fromPublicKeyRow)
-        .toListL
-
-      filteredPubKeys <- Task.delay(PublicKey.sortAndFilterPubKeys(unfilteredPubKeys))
-      (validPubKeys, invalidPubKeys) = filteredPubKeys
-
-      _ = logger.info("keys_found={} valid_keys_found={} invalid_keys={} pub_key_id={}", unfilteredPubKeys.size, validPubKeys.size, invalidPubKeys.size, pubKeyId)
-
-    } yield {
-      validPubKeys
+    get(publicKeyByPubKeyIdDao.byPubKeyId, pubKeyId).map {
+      case (_, _, validPubKeys) => validPubKeys
     }
   }
 
@@ -154,16 +144,20 @@ class DefaultPubKeyService @Inject() (
     getByHardwareIdFull(hwDeviceId).map { case (_, _, validPubKeys) => validPubKeys }
   }
 
-  def getByHardwareIdFull(hwDeviceId: String): Task[(List[PublicKey], List[PublicKey], List[PublicKey])] = {
+  private def getByHardwareIdFull(hwDeviceId: String): Task[(List[PublicKey], List[PublicKey], List[PublicKey])] = {
+    get(publicKeyByHwDeviceIdDao.byOwnerId, hwDeviceId)
+  }
+
+  private def get[T](getter: T => Observable[PublicKeyRow], v1: T): Task[(List[PublicKey], List[PublicKey], List[PublicKey])] = {
     for {
-      unfilteredPubKeys <- publicKeyByHwDeviceIdDao
-        .byOwnerId(hwDeviceId)
+      unfilteredPubKeys <- getter(v1)
         .map(PublicKey.fromPublicKeyRow)
         .toListL
 
       filteredPubKeys <- Task.delay(PublicKey.sortAndFilterPubKeys(unfilteredPubKeys))
       (validPubKeys, invalidPubKeys) = filteredPubKeys
-      _ = logger.info("keys_found={} valid_keys_found={} invalid_keys={} hardware_id={}", unfilteredPubKeys.size, validPubKeys.size, invalidPubKeys.size, hwDeviceId)
+
+      _ = logger.info("keys_found={} valid_keys_found={} invalid_keys={} by={}", unfilteredPubKeys.size, validPubKeys.size, invalidPubKeys.size, v1.toString)
 
     } yield {
       (unfilteredPubKeys, invalidPubKeys.toList, validPubKeys.toList)
