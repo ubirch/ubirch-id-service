@@ -106,6 +106,7 @@ object EmbeddedCassandra {
         |""".stripMargin
     ),
     CqlScript.statements("alter table keys add prev_signature text;"),
-    CqlScript.statements("alter table keys add prev_pub_key_id text;")
+    CqlScript.statements("alter table keys add prev_pub_key_id text;"),
+    CqlScript.statements("alter table keys add revoked_at timestamp;")
   )
 }

@@ -3,7 +3,7 @@ package com.ubirch.controllers
 import java.util.{ Base64, UUID }
 
 import com.ubirch.kafka.util.PortGiver
-import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete }
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyRevoke }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import com.ubirch.{ EmbeddedCassandra, _ }
@@ -451,8 +451,6 @@ class KeyServiceSpec
 
       } yield {
 
-        println(pkAsString)
-        println(pubDeleteAsString)
         post("/v1/pubkey", body = pkAsString) {
           status should equal(200)
           body should equal(pkAsString)
@@ -641,6 +639,63 @@ class KeyServiceSpec
         status should equal(200)
         body should equal("[" + dataKey1 + "]")
       }
+
+    }
+
+    "revoke key" taggedAs Tag("carrot") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareId = UUID.randomUUID()
+
+      (for {
+        res <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareId.toString)
+        (pk, pkAsString, _, _, pkr) = res
+        signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
+        signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
+        pubRevoke = PublicKeyRevoke(pk.pubKeyInfo.pubKeyId, signatureAsString)
+        pubRevokeAsString <- jsonConverter.toString[PublicKeyRevoke](pubRevoke)
+
+      } yield {
+
+        post("/v1/pubkey", body = pkAsString) {
+          status should equal(200)
+          body should equal(pkAsString)
+        }
+
+        get("/v1/pubkey/current/hardwareId/" + hardwareId) {
+          status should equal(200)
+          body should equal("[" + pkAsString + "]")
+        }
+
+        get("/v1/pubkey/" + pk.pubKeyInfo.pubKeyId) {
+          status should equal(200)
+          body should equal(pkAsString)
+        }
+
+        patch("/v1/pubkey/revoke", body = pubRevokeAsString) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key revoked"}""")
+        }
+
+        get("/v1/pubkey/current/hardwareId/" + hardwareId) {
+          status should equal(200)
+          body should equal("[]")
+        }
+
+        get("/v1/pubkey/" + pk.pubKeyInfo.pubKeyId) {
+          status should equal(404)
+          body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Key not found"}""")
+        }
+
+        post("/v1/pubkey", body = pkAsString) {
+          println(body)
+          status should equal(400)
+          body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+        }
+
+      }).getOrElse(fail())
 
     }
 

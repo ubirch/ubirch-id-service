@@ -135,6 +135,29 @@ object PublicKey {
     }
   }
 
+  def sortAndFilterPubKeys(pubKeys: Seq[PublicKey]): (Seq[PublicKey], Seq[PublicKey]) = {
+
+    def valid(pubKeys: Seq[PublicKey]) = {
+      sort {
+        filter(pubKeys)(
+          _.validateTime,
+          _.isNotRevoked
+        )
+      }
+    }
+
+    def invalid(pubKeys: Seq[PublicKey]) = {
+      sort {
+        filterNot(pubKeys)(
+          _.validateTime,
+          _.isNotRevoked
+        )
+      }
+    }
+
+    (valid(pubKeys), invalid(pubKeys))
+  }
+
 }
 
 /**

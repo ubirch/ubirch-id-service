@@ -135,13 +135,15 @@ class DefaultPubKeyService @Inject() (
 
   def getByPubKeyId(pubKeyId: String): Task[Seq[PublicKey]] = {
     for {
-      pubKeys <- publicKeyByPubKeyIdDao
+      unfilteredPubKeys <- publicKeyByPubKeyIdDao
         .byPubKeyId(pubKeyId)
         .map(PublicKey.fromPublicKeyRow)
         .toListL
 
-      validPubKeys <- Task.delay(filterAndSortInValidPubkeys(pubKeys))
-      _ = logger.info("keys_found={} valid_keys_found={} pub_key_id={}", pubKeys.size, validPubKeys.size, pubKeyId)
+      filteredPubKeys <- Task.delay(PublicKey.sortAndFilterPubKeys(unfilteredPubKeys))
+      (validPubKeys, invalidPubKeys) = filteredPubKeys
+
+      _ = logger.info("keys_found={} valid_keys_found={} invalid_keys={} pub_key_id={}", unfilteredPubKeys.size, validPubKeys.size, invalidPubKeys.size, pubKeyId)
 
     } yield {
       validPubKeys
@@ -159,32 +161,13 @@ class DefaultPubKeyService @Inject() (
         .map(PublicKey.fromPublicKeyRow)
         .toListL
 
-      validPubKeys <- Task.delay(filterAndSortValidPubkeys(unfilteredPubKeys))
-      invalidPubKeys <- Task.delay(filterAndSortInValidPubkeys(unfilteredPubKeys))
-
+      filteredPubKeys <- Task.delay(PublicKey.sortAndFilterPubKeys(unfilteredPubKeys))
+      (validPubKeys, invalidPubKeys) = filteredPubKeys
       _ = logger.info("keys_found={} valid_keys_found={} invalid_keys={} hardware_id={}", unfilteredPubKeys.size, validPubKeys.size, invalidPubKeys.size, hwDeviceId)
 
     } yield {
-      (unfilteredPubKeys, invalidPubKeys, validPubKeys)
+      (unfilteredPubKeys, invalidPubKeys.toList, validPubKeys.toList)
     }
-  }
-
-  private def filterAndSortValidPubkeys(pubKeys: List[PublicKey]): List[PublicKey] = {
-    PublicKey.sort {
-      PublicKey.filter(pubKeys)(
-        _.validateTime,
-        _.isNotRevoked
-      )
-    }.toList
-  }
-
-  private def filterAndSortInValidPubkeys(pubKeys: List[PublicKey]): List[PublicKey] = {
-    PublicKey.sort {
-      PublicKey.filterNot(pubKeys)(
-        _.validateTime,
-        _.isNotRevoked
-      )
-    }.toList
   }
 
   def create(publicKey: PublicKey, rawMessage: String): Task[PublicKey] = {
