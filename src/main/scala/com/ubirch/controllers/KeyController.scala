@@ -240,7 +240,7 @@ class KeyController @Inject() (
       summary "Revokes a public key"
       description "revokes a public key"
       tags SwaggerElements.TAG_KEY_SERVICE
-      parameters bodyParam[String]("publicKeyToRevoke").description("the public key to revoke including signature of publicKey field")
+      parameters bodyParam[String]("publicKeyToRevoke").description("the public key id to revoke including signature of publicKey field")
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to revoke public key"),
         ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
@@ -265,7 +265,7 @@ class KeyController @Inject() (
       summary "Deletes a public key"
       description "deletes a public key"
       tags SwaggerElements.TAG_KEY_SERVICE
-      parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
+      parameters bodyParam[String]("publicKeyToDelete").description("the public key id to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
         ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
@@ -356,7 +356,7 @@ class KeyController @Inject() (
     } yield res
   }
 
-  private def revoke(implicit request: HttpServletRequest) = {
+  private def revoke(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
       readBody <- Task.delay(ReadBody.readJson[PublicKeyRevoke](x => x))
       res <- pubKeyService.revoke(readBody.extracted)
@@ -376,7 +376,7 @@ class KeyController @Inject() (
 
   }
 
-  private def delete(implicit request: HttpServletRequest) = {
+  private def delete(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
       readBody <- Task.delay(ReadBody.readJson[PublicKeyDelete](x => x))
       res <- pubKeyService.delete(readBody.extracted)
