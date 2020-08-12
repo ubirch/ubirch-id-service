@@ -21,7 +21,7 @@ trait EmbeddedCassandra {
 
     def start(): Unit = {
       val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
-      //factory.getJvmOptions.addAll(List("-Xms1000m", "-Xmx2000m").asJava)
+      factory.getJvmOptions.addAll(List("-Xms1000m", "-Xmx2000m").asJava)
       cassandra = factory.create()
       cassandra.start()
       cassandraConnectionFactory = new DefaultCassandraConnectionFactory
