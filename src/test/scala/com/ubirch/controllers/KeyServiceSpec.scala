@@ -246,6 +246,8 @@ class KeyServiceSpec
 
       }
 
+      Thread.sleep(3000)
+
       val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
       assert(anchors.nonEmpty)
 
@@ -648,7 +650,7 @@ class KeyServiceSpec
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.truncate.forEachStatement(cassandra.connection.execute _)
+    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {

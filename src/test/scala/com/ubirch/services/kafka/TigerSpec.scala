@@ -2,7 +2,6 @@ package com.ubirch.services.kafka
 
 import java.util.UUID
 
-import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.ConfPaths.{ AnchoringProducerConfPaths, TigerConsumerConfPaths, TigerProducerConfPaths }
@@ -157,7 +156,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.truncate.forEachStatement(cassandra.connection.execute _)
+    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
