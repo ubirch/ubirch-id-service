@@ -14,6 +14,8 @@ import org.scalatra.test.scalatest.ScalatraWordSpec
   */
 class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach {
 
+  val cassandra = new CassandraTest
+
   implicit lazy val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
 
   lazy val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
@@ -101,7 +103,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
+    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -113,7 +115,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
   protected override def beforeAll(): Unit = {
 
     EmbeddedKafka.start()
-    cassandra.start()
+    cassandra.startAndCreateDefaults()
 
     lazy val certController = Injector.get[CertController]
     lazy val keyController = Injector.get[KeyController]

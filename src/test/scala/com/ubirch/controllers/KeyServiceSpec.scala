@@ -25,6 +25,8 @@ class KeyServiceSpec
   with WithFixtures
   with BeforeAndAfterEach {
 
+  val cassandra = new CassandraTest
+
   implicit lazy val kafkaConfig: EmbeddedKafkaConfig = EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
 
   lazy val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
@@ -243,6 +245,8 @@ class KeyServiceSpec
           fail(e)
 
       }
+
+      Thread.sleep(3000)
 
       val anchors = consumeNumberStringMessagesFrom("com.ubirch.identity.key", 2)
       assert(anchors.nonEmpty)
@@ -646,7 +650,7 @@ class KeyServiceSpec
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
+    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -659,7 +663,7 @@ class KeyServiceSpec
 
     CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
-    cassandra.start()
+    cassandra.startAndCreateDefaults()
 
     lazy val keyController = Injector.get[KeyController]
 
