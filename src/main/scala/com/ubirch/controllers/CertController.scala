@@ -46,9 +46,9 @@ class CertController @Inject() (
   }
 
   val postCsrRegister: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[PublicKeyInfo]("CSRRegister")
+    (apiOperation("CSRRegister")
       summary "Certification Signing Requests"
-      description "Validates and stores Certification Signing Requests"
+      description "Validates and stores Certification Signing Requests sent as bytes to this endpoint (DER format)"
       parameters bodyParam[Byte]("csr request").description("The certification request").required
       tags SwaggerElements.TAG_CERT_SERVICE
       responseMessages (
@@ -80,9 +80,9 @@ class CertController @Inject() (
   }
 
   val postCertRegister: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[PublicKeyInfo]("CertRegister")
-      summary "Creates a key in the identity service based on the cert"
-      description "Creates a key in the identity service based on the cert"
+    (apiOperation("CertRegister")
+      summary "Creates a key in the identity service based on a X509 cert"
+      description "Creates a key in the identity service based on a X509 cert sent as bytes to this endpoint (DER format)"
       parameters bodyParam[Byte]("cert request").description("The X509 certificate").required
       tags SwaggerElements.TAG_CERT_SERVICE
       responseMessages (
