@@ -648,7 +648,7 @@ class KeyServiceSpec
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
+    EmbeddedCassandra.truncate.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -661,7 +661,7 @@ class KeyServiceSpec
 
     CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
-    cassandra.start()
+    cassandra.startAndCreateDefaults()
 
     lazy val keyController = Injector.get[KeyController]
 

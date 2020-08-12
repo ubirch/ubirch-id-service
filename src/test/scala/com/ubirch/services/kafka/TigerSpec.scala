@@ -156,12 +156,8 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   }
 
   override protected def beforeEach(): Unit = {
-
     CollectorRegistry.defaultRegistry.clear()
-    CqlScript
-      .ofString("truncate identity_system.identities;")
-      .forEachStatement(cassandra.connection.execute _)
-
+    EmbeddedCassandra.truncate.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -169,10 +165,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   }
 
   protected override def beforeAll(): Unit = {
-
-    cassandra.start()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
-
+    cassandra.startAndCreateDefaults()
   }
 
 }

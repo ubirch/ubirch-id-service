@@ -138,7 +138,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
+    EmbeddedCassandra.truncate.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -147,7 +147,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
   }
 
   protected override def beforeAll(): Unit = {
-    cassandra.start()
+    cassandra.startAndCreateDefaults()
     super.beforeAll()
   }
 

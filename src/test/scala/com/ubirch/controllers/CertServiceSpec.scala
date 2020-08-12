@@ -103,7 +103,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.scripts.foreach(x => x.forEachStatement(cassandra.connection.execute _))
+    EmbeddedCassandra.truncate.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -115,7 +115,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
   protected override def beforeAll(): Unit = {
 
     EmbeddedKafka.start()
-    cassandra.start()
+    cassandra.startAndCreateDefaults()
 
     lazy val certController = Injector.get[CertController]
     lazy val keyController = Injector.get[KeyController]

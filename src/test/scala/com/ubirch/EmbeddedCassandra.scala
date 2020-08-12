@@ -5,6 +5,7 @@ import com.github.nosan.embedded.cassandra.api.Cassandra
 import com.github.nosan.embedded.cassandra.api.connection.{ CassandraConnection, DefaultCassandraConnectionFactory }
 import com.github.nosan.embedded.cassandra.api.cql.CqlScript
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.EmbeddedCassandra.scripts
 
 import scala.collection.JavaConverters._
 
@@ -21,7 +22,7 @@ trait EmbeddedCassandra {
 
     def start(): Unit = {
       val factory: EmbeddedCassandraFactory = new EmbeddedCassandraFactory()
-      factory.getJvmOptions.addAll(List("-Xms1000m", "-Xmx2000m").asJava)
+      factory.getJvmOptions.addAll(List("-Xms500m", "-Xmx1000m").asJava)
       cassandra = factory.create()
       cassandra.start()
       cassandraConnectionFactory = new DefaultCassandraConnectionFactory
@@ -39,12 +40,22 @@ trait EmbeddedCassandra {
       if (cassandra != null) cassandra.stop()
     }
 
+    def startAndCreateDefaults(scripts: Seq[CqlScript] = EmbeddedCassandra.scripts): Unit = {
+      start()
+      scripts.foreach(x => x.forEachStatement(connection.execute _))
+    }
+
   }
 
 }
 
 object EmbeddedCassandra {
-  def scripts = List(
+
+  def truncate: CqlScript = {
+    CqlScript.ofString("truncate identity_system.identities; truncate identity_system.identities_by_state; truncate identity_system.keys;")
+  }
+
+  def scripts: Seq[CqlScript] = List(
     CqlScript.ofString("drop keyspace IF EXISTS identity_system;"),
     CqlScript.ofString("CREATE KEYSPACE identity_system WITH replication = {'class': 'SimpleStrategy','replication_factor': '1'};"),
     CqlScript.ofString("USE identity_system;"),
