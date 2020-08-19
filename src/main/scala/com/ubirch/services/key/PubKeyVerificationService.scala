@@ -13,7 +13,6 @@ import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.PublicKeyUtil
 import javax.inject._
-import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.util.Try
 
@@ -22,7 +21,6 @@ import scala.util.Try
   */
 trait PubKeyVerificationService {
   def getCurve(algorithm: String): Try[Curve]
-  def validateTime(publicKey: PublicKey): Boolean
   def validate(publicKey: PublicKey): Boolean
   def validate(publicKeyN_1: PublicKey, publicKeyN: PublicKey): Boolean
   def validateFromBase64(publicKey: String, signature: String, message: Array[Byte], curve: Curve): Boolean
@@ -43,13 +41,6 @@ class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterSe
   with LazyLogging {
 
   def getCurve(algorithm: String): Try[Curve] = PublicKeyUtil.associateCurve(algorithm)
-
-  def validateTime(publicKey: PublicKey): Boolean = {
-    val now = DateTime.now(DateTimeZone.UTC)
-    val validNotBefore = new DateTime(publicKey.pubKeyInfo.validNotBefore)
-    val validNotAfter = publicKey.pubKeyInfo.validNotAfter.map(x => new DateTime(x))
-    validNotBefore.isBefore(now) && validNotAfter.forall(_.isAfter(now))
-  }
 
   def validate(publicKey: PublicKey): Boolean = {
     (for {

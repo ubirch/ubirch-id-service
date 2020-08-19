@@ -21,7 +21,7 @@
 
     <groupId>com.ubirch</groupId>
     <artifactId>ubirch-id-service</artifactId>
-    <version>0.6.3</version>
+    <version>0.6.4</version>
     <packaging>jar</packaging>
 
     <licenses>
@@ -70,7 +70,7 @@
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <quill.cassandra.version>3.4.1</quill.cassandra.version>
         <embedded-kafka>2.3.0</embedded-kafka>
-        <embedded-cassandra-test>1.2.9</embedded-cassandra-test>
+        <embedded-cassandra>3.0.3</embedded-cassandra>
 
         <guice.version>4.1.0</guice.version>
 
@@ -99,7 +99,7 @@
         <scalariform.version>0.2.2</scalariform.version>
         <scala-maven-plugin.version>3.3.2</scala-maven-plugin.version>
         <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
-        <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
+        <scalatest-maven-plugin.version>2.0.0</scalatest-maven-plugin.version>
         <!-- plugins -->
 
     </properties>
@@ -307,8 +307,8 @@
 
         <dependency>
             <groupId>com.github.nosan</groupId>
-            <artifactId>embedded-cassandra-test</artifactId>
-            <version>${embedded-cassandra-test}</version>
+            <artifactId>embedded-cassandra</artifactId>
+            <version>${embedded-cassandra}</version>
         </dependency>
 
         <dependency>

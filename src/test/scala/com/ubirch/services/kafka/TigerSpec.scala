@@ -2,7 +2,6 @@ package com.ubirch.services.kafka
 
 import java.util.UUID
 
-import com.github.nosan.embedded.cassandra.cql.CqlScript
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.ConfPaths.{ AnchoringProducerConfPaths, TigerConsumerConfPaths, TigerProducerConfPaths }
@@ -23,6 +22,8 @@ import scala.language.postfixOps
   * Test for the Tiger Engine
   */
 class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
+
+  val cassandra = new CassandraTest
 
   def FakeInjector(bootstrapServers: String, importTopic: String, activationTopic: String) = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(new ConfigProvider {
@@ -155,10 +156,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    cassandra.executeScripts(
-      CqlScript.statements("truncate identity_system.identities;")
-    )
-
+    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
   }
 
   protected override def afterAll(): Unit = {
@@ -166,10 +164,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   }
 
   protected override def beforeAll(): Unit = {
-
-    cassandra.start()
-    cassandra.executeScripts(EmbeddedCassandra.scripts: _*)
-
+    cassandra.startAndCreateDefaults()
   }
 
 }
