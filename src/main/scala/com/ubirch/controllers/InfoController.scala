@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext
 class InfoController @Inject() (config: Config, val swagger: Swagger, jFormats: Formats)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase {
 
-  override protected val applicationDescription = "Device-related requests."
+  override protected val applicationDescription = "Info Controller"
   override protected implicit def jsonFormats: Formats = jFormats
 
   val service: String = config.getString(GenericConfPaths.NAME)

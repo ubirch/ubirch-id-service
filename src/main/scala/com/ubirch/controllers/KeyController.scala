@@ -235,12 +235,37 @@ class KeyController @Inject() (
 
   }
 
+  val revokeV1PubKey: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[PublicKeyRevoke]("revokeV1PubKey")
+      summary "Revokes a public key"
+      description "revokes a public key"
+      tags SwaggerElements.TAG_KEY_SERVICE
+      parameters bodyParam[String]("publicKeyToRevoke").description("the public key id to revoke including signature of publicKey field")
+      responseMessages (
+        ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to revoke public key"),
+        ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
+      ))
+
+  delete("/v1/pubkey/revoke", operation(revokeV1PubKey)) {
+    asyncResult("revoke") { implicit request =>
+      revoke
+    }
+  }
+  /**
+    * This has been added since the revoke method cannot be tested with a body.
+    */
+  patch("/v1/pubkey/revoke") {
+    asyncResult("revoke") { implicit request =>
+      revoke
+    }
+  }
+
   val deleteV1PubKey: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[PublicKeyDelete]("deleteV1PubKey")
       summary "Deletes a public key"
       description "deletes a public key"
       tags SwaggerElements.TAG_KEY_SERVICE
-      parameters bodyParam[String]("publicKeyToDelete").description("the public key to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
+      parameters bodyParam[String]("publicKeyToDelete").description("the public key id to delete including signature of publicKey field") //.example("{\n  \"publicKey\": \"MC0wCAYDK2VkCgEBAyEAxUQcVYd3dt7jAJBtulZoz8QDftnND2X5//ittJ7XAhs=\",\n  \"signature\": \"/kED2IJKCAyro/szRoylAwaEx3E8U2OFI8zHNB8cEHdxy8JtgoR81YL1X/o7Xzkz30eqNjIsWfhmQNdaIma2Aw==\"\n}").required
       responseMessages (
         ResponseMessage(SwaggerElements.ERROR_REQUEST_CODE_400, "Failed to delete public key"),
         ResponseMessage(SwaggerElements.INTERNAL_ERROR_CODE_500, "Sorry, something went wrong on our end")
@@ -331,7 +356,27 @@ class KeyController @Inject() (
     } yield res
   }
 
-  private def delete(implicit request: HttpServletRequest) = {
+  private def revoke(implicit request: HttpServletRequest): Task[ActionResult] = {
+    for {
+      readBody <- Task.delay(ReadBody.readJson[PublicKeyRevoke](x => x))
+      res <- pubKeyService.revoke(readBody.extracted)
+        .map { dr =>
+          if (dr) Ok(Simple("Key revoked"))
+          else BadRequest(NOK.deleteKeyError("Failed to revoke public key"))
+        }
+        .onErrorRecover {
+          case e: Exception =>
+            logger.error("1.1 Error revoking pub key: exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+            InternalServerError(NOK.serverError("1.1 Sorry, something went wrong on our end"))
+        }
+
+    } yield {
+      res
+    }
+
+  }
+
+  private def delete(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
       readBody <- Task.delay(ReadBody.readJson[PublicKeyDelete](x => x))
       res <- pubKeyService.delete(readBody.extracted)

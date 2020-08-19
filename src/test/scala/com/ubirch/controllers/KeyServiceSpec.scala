@@ -3,7 +3,7 @@ package com.ubirch.controllers
 import java.util.{ Base64, UUID }
 
 import com.ubirch.kafka.util.PortGiver
-import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete }
+import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyRevoke }
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import com.ubirch.{ EmbeddedCassandra, _ }
@@ -643,6 +643,147 @@ class KeyServiceSpec
         status should equal(200)
         body should equal("[" + dataKey1 + "]")
       }
+
+    }
+
+    "revoke key" taggedAs Tag("carrot") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareId = UUID.randomUUID()
+
+      (for {
+        res <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId = hardwareId.toString)
+        (pk, pkAsString, _, _, pkr) = res
+        signature <- Try(pkr.sign(pkr.getRawPublicKey)).toEither
+        signatureAsString <- Try(Base64.getEncoder.encodeToString(signature)).toEither
+        pubRevoke = PublicKeyRevoke(pk.pubKeyInfo.pubKeyId, signatureAsString)
+        pubRevokeAsString <- jsonConverter.toString[PublicKeyRevoke](pubRevoke)
+        pubDelete = PublicKeyDelete(pk.pubKeyInfo.pubKeyId, signatureAsString)
+        pubDeleteAsString <- jsonConverter.toString[PublicKeyDelete](pubDelete)
+
+      } yield {
+
+        post("/v1/pubkey", body = pkAsString) {
+          status should equal(200)
+          body should equal(pkAsString)
+        }
+
+        get("/v1/pubkey/current/hardwareId/" + hardwareId) {
+          status should equal(200)
+          body should equal("[" + pkAsString + "]")
+        }
+
+        get("/v1/pubkey/" + pk.pubKeyInfo.pubKeyId) {
+          status should equal(200)
+          body should equal(pkAsString)
+        }
+
+        patch("/v1/pubkey/revoke", body = pubRevokeAsString) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key revoked"}""")
+        }
+
+        get("/v1/pubkey/current/hardwareId/" + hardwareId) {
+          status should equal(200)
+          body should equal("[]")
+        }
+
+        get("/v1/pubkey/" + pk.pubKeyInfo.pubKeyId) {
+          status should equal(404)
+          body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Key not found"}""")
+        }
+
+        post("/v1/pubkey", body = pkAsString) {
+          status should equal(400)
+          body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+        }
+
+        patch("/v1/pubkey", body = pubDeleteAsString) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key deleted"}""")
+        }
+
+      }).getOrElse(fail())
+
+    }
+
+    "create subsequent key not possible after key has been revoked" taggedAs Tag("corn") in {
+
+      val created = DateUtil.nowUTC
+      val validNotAfter = Some(created.plusMonths(6))
+      val validNotBefore = created
+      val hardwareDeviceId: String = UUID.randomUUID().toString
+
+      (for {
+        res1 <- PublicKeyCreationHelpers.getPublicKey(PublicKeyUtil.ECDSA, created, validNotAfter, validNotBefore, hardwareDeviceId)
+        (pk1, pkAsString1, _, _, pkr1) = res1
+
+        signature1 <- Try(pkr1.sign(pkr1.getRawPublicKey)).toEither
+        signatureAsString1 <- Try(Base64.getEncoder.encodeToString(signature1)).toEither
+        pubDelete1 = PublicKeyDelete(pk1.pubKeyInfo.pubKeyId, signatureAsString1)
+        pubDeleteAsString1 <- jsonConverter.toString[PublicKeyDelete](pubDelete1)
+
+        res2 <- PublicKeyCreationHelpers.getPublicKey(
+          curveName = PublicKeyUtil.ECDSA,
+          created = created,
+          validNotAfter = validNotAfter,
+          validNotBefore = validNotBefore,
+          hardwareDeviceId = hardwareDeviceId,
+          prevPubKeyId = Some(pk1.pubKeyInfo.pubKeyId)
+        )
+        (pk2, _, _, _, pkr2) = res2
+
+        signed2 <- PublicKeyCreationHelpers.sign(pk2.pubKeyInfo, pkr1)
+        (_, signature2, _) = signed2
+
+        pk2WithPrevSign = pk2.copy(prevSignature = Option(signature2))
+        pk2WithPrevSignAsString <- jsonConverter.toString[PublicKey](pk2WithPrevSign)
+
+        signature2 <- Try(pkr2.sign(pkr2.getRawPublicKey)).toEither
+        signatureAsString2 <- Try(Base64.getEncoder.encodeToString(signature2)).toEither
+        pubDelete2 = PublicKeyDelete(pk2WithPrevSign.pubKeyInfo.pubKeyId, signatureAsString2)
+        pubDeleteAsString2 <- jsonConverter.toString[PublicKeyDelete](pubDelete2)
+
+        res3 <- PublicKeyCreationHelpers.getPublicKey(
+          curveName = PublicKeyUtil.ECDSA,
+          created = created,
+          validNotAfter = validNotAfter,
+          validNotBefore = validNotBefore,
+          hardwareDeviceId = hardwareDeviceId,
+          prevPubKeyId = Some(pk2.pubKeyInfo.pubKeyId)
+        )
+        (pk3, _, _, _, pkr3) = res3
+
+        signed3 <- PublicKeyCreationHelpers.sign(pk3.pubKeyInfo, pkr2)
+        (_, signature3, _) = signed3
+
+        pk3WithPrevSign = pk3.copy(prevSignature = Option(signature3))
+        pk3WithPrevSignAsString <- jsonConverter.toString[PublicKey](pk3WithPrevSign)
+
+        signature3 <- Try(pkr3.sign(pkr3.getRawPublicKey)).toEither
+        signatureAsString3 <- Try(Base64.getEncoder.encodeToString(signature3)).toEither
+        _ = PublicKeyDelete(pk3.pubKeyInfo.pubKeyId, signatureAsString3)
+
+      } yield {
+
+        post("/v1/pubkey", body = pkAsString1) {
+          status should equal(200)
+          body should equal(pkAsString1)
+        }
+
+        patch("/v1/pubkey/revoke", body = pubDeleteAsString1) {
+          status should equal(200)
+          body should equal("""{"version":"1.0","status":"OK","message":"Key revoked"}""")
+        }
+
+        post("/v1/pubkey", body = pk2WithPrevSignAsString) {
+          status should equal(400)
+          body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
+        }
+
+      }).getOrElse(fail())
 
     }
 

@@ -67,7 +67,8 @@ object EmbeddedCassandra {
     CqlScript.ofClasspath("db/migrations/v7_identity_states.cql"),
     CqlScript.ofClasspath("db/migrations/v8_previous_signature_column.cql"),
     CqlScript.ofClasspath("db/migrations/v9_Modifying_identity_family_column.cql"),
-    CqlScript.ofClasspath("db/migrations/v10_Adding_prevPubKeyId_column.cql")
+    CqlScript.ofClasspath("db/migrations/v10_Adding_prevPubKeyId_column.cql"),
+    CqlScript.ofClasspath("db/migrations/v11_Adding_revoke_column.cql")
 
   )
 }

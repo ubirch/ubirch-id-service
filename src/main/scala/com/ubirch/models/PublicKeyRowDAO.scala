@@ -1,5 +1,7 @@
 package com.ubirch.models
 
+import java.util.Date
+
 import com.ubirch.services.cluster.ConnectionService
 import io.getquill.{ CassandraStreamContext, SnakeCase }
 import javax.inject.{ Inject, Singleton }
@@ -24,6 +26,15 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 
   def insertQ(publicKeyRow: PublicKeyRow): db.Quoted[db.Insert[PublicKeyRow]] = quote {
     query[PublicKeyRow].insert(lift(publicKeyRow))
+  }
+
+  def revokedAtQ(publicKeyId: String, ownerId: String, revokedAt: Option[Date]): db.Quoted[db.Insert[PublicKeyRow]] = quote {
+    query[PublicKeyRow]
+      .insert(
+        _.pubKeyInfoRow.pubKeyId -> lift(publicKeyId),
+        _.pubKeyInfoRow.ownerId -> lift(ownerId),
+        _.pubKeyInfoRow.revokedAt -> lift(revokedAt)
+      )
   }
 
   def deleteQ(pubKeyId: String): db.Quoted[db.Delete[PublicKeyRow]] = quote {
@@ -53,6 +64,8 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) exten
   def byPubKeyId(pubKeyId: String): Observable[PublicKeyRow] = run(byPubKeyIdQ(pubKeyId))
 
   def insert(publicKeyRow: PublicKeyRow): Observable[Unit] = run(insertQ(publicKeyRow))
+
+  def revoke(publicKeyId: String, ownerId: String): Observable[Unit] = run(revokedAtQ(publicKeyId, ownerId, Some(new Date())))
 
   def delete(pubKeyId: String): Observable[Unit] = run(deleteQ(pubKeyId))
 

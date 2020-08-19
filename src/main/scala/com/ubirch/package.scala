@@ -35,6 +35,7 @@ package object ubirch {
   case class KeyExists(publicKey: PublicKey) extends PubKeyServiceException("Key provided already exits")
   case class InvalidKeyVerification(publicKey: PublicKey) extends PubKeyServiceException("Invalid verification")
   case class KeyNotExists(publicKey: String) extends PubKeyServiceException("Key provided does not exist")
+  case class KeyAlreadyRevoked(publicKey: String) extends PubKeyServiceException("Key provided has already been revoked")
   case class InvalidPreSignature(publicKey: String) extends PubKeyServiceException("Invalid Prev Signature Found")
 
   case class NoPublicKeyFoundForCSR(csr: JcaPKCS10CertificationRequest) extends CertServiceException("Invalid CSR verification")
