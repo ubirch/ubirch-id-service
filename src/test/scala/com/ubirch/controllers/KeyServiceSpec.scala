@@ -183,7 +183,7 @@ class KeyServiceSpec
 
     "get public key object when data exists by public key id when / is present" taggedAs Tag("pummelo") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:56:10.656Z","hwDeviceId":"e41b1945-886c-4fc6-a044-9fcc509136fa","pubKey":"qQqY2Rf71GeT968YcEWzOZ2L8KKNIFY2eHxHqeINeCQ=","pubKeyId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","validNotAfter":"2020-11-22T13:56:10.656Z","validNotBefore":"2020-05-22T13:56:10.656Z"},"signature":"gufCxO6ISDP/K05DSNgLznI1FSdiK1QdSQhCSdyYR6Zq5S3w6iLr5dqCODZVd+aDKGkWYXzJMbZypLFZWUsoBg=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-11-28T10:02:17.253Z","hwDeviceId":"31a12f36-61a4-4337-827b-ca5655b16c53","pubKey":"x3FSPYIrYQ1qSegVW4IJF7j1qWf8z3NupfeedJtK1Js=","pubKeyId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","validNotAfter":"2021-05-28T10:02:17.253Z","validNotBefore":"2020-11-28T10:02:17.253Z"},"signature":"xyZDIjOH4UE7FRvh3TNXks/f/X7q9zkVWEL9Bfb8LLsX+MDlqTw4vr+4hf5sMFMbF7sYDQfM5VvZ9rGHiXheBA=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -195,7 +195,7 @@ class KeyServiceSpec
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T14:29:27.993Z","hwDeviceId":"d255d636-bcaa-47ef-9130-5b3b7e6ef748","pubKey":"yOnHwSOEAmkI24Gkp2g2gTwlvCx0awhzbsHyQnAqwr8=","pubKeyId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","validNotAfter":"2020-11-22T14:29:27.993Z","validNotBefore":"2020-05-22T14:29:27.993Z"},"signature":"N/En6GNjJuIkphiDofiVxSpmG2N27IRMp9veVLtiM1omxQH0A1l7VAfzjjM/BSXPBHq9DAQ4cqPad9prB6FmBg=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-11-28T10:04:51.905Z","hwDeviceId":"32cc20d7-a565-43e4-b0a2-bc43eaa67c16","pubKey":"lccN/yyor3bI8igjLWq73c9Fw983rAj0d2udW4kkqY8=","pubKeyId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","validNotAfter":"2021-05-28T10:04:51.905Z","validNotBefore":"2020-11-28T10:04:51.905Z"},"signature":"et8w6+uI/fpjUVhITUuQ/9tA2GW9nHmSSedIumXvKXqwlzmCYAN+mNIt8roifZf8poW/Aa3hlUVMsz+Qf3yHCg=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
@@ -625,14 +625,14 @@ class KeyServiceSpec
 
     "second key should not be created if not signed -json-" taggedAs Tag("sapote") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-05-22T12:52:02.892Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"eqWsIjD1OoaLgKSPHcPKagbjHzTLdvIIdWmR8UM8V09jzZQORV9xzvZRW249JerpufEhX135dFafETFT6jGwWA==","pubKeyId":"4318f9cf-e75b-4c43-a1c4-78741e6cd7c6","validNotAfter":"2020-11-22T12:52:02.892Z","validNotBefore":"2020-05-22T12:52:02.892Z"},"signature":"MEUCIQDhqpZscBu1hG0N3Qq+pQCoDinjhQWS3JBSehlyBCgzDwIgJiY05NKJf2brxx7ox/59xawFq3YM4hEx8aVLJzkd27Y="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-11-28T10:14:48.200Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"SnQTBQ1DMCfIu8tWzPvo9cIY5yoFLvaalo4+KNj2P3k=","pubKeyId":"SnQTBQ1DMCfIu8tWzPvo9cIY5yoFLvaalo4+KNj2P3k=","validNotAfter":"2021-05-28T10:14:48.200Z","validNotBefore":"2020-11-28T10:14:48.200Z"},"signature":"uqYVotqMVjpLHxM17mD1ojSG1xOdiZ+J2xiVHSPn3bzVRzdRugQJxJjyMCMcuEDuKmh0ibGYjjzTgCVxEJVlAA=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-05-22T13:05:04.956Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"9p/qTu/+O9VVWS4TUbRtk5K21f5Z7J/aXPIIbM8Ng4A=","pubKeyId":"284bc3be-d649-4f7e-8a3b-439ac3292152","validNotAfter":"2020-11-22T13:05:04.956Z","validNotBefore":"2020-05-22T13:05:04.956Z"},"signature":"kM0WHPYDbiFXXPiXHXoFokFfwyaAlyUtWEaPxepSnDXLOexV04zlB2a86M1CpHAKveKeE9qoQgOqOjlmFzfjAQ=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2020-11-28T10:16:14.416Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"7++b+hdMoY5FK+eanAzzSeAy4gsIuk9RQPvHmjr0BrQ=","pubKeyId":"7++b+hdMoY5FK+eanAzzSeAy4gsIuk9RQPvHmjr0BrQ=","validNotAfter":"2021-05-28T10:16:14.416Z","validNotBefore":"2020-11-28T10:16:14.416Z"},"signature":"02rfLZBPmgg7s0ZV8Cum+oa+3usZn9Y1SufJI0K4ARVOVq6ieYi2CkEdbPlaN30RtbHOBJSmO+Dp5df3HuY9BA=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(400)
