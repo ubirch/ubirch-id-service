@@ -77,13 +77,15 @@ object PublicKeyCreationHelpers extends LazyLogging {
 
   def randomPublicKeyWithPrevSignature = {
     for {
-      hardwareDeviceId <- Try("6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==").toEither // Try("7cf5b4c3-ac93-4c8f-95b3-ff44a02b43d3").toEither
+      //hardwareDeviceId <- Try("6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==").toEither // Try("7cf5b4c3-ac93-4c8f-95b3-ff44a02b43d3").toEither
+      hardwareDeviceId <- Try("c0eee73e-0ee5-40ed-b021-d9717e26330e").toEither
 
+      curve <- Try(PublicKeyUtil.ECDSA).toEither
       ///
-      random1 <- randomPublicKey(PublicKeyUtil.EDDSA, hardwareDeviceId)
+      random1 <- randomPublicKey(curve, hardwareDeviceId)
       (publicKey1, publicKey1AsString, _, _, prevPrivKey) = random1
 
-      random2 <- randomPublicKey(curve = PublicKeyUtil.EDDSA, hardwareDeviceId = hardwareDeviceId, prevPubKeyId = Some(publicKey1.pubKeyInfo.pubKeyId))
+      random2 <- randomPublicKey(curve = curve, hardwareDeviceId = hardwareDeviceId, prevPubKeyId = Some(publicKey1.pubKeyInfo.pubKeyId))
       (pk2, _, _, _, prevPrivKey2) = random2
 
       signed <- sign(pk2.pubKeyInfo, prevPrivKey)
@@ -92,7 +94,7 @@ object PublicKeyCreationHelpers extends LazyLogging {
       publicKey2 = pk2.copy(prevSignature = Option(prevSignature))
       publicKey2AsString <- jsonConverter.toString[PublicKey](publicKey2)
 
-      random3 <- randomPublicKey(curve = PublicKeyUtil.EDDSA, hardwareDeviceId = hardwareDeviceId, prevPubKeyId = Some(publicKey2.pubKeyInfo.pubKeyId))
+      random3 <- randomPublicKey(curve = curve, hardwareDeviceId = hardwareDeviceId, prevPubKeyId = Some(publicKey2.pubKeyInfo.pubKeyId))
       (pk3, _, _, _, _) = random3
 
       signed <- sign(pk3.pubKeyInfo, prevPrivKey2)

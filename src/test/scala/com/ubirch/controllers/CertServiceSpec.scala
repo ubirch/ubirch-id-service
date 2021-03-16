@@ -54,7 +54,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
     "register CSR with ECDSA when key exists" taggedAs Tag("feijoa") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-06-30T18:52:55.978Z","hwDeviceId":"c0eee73e-0ee5-40ed-b021-d9717e26330e","pubKey":"jlyU4AY0B8Xo7SmdL47Kix6xv9WjakRFexMrFHdxX8lD5Zo7+ZY7HiY9D6N/37bHVD8D5kTjfEkau38LR/ITrg==","pubKeyId":"jlyU4AY0B8Xo7SmdL47Kix6xv9WjakRFexMrFHdxX8lD5Zo7+ZY7HiY9D6N/37bHVD8D5kTjfEkau38LR/ITrg==","validNotAfter":"2020-12-30T18:52:55.978Z","validNotBefore":"2020-06-30T18:52:55.978Z"},"signature":"MEQCIE3pftyjycMTTz5NchzCER/8Kiw+SoNs8JeFiSmRwqKWAiAyljiyqZK2wA1Gg+gmcbMqa1CaHvg4097WnmFNso6ILg=="}""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2021-02-07T19:24:23.104Z","hwDeviceId":"c0eee73e-0ee5-40ed-b021-d9717e26330e","pubKey":"bO8heVJf38kG42x4c/pRANT7SRNSz0XUQ/nT+FT0lRGvjos9DF9h54eC9RYpY3AYNUPrkTFgqhE0W5twkGGe7Q==","pubKeyId":"bO8heVJf38kG42x4c/pRANT7SRNSz0XUQ/nT+FT0lRGvjos9DF9h54eC9RYpY3AYNUPrkTFgqhE0W5twkGGe7Q==","validNotAfter":"2021-08-07T19:24:23.104Z","validNotBefore":"2021-02-07T19:24:23.104Z"},"signature":"MEUCID8dhTVbusjVJV8vIS16knEebwOkUFndsZLdqQgMlBZiAiEAwIwYjh/5epNH6rhNaSjYsMpLOP3QbXi3+M4u3lCPAE4="}""".stripMargin
 
       post("/key/v1/pubkey", body = expectedBody) {
         status should equal(200)
@@ -63,6 +63,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
       val bytes = loadFixture("src/main/resources/fixtures/3_CSR.der")
       post("/v1/csr/register", body = bytes) {
+        println(body)
         assert(jsonConverter.as[PublicKeyInfo](body).isRight)
         status should equal(200)
       }
@@ -70,7 +71,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
     "register CSR with Ed25519" taggedAs Tag("durian") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ED25519","created":"2020-07-01T06:13:01.333Z","hwDeviceId":"a0d1f73c-8819-4a97-b96b-49cabd3eba47","pubKey":"DxRWvEGJ5Dih861Kww/jYfGnLqV6oXwbE/aKLxFgiAk=","pubKeyId":"DxRWvEGJ5Dih861Kww/jYfGnLqV6oXwbE/aKLxFgiAk=","validNotAfter":"2021-01-01T06:13:01.333Z","validNotBefore":"2020-07-01T06:13:01.333Z"},"signature":"Ck2sUmbYk6rQmJEx6x2un0B9gfn5wIJWkgLtXDNc+rtD6+OKez5R2z2OPAzMhYLdXAKR06BgUIJBvie5nHQLCQ=="}""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2021-02-07T18:53:09.168Z","hwDeviceId":"0eee73e-0ee5-40ed-b021-d9717e26330e","pubKey":"RyBMw0jYLO/kWSUFlg1bUZPHCqytr4Fpucrio2/b/kU=","pubKeyId":"RyBMw0jYLO/kWSUFlg1bUZPHCqytr4Fpucrio2/b/kU=","validNotAfter":"2021-08-07T18:53:09.168Z","validNotBefore":"2021-02-07T18:53:09.168Z"},"signature":"9VBGAzadr8SDks0oACUqyIiPU5tfV2fKFT+IjqrRH29IDvcwMgyJzbqmCwzQF5sxUcPgCzwAjoS2Cok+EpTuDw=="}""".stripMargin
 
       post("/key/v1/pubkey", body = expectedBody) {
         status should equal(200)

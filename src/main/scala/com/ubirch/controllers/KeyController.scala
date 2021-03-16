@@ -322,6 +322,9 @@ class KeyController @Inject() (
 
   private def handlePubKeyId(pubKeyId: String)(implicit request: HttpServletRequest): Task[ActionResult] = {
     for {
+      _ <- earlyResponseIf(pubKeyId.isEmpty)(InvalidParamsException("public key id can't be empty"))
+      _ <- earlyResponseIf(pubKeyId.contains(" "))(InvalidParamsException("public key id is invalid"))
+
       res <- pubKeyService.getByPubKeyId(pubKeyId)
         .map { pks =>
           pks.toList match {
