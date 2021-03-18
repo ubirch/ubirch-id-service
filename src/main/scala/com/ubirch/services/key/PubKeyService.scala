@@ -226,7 +226,8 @@ class DefaultPubKeyService @Inject() (
       text <- Task(pm.getPayload.toString)
       payloadJValue <- Task.fromTry {
         jsonConverterService.toJValue(text).toTry
-      }
+      }.onErrorHandle(_ => throw ParsingError("Error Parsing: " + pm.getPayload.asText()))
+
       _ = logger.info("protocol_message_payload={}", payloadJValue.toString)
       pubKeyInfo <- Task(payloadJValue).map { jv =>
         PublicKeyInfo
