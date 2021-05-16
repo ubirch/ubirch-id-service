@@ -4,27 +4,35 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.HttpServerConfPaths
 import com.ubirch.services.lifeCycle.Lifecycle
-import javax.inject._
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
-import org.eclipse.jetty.server.{ Handler, Server }
+import org.eclipse.jetty.server.{ Handler, HttpConnectionFactory, Server }
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
+import javax.inject._
 import scala.concurrent.Future
 
 /**
-  * Represents the basic component for supporting scalatra
-  * @param config the configuration object
-  * @param lifecycle the life cycle object
-  */
+ * Represents the basic component for supporting scalatra
+ * @param config the configuration object
+ * @param lifecycle the life cycle object
+ */
 class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyLogging {
 
   val serverPort: Int = config.getInt(HttpServerConfPaths.PORT)
   val swaggerPath: String = config.getString(HttpServerConfPaths.SWAGGER_PATH)
-  val contextPathBase: String = ""
 
-  def start = {
+  def disableServerVersionHeader(server: Server): Unit = {
+    server.getConnectors.foreach { connector =>
+      connector.getConnectionFactories
+        .stream()
+        .filter(cf => cf.isInstanceOf[HttpConnectionFactory])
+        .forEach(cf => cf.asInstanceOf[HttpConnectionFactory].getHttpConfiguration.setSendServerVersion(false))
+    }
+  }
+
+  def start(): Unit = {
     val server = initializeServer
     startServer(server)
     addShutdownHook(server)
@@ -32,6 +40,7 @@ class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyL
 
   private def initializeServer: Server = {
     val server = createServer
+    disableServerVersionHeader(server)
     val contexts = createContextsOfTheServer
     server.setHandler(contexts)
     server
@@ -53,7 +62,7 @@ class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyL
 
   private def createContextScalatraApi: WebAppContext = {
     val contextRestApi = new WebAppContext()
-    contextRestApi.setContextPath(contextPathBase)
+    contextRestApi.setContextPath("/")
     contextRestApi.setResourceBase("src/main/scala")
     contextRestApi.addEventListener(new ScalatraListener)
     contextRestApi.addServlet(classOf[DefaultServlet], "/")
@@ -63,7 +72,7 @@ class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyL
 
   private def createContextSwaggerUi: WebAppContext = {
     val contextSwaggerUi = new WebAppContext()
-    contextSwaggerUi.setContextPath(contextPathBase + "/docs")
+    contextSwaggerUi.setContextPath("/docs")
     contextSwaggerUi.setResourceBase(swaggerPath)
     contextSwaggerUi
   }
@@ -78,7 +87,7 @@ class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyL
         System.exit(-1)
     }
 
-  private def addShutdownHook(server: Server) = {
+  private def addShutdownHook(server: Server): Unit = {
     lifecycle.addStopHook { () =>
       logger.info("Shutting down Restful Service")
       Future.successful(server.stop())
