@@ -89,8 +89,7 @@
         <scalatra-scalatest.version>2.6.5</scalatra-scalatest.version>
         <scalactic.version>3.0.5</scalactic.version>
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
-        <javaxServlet.version>3.1.0</javaxServlet.version>
-        <jetty.version>9.4.39.v20210325</jetty.version>
+        <jetty.version>9.4.40.v20210413</jetty.version>
 
         <!-- plugins -->
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
@@ -260,13 +259,6 @@
             <artifactId>scalatra-scalatest_${scala.compat.version}</artifactId>
             <version>${scalatra-scalatest.version}</version>
             <scope>test</scope>
-        </dependency>
-
-        <!-- Javax servlet -->
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>${javaxServlet.version}</version>
         </dependency>
 
         <!-- Jetty servlet -->
