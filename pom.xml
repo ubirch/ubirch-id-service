@@ -82,7 +82,7 @@
 
 
         <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
-        <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
+        <bcprov-jdk15on.version>1.67</bcprov-jdk15on.version>
 
         <!-- Scalatra -->
         <scalatra.version>2.6.5</scalatra.version>
