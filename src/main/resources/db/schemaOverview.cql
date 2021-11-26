@@ -7,11 +7,27 @@ use identity_system;
 
 drop table if exists identities;
 
-create table if not exists identities (
-    id text,
+create table identities
+(
+    owner_id text,
+    identity_id text,
+    data_id text,
     category text,
-    cert text,
-    PRIMARY KEY (id, category)
+    created timestamp,
+    data text,
+    description text,
+    primary key ((owner_id), identity_id, data_id, created)
+    ) with clustering order by (identity_id desc, data_id desc, created desc);
+
+drop table if exists identities_by_state;
+
+create table identities_by_state
+(
+    owner_id text,
+    identity_id text,
+    state text,
+    created timestamp,
+    primary key (identity_id, state)
 );
 
 drop table if exists keys;
@@ -26,6 +42,9 @@ create table if not exists keys(
     signature         text,
     raw               text,
     category          text,
+    prev_signature    text,
+    prev_pub_key_id   text,
+    "revoked_at"      timestamp,
     created           timestamp,
     PRIMARY KEY (pub_key_id, hw_device_id)
 );

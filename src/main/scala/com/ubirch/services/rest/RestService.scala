@@ -14,10 +14,10 @@ import javax.inject._
 import scala.concurrent.Future
 
 /**
- * Represents the basic component for supporting scalatra
- * @param config the configuration object
- * @param lifecycle the life cycle object
- */
+  * Represents the basic component for supporting scalatra
+  * @param config the configuration object
+  * @param lifecycle the life cycle object
+  */
 class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyLogging {
 
   val serverPort: Int = config.getInt(HttpServerConfPaths.PORT)
