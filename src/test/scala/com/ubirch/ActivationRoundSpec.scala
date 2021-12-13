@@ -1,11 +1,10 @@
 package com.ubirch
 
 import java.util.{ Base64, UUID }
-
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.ConfPaths.{ AnchoringProducerConfPaths, TigerConsumerConfPaths, TigerProducerConfPaths }
-import com.ubirch.controllers.CertController
+import com.ubirch.controllers.{ CertController, ResourcesController }
 import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models._
 import com.ubirch.services.config.ConfigProvider
@@ -13,6 +12,7 @@ import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.kafka.Tiger
 import com.ubirch.services.key.PubKeyService
 import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil }
+
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.bouncycastle.jcajce.BCFKSLoadStoreParameter.SignatureAlgorithm

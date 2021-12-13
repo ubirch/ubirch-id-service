@@ -76,10 +76,8 @@
 
         <slf4j.api.version>1.7.15</slf4j.api.version>
         <logback-classic.version>1.2.3</logback-classic.version>
-        <log4j-over-slf4j.version>1.7.25</log4j-over-slf4j.version>
         <jcl-over-slf4j.version>1.7.25</jcl-over-slf4j.version>
         <logstash-logback-encoder.version>5.3</logstash-logback-encoder.version>
-
 
         <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
         <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
@@ -212,13 +210,6 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback-classic.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.slf4j/log4j-over-slf4j -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>log4j-over-slf4j</artifactId>
-            <version>${log4j-over-slf4j.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.slf4j/jcl-over-slf4j -->
