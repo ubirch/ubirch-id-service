@@ -35,4 +35,4 @@ _Commands_:
 
 # Tests
 
-They don't run via Idea, but in the console e.g. 'mvn -Dtest=KeyServiceSpec test'.
+'mvn -Dtest=KeyServiceSpec test'.
