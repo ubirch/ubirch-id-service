@@ -3,11 +3,16 @@ package com.ubirch.controllers
 import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ NOK, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.{ CertUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import com.ubirch.{ EmbeddedCassandra, InjectorHelperImpl, WithFixtures }
+
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.scalatest.{ BeforeAndAfterEach, Tag }
 import org.scalatra.test.scalatest.ScalatraWordSpec
+
+import java.security.KeyPair
+import java.util.UUID
 
 /**
   * Test for the Cert Controller
@@ -52,17 +57,26 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
       }
     }
 
-    //TODO: update fixtures
-    "register CSR with ECDSA when key exists" taggedAs Tag("feijoa") ignore {
+    "register CSR with ECDSA when key exists" taggedAs Tag("feijoa") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2020-06-30T18:52:55.978Z","hwDeviceId":"c0eee73e-0ee5-40ed-b021-d9717e26330e","pubKey":"jlyU4AY0B8Xo7SmdL47Kix6xv9WjakRFexMrFHdxX8lD5Zo7+ZY7HiY9D6N/37bHVD8D5kTjfEkau38LR/ITrg==","pubKeyId":"jlyU4AY0B8Xo7SmdL47Kix6xv9WjakRFexMrFHdxX8lD5Zo7+ZY7HiY9D6N/37bHVD8D5kTjfEkau38LR/ITrg==","validNotAfter":"2020-12-30T18:52:55.978Z","validNotBefore":"2020-06-30T18:52:55.978Z"},"signature":"MEQCIE3pftyjycMTTz5NchzCER/8Kiw+SoNs8JeFiSmRwqKWAiAyljiyqZK2wA1Gg+gmcbMqa1CaHvg4097WnmFNso6ILg=="}""".stripMargin
+      val uuid = UUID.randomUUID()
+      val (keyAsString, keyPair) = PublicKeyCreationHelpers.randomPublicKey(
+        hardwareDeviceId = uuid.toString,
+        curve = "ecdsa-p256v1"
+      ) match {
+        case Left(e) => fail(e)
+        case Right((_, keyAsString, _, _, privKey)) => (keyAsString, new KeyPair(privKey.getPublicKey, privKey.getPrivateKey))
+      }
+
+      val expectedBody = keyAsString
 
       post("/key/v1/pubkey", body = expectedBody) {
         status should equal(200)
         body should equal(expectedBody)
       }
 
-      val bytes = loadFixture("src/main/resources/fixtures/3_CSR.der")
+      val csr = CertUtil.createCSR(uuid)(keyPair)
+      val bytes = csr.getEncoded
       post("/v1/csr/register", body = bytes) {
         assert(jsonConverter.as[PublicKeyInfo](body).isRight)
         status should equal(200)
