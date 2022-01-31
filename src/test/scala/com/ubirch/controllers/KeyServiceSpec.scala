@@ -51,14 +51,14 @@ class KeyServiceSpec
 
     "get public key object when data exists" taggedAs Tag("mango") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2022-01-25T14:21:12.923Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"ymOwYyqtOFGJ0jBfnZv2OwlKnlfNJrzLVk+xUHlBHCk=","pubKeyId":"ymOwYyqtOFGJ0jBfnZv2OwlKnlfNJrzLVk+xUHlBHCk=","validNotAfter":"2022-07-25T14:21:12.923Z","validNotBefore":"2022-01-25T14:21:12.923Z"},"signature":"1N/h+Ues44KTg/w+lh8ORzKY8wxqKQgvnPu+btwEi5nmbXWPg6VlWmSInTvN9UfrfF1n8hZh0UPEunXhukekDQ=="}""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2022-01-31T09:59:08.042Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"iHnu16KSvS5Trzv2DU7hmAtcRYQqYFF/w3LLAp7Dnxc=","pubKeyId":"iHnu16KSvS5Trzv2DU7hmAtcRYQqYFF/w3LLAp7Dnxc=","validNotAfter":"2032-01-31T09:59:08.042Z","validNotBefore":"2022-01-31T09:59:08.042Z"},"signature":"12i1M3vIxUPOQ4ZGusvG1wtj9O2r3QBQ8ozRvX/g4NWzp2wOCx7g8fOzPwP4BBRBIH7XA+JTN8e3WURqJWlvCA=="}""".stripMargin
 
       post("/v1/pubkey", body = expectedBody) {
         status should equal(200)
         body should equal(expectedBody)
       }
 
-      get("/v1/pubkey/ymOwYyqtOFGJ0jBfnZv2OwlKnlfNJrzLVk+xUHlBHCk=") {
+      get("/v1/pubkey/iHnu16KSvS5Trzv2DU7hmAtcRYQqYFF/w3LLAp7Dnxc=") {
         status should equal(200)
         body should equal(expectedBody)
       }
@@ -93,7 +93,7 @@ class KeyServiceSpec
 
     "get public key object when data exists by hardware id " taggedAs Tag("cherry") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2022-01-25T14:23:10.242Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"U6IzSWjJWiQdRmUD/ZF8bqRm37XnYOPsYJKEzr4kLE0=","pubKeyId":"U6IzSWjJWiQdRmUD/ZF8bqRm37XnYOPsYJKEzr4kLE0=","validNotAfter":"2022-07-25T14:23:10.242Z","validNotBefore":"2022-01-25T14:23:10.242Z"},"signature":"kXd1KMBweKw1vcpz4jbSw5/HDem40+gi1nvik+eSyyY8TPKOTx+bip4c43NQOcdvrYJ6Uwj2ZMYsgXw9i4FbCA=="}""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2022-01-31T10:02:52.393Z","hwDeviceId":"e686b4ba-26b4-4a6d-8b57-f904299d4a5e","pubKey":"COu0qwHd7RfFDyZlXc1872s/+wPDJjG8Uox0IRZnyz4=","pubKeyId":"COu0qwHd7RfFDyZlXc1872s/+wPDJjG8Uox0IRZnyz4=","validNotAfter":"2032-01-31T10:02:52.393Z","validNotBefore":"2022-01-31T10:02:52.393Z"},"signature":"GQ56zN+XHG1VlzY5mZl4OULljQvvqs/oA4etWjbWpTqzCfj0PWZcTQOC8XcnCFlVGM4kujN25W6tiK33L++LCA=="}""".stripMargin
 
       post("/v1/pubkey", body = expectedBody) {
         status should equal(200)
@@ -109,7 +109,7 @@ class KeyServiceSpec
 
     "get public key object when data exists by hardware id when / is present" taggedAs Tag("lychee") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T10:53:09.951Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"x2LzhLOJ8vpx3WFd/DTCzzprqZ1PGjuMkPjK2/bg+os=","pubKeyId":"x2LzhLOJ8vpx3WFd/DTCzzprqZ1PGjuMkPjK2/bg+os=","validNotAfter":"2022-07-25T10:53:09.951Z","validNotBefore":"2022-01-25T10:53:09.951Z"},"signature":"Oo7SvGVhjZW4+MSBk0No6i/6hFJUIGnnRpUkJpiMs2nOAcE78ihG4Y4KItZviZEBTbtABL+TvBWItGOWw+yCBQ=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:08:07.372Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"uYebuawx5Q4oJtm1OvULJMQg2vIZ7bvb9kdvsoFh+TY=","pubKeyId":"uYebuawx5Q4oJtm1OvULJMQg2vIZ7bvb9kdvsoFh+TY=","validNotAfter":"2032-01-31T10:08:07.372Z","validNotBefore":"2022-01-31T10:08:07.372Z"},"signature":"+1VmRyGOnl/oXGA1gaGgAOU1JFcWnRUio+1hnd8prZIawzP7FRwGjvlkTRCVbIpPVrwmF4xoYD/b6Je5PHz9AQ=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -121,14 +121,14 @@ class KeyServiceSpec
         body should equal("[" + dataKey1 + "]")
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T10:53:17.978Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"y/I0brHlXT8I8oiEuv+lzdE9BmprDOz7wW0hWEYJdLU=","pubKeyId":"y/I0brHlXT8I8oiEuv+lzdE9BmprDOz7wW0hWEYJdLU=","prevPubKeyId":"x2LzhLOJ8vpx3WFd/DTCzzprqZ1PGjuMkPjK2/bg+os=","validNotAfter":"2022-07-25T10:53:17.978Z","validNotBefore":"2022-01-25T10:53:17.978Z"},"signature":"yp74E+mQtmO491sZvcanIc/J3vI8L0nBYfcvqOZ/X3PxJAwNRvGf2hqP/4qSPxOIN/R4gWtS1DC5a/13sapPBw==","prevSignature":"zkYEYvZYcIjMoeZ1oVNrYUS3vcp0UAjs7PkNaHOMA3ImXJnGQAH9/6SKp6pJydfo4j5b1ZpV+egde9FEqqq4Dg=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:08:15.484Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"exB+duCgXG2Kj+J+Lp9+PGEIFUGVJDpN6v/OvVu9Dhw=","pubKeyId":"exB+duCgXG2Kj+J+Lp9+PGEIFUGVJDpN6v/OvVu9Dhw=","prevPubKeyId":"uYebuawx5Q4oJtm1OvULJMQg2vIZ7bvb9kdvsoFh+TY=","validNotAfter":"2032-01-31T10:08:15.484Z","validNotBefore":"2022-01-31T10:08:15.484Z"},"signature":"R445lLGA8AyfWF62+cirXXpWwfmlIVf+1DvbHpVpOeVd2U+vKdIYAeVZYMU5YhrsqHySS/i4J6Sn93VFKO4QDQ==","prevSignature":"gWEIFztLgWr47R55ml50iRXkA4L56FwwlvP4ZMdzdGzDKFK0mJpPdO5ab8MS3OT0RVa23eRZQZIUNrdwagUpCw=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T10:53:17.978Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"y/I0brHlXT8I8oiEuv+lzdE9BmprDOz7wW0hWEYJdLU=","pubKeyId":"y/I0brHlXT8I8oiEuv+lzdE9BmprDOz7wW0hWEYJdLU=","prevPubKeyId":"x2LzhLOJ8vpx3WFd/DTCzzprqZ1PGjuMkPjK2/bg+os=","validNotAfter":"2022-07-25T10:53:17.978Z","validNotBefore":"2022-01-25T10:53:17.978Z"},"signature":"yp74E+mQtmO491sZvcanIc/J3vI8L0nBYfcvqOZ/X3PxJAwNRvGf2hqP/4qSPxOIN/R4gWtS1DC5a/13sapPBw==","prevSignature":"zkYEYvZYcIjMoeZ1oVNrYUS3vcp0UAjs7PkNaHOMA3ImXJnGQAH9/6SKp6pJydfo4j5b1ZpV+egde9FEqqq4Dg=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T10:53:09.951Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"x2LzhLOJ8vpx3WFd/DTCzzprqZ1PGjuMkPjK2/bg+os=","pubKeyId":"x2LzhLOJ8vpx3WFd/DTCzzprqZ1PGjuMkPjK2/bg+os=","validNotAfter":"2022-07-25T10:53:09.951Z","validNotBefore":"2022-01-25T10:53:09.951Z"},"signature":"Oo7SvGVhjZW4+MSBk0No6i/6hFJUIGnnRpUkJpiMs2nOAcE78ihG4Y4KItZviZEBTbtABL+TvBWItGOWw+yCBQ=="}]""".stripMargin
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:08:15.484Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"exB+duCgXG2Kj+J+Lp9+PGEIFUGVJDpN6v/OvVu9Dhw=","pubKeyId":"exB+duCgXG2Kj+J+Lp9+PGEIFUGVJDpN6v/OvVu9Dhw=","prevPubKeyId":"uYebuawx5Q4oJtm1OvULJMQg2vIZ7bvb9kdvsoFh+TY=","validNotAfter":"2032-01-31T10:08:15.484Z","validNotBefore":"2022-01-31T10:08:15.484Z"},"signature":"R445lLGA8AyfWF62+cirXXpWwfmlIVf+1DvbHpVpOeVd2U+vKdIYAeVZYMU5YhrsqHySS/i4J6Sn93VFKO4QDQ==","prevSignature":"gWEIFztLgWr47R55ml50iRXkA4L56FwwlvP4ZMdzdGzDKFK0mJpPdO5ab8MS3OT0RVa23eRZQZIUNrdwagUpCw=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:08:07.372Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"uYebuawx5Q4oJtm1OvULJMQg2vIZ7bvb9kdvsoFh+TY=","pubKeyId":"uYebuawx5Q4oJtm1OvULJMQg2vIZ7bvb9kdvsoFh+TY=","validNotAfter":"2032-01-31T10:08:07.372Z","validNotBefore":"2022-01-31T10:08:07.372Z"},"signature":"+1VmRyGOnl/oXGA1gaGgAOU1JFcWnRUio+1hnd8prZIawzP7FRwGjvlkTRCVbIpPVrwmF4xoYD/b6Je5PHz9AQ=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)
@@ -139,7 +139,7 @@ class KeyServiceSpec
 
     "create when signed by previous" taggedAs Tag("breadfruit") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:51:30.930Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Yjp9zvib8ObFqCc5gmEOKgwvmGy/iiHOZDqzQIgPDiY=","pubKeyId":"Yjp9zvib8ObFqCc5gmEOKgwvmGy/iiHOZDqzQIgPDiY=","validNotAfter":"2022-07-25T11:51:30.930Z","validNotBefore":"2022-01-25T11:51:30.930Z"},"signature":"J3jTJHuCxPtkF7390i1lYhNQIcdgKUEz4xNaBlvxtgjfcjIRNGEvszvpZcWbJAb5vQ2C5mmvwNksYmPv0QnxDQ=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:25:56.902Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"l6KTnhPdl2/A9zY1kDMbELuwC/il2qMmpZGnnzvygo4=","pubKeyId":"l6KTnhPdl2/A9zY1kDMbELuwC/il2qMmpZGnnzvygo4=","validNotAfter":"2032-01-31T10:25:56.902Z","validNotBefore":"2022-01-31T10:25:56.902Z"},"signature":"Zx+dyuNFkPExZCMi0AGq0AP2rbXo/vOKDQQqwbjJuokZ4YebeSNDBSYFhtnc0U8iQnr1z8FuGlMpN5N75jPJCw=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
@@ -151,28 +151,28 @@ class KeyServiceSpec
         body should equal("[" + dataKey1 + "]")
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:51:32.198Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Ijv5o7fEt1Y93nTD5ZkOtwq/PkUuMLMuce3E+NCqbm4=","pubKeyId":"Ijv5o7fEt1Y93nTD5ZkOtwq/PkUuMLMuce3E+NCqbm4=","prevPubKeyId":"Yjp9zvib8ObFqCc5gmEOKgwvmGy/iiHOZDqzQIgPDiY=","validNotAfter":"2022-07-25T11:51:32.198Z","validNotBefore":"2022-01-25T11:51:32.198Z"},"signature":"HwzdoG85u9VPmNuDgQphMoiFgGiytYhNaeBZpAwnb4f+Ex6zHbTiYf2ZZzUxm55a5rsaerty0X6v0j6S4Q/KBQ==","prevSignature":"SMnAJrqPDUHJP9nhwzxOY9VXAHal6K/F8ZuDcoPP0HCcEWLV3qX7dgVg3EwrCLRvxN1tm3M0pw0Nczl3xcUxDA=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:26:01.502Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"670cMFXksdFIZaiQ+GFtZ7G5gMBfVEW6p/M7T4XL0Tg=","pubKeyId":"670cMFXksdFIZaiQ+GFtZ7G5gMBfVEW6p/M7T4XL0Tg=","prevPubKeyId":"l6KTnhPdl2/A9zY1kDMbELuwC/il2qMmpZGnnzvygo4=","validNotAfter":"2032-01-31T10:26:01.502Z","validNotBefore":"2022-01-31T10:26:01.502Z"},"signature":"RvmoFHtdSUTGyZxVm5wd9DS2bbMoM92AfuqbuLOxZqJ9b1/T+6FCTWBkgCG88x7eYQo5XMGerxkU/an96GdICw==","prevSignature":"rXJl5WOu5G7tt0e6sZLUeM6z46mHkByJsMBR/GgbkCEEOIs7UnK2Ir76X7C00Pjr/X6VeV5zuURIRTFB8J7rAg=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:51:32.216Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"/1UI9jQZxM1oZuaWnNguCGE4blnqrsYYs75bhkNavCU=","pubKeyId":"/1UI9jQZxM1oZuaWnNguCGE4blnqrsYYs75bhkNavCU=","prevPubKeyId":"Ijv5o7fEt1Y93nTD5ZkOtwq/PkUuMLMuce3E+NCqbm4=","validNotAfter":"2022-07-25T11:51:32.216Z","validNotBefore":"2022-01-25T11:51:32.216Z"},"signature":"Bjp36MZBeZSeJV90fsHvm4n8tCFNLxMUt0RCb2OJB0aD/I13lYHM8ftygwzCiNvza5oGw8XEn2Z9SAqfnxixBA==","prevSignature":"xDLIZGEe/gbaqdB037cWFuLg00BZGJAIxSNTEawYqW83DRY6x+VyZT17qcGxMLS0/77eIcFbsClrpwFzdmCLBQ=="}"""
+      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:26:01.554Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"lgGWoH2czQR1cDWud4SiUGGycamrPHGM6XU07a4iokA=","pubKeyId":"lgGWoH2czQR1cDWud4SiUGGycamrPHGM6XU07a4iokA=","prevPubKeyId":"670cMFXksdFIZaiQ+GFtZ7G5gMBfVEW6p/M7T4XL0Tg=","validNotAfter":"2032-01-31T10:26:01.554Z","validNotBefore":"2022-01-31T10:26:01.554Z"},"signature":"HBlTdUNaRgc8eOJ6AEuPaNBLDdAwj6r5y6u6Mjl7lo1FlmNU2jIgjZStY4oxLyqJPJdPad6h6W4BdyNTesVgCw==","prevSignature":"rgP/LSfU2rEbho1iDzXVpfsKbBaBp+owjV73I5YOezZqzvUAxXZ0cGO6sCjxpJxuFhXl5GxbzdArMjLSHBxhDw=="}"""
 
       post("/v1/pubkey", body = dataKey3) {
         status should equal(200)
         body should equal(dataKey3)
       }
 
-      val dataKey4 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:53:41.887Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Qa1pg327TIoT0DccjV082PBBDGPiD1FsVjjGh/xFmV8=","pubKeyId":"Qa1pg327TIoT0DccjV082PBBDGPiD1FsVjjGh/xFmV8=","validNotAfter":"2022-07-25T11:53:41.887Z","validNotBefore":"2022-01-25T11:53:41.887Z"},"signature":"dfh9Rx4omx7UUfKawWymY9uWtB3F1voc5inCz6KFYhFnVvYOwNqcepPxJQSjG6aRD9ik3GIY7GGD+dqVtSbdCw=="}""".stripMargin
+      val dataKey4 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:28:00.595Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"T5vv8pGF5AEk5H+KUqk/b0Dz3TDska4vfrgN9lUCp2s=","pubKeyId":"T5vv8pGF5AEk5H+KUqk/b0Dz3TDska4vfrgN9lUCp2s=","validNotAfter":"2032-01-31T10:28:00.595Z","validNotBefore":"2022-01-31T10:28:00.595Z"},"signature":"Ig9qSXWnrx0170i0qUO56G7e5gX8rTNiJX4iNyl9TSD6gzQcUV4Db/mIlooPo9dy5QVaPADaSc6DhP4fQrJ+DA=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey4) {
         status should equal(400)
         body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:51:32.198Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Ijv5o7fEt1Y93nTD5ZkOtwq/PkUuMLMuce3E+NCqbm4=","pubKeyId":"Ijv5o7fEt1Y93nTD5ZkOtwq/PkUuMLMuce3E+NCqbm4=","prevPubKeyId":"Yjp9zvib8ObFqCc5gmEOKgwvmGy/iiHOZDqzQIgPDiY=","validNotAfter":"2022-07-25T11:51:32.198Z","validNotBefore":"2022-01-25T11:51:32.198Z"},"signature":"HwzdoG85u9VPmNuDgQphMoiFgGiytYhNaeBZpAwnb4f+Ex6zHbTiYf2ZZzUxm55a5rsaerty0X6v0j6S4Q/KBQ==","prevSignature":"SMnAJrqPDUHJP9nhwzxOY9VXAHal6K/F8ZuDcoPP0HCcEWLV3qX7dgVg3EwrCLRvxN1tm3M0pw0Nczl3xcUxDA=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:51:32.216Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"/1UI9jQZxM1oZuaWnNguCGE4blnqrsYYs75bhkNavCU=","pubKeyId":"/1UI9jQZxM1oZuaWnNguCGE4blnqrsYYs75bhkNavCU=","prevPubKeyId":"Ijv5o7fEt1Y93nTD5ZkOtwq/PkUuMLMuce3E+NCqbm4=","validNotAfter":"2022-07-25T11:51:32.216Z","validNotBefore":"2022-01-25T11:51:32.216Z"},"signature":"Bjp36MZBeZSeJV90fsHvm4n8tCFNLxMUt0RCb2OJB0aD/I13lYHM8ftygwzCiNvza5oGw8XEn2Z9SAqfnxixBA==","prevSignature":"xDLIZGEe/gbaqdB037cWFuLg00BZGJAIxSNTEawYqW83DRY6x+VyZT17qcGxMLS0/77eIcFbsClrpwFzdmCLBQ=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T11:51:30.930Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Yjp9zvib8ObFqCc5gmEOKgwvmGy/iiHOZDqzQIgPDiY=","pubKeyId":"Yjp9zvib8ObFqCc5gmEOKgwvmGy/iiHOZDqzQIgPDiY=","validNotAfter":"2022-07-25T11:51:30.930Z","validNotBefore":"2022-01-25T11:51:30.930Z"},"signature":"J3jTJHuCxPtkF7390i1lYhNQIcdgKUEz4xNaBlvxtgjfcjIRNGEvszvpZcWbJAb5vQ2C5mmvwNksYmPv0QnxDQ=="}]""".stripMargin
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:26:01.502Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"670cMFXksdFIZaiQ+GFtZ7G5gMBfVEW6p/M7T4XL0Tg=","pubKeyId":"670cMFXksdFIZaiQ+GFtZ7G5gMBfVEW6p/M7T4XL0Tg=","prevPubKeyId":"l6KTnhPdl2/A9zY1kDMbELuwC/il2qMmpZGnnzvygo4=","validNotAfter":"2032-01-31T10:26:01.502Z","validNotBefore":"2022-01-31T10:26:01.502Z"},"signature":"RvmoFHtdSUTGyZxVm5wd9DS2bbMoM92AfuqbuLOxZqJ9b1/T+6FCTWBkgCG88x7eYQo5XMGerxkU/an96GdICw==","prevSignature":"rXJl5WOu5G7tt0e6sZLUeM6z46mHkByJsMBR/GgbkCEEOIs7UnK2Ir76X7C00Pjr/X6VeV5zuURIRTFB8J7rAg=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:26:01.554Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"lgGWoH2czQR1cDWud4SiUGGycamrPHGM6XU07a4iokA=","pubKeyId":"lgGWoH2czQR1cDWud4SiUGGycamrPHGM6XU07a4iokA=","prevPubKeyId":"670cMFXksdFIZaiQ+GFtZ7G5gMBfVEW6p/M7T4XL0Tg=","validNotAfter":"2032-01-31T10:26:01.554Z","validNotBefore":"2022-01-31T10:26:01.554Z"},"signature":"HBlTdUNaRgc8eOJ6AEuPaNBLDdAwj6r5y6u6Mjl7lo1FlmNU2jIgjZStY4oxLyqJPJdPad6h6W4BdyNTesVgCw==","prevSignature":"rgP/LSfU2rEbho1iDzXVpfsKbBaBp+owjV73I5YOezZqzvUAxXZ0cGO6sCjxpJxuFhXl5GxbzdArMjLSHBxhDw=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T10:25:56.902Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"l6KTnhPdl2/A9zY1kDMbELuwC/il2qMmpZGnnzvygo4=","pubKeyId":"l6KTnhPdl2/A9zY1kDMbELuwC/il2qMmpZGnnzvygo4=","validNotAfter":"2032-01-31T10:25:56.902Z","validNotBefore":"2022-01-31T10:25:56.902Z"},"signature":"Zx+dyuNFkPExZCMi0AGq0AP2rbXo/vOKDQQqwbjJuokZ4YebeSNDBSYFhtnc0U8iQnr1z8FuGlMpN5N75jPJCw=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)
@@ -183,26 +183,26 @@ class KeyServiceSpec
 
     "get public key object when data exists by public key id when / is present" taggedAs Tag("pummelo") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T12:08:46.483Z","hwDeviceId":"31a12f36-61a4-4337-827b-ca5655b16c53","pubKey":"QpXW4/1npbdqn/++fNZI9zrOD1UopxO89sXhNZwScSE=","pubKeyId":"QpXW4/1npbdqn/++fNZI9zrOD1UopxO89sXhNZwScSE=","validNotAfter":"2022-07-25T12:08:46.483Z","validNotBefore":"2022-01-25T12:08:46.483Z"},"signature":"93jXzvxMPwMwn7djJQVg4dQcJFDRVtRuzCX9FbK9dgytSPi0cjtAiAXo41zycQSczGPwpjQJN6LM0Qykfj8xDw=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:36:30.731Z","hwDeviceId":"31a12f36-61a4-4337-827b-ca5655b16c53","pubKey":"ZfhPMdG5HgoaiQdSvkM2xZA71ACdSYqxbsc+VxV6JI0=","pubKeyId":"ZfhPMdG5HgoaiQdSvkM2xZA71ACdSYqxbsc+VxV6JI0=","validNotAfter":"2032-01-31T12:36:30.731Z","validNotBefore":"2022-01-31T12:36:30.731Z"},"signature":"xnZ8EOa6zYQZTB55SiDyClU4ZlddyTfqYRqJhDLyk4QBOXndI4l7g8BNwaZzJzerwf1UpJwyd9VgcHazwdNSAw=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      get("/v1/pubkey/QpXW4/1npbdqn/++fNZI9zrOD1UopxO89sXhNZwScSE=") {
+      get("/v1/pubkey/ZfhPMdG5HgoaiQdSvkM2xZA71ACdSYqxbsc+VxV6JI0=") {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T12:10:41.005Z","hwDeviceId":"7cf5b4c3-ac93-4c8f-95b3-ff44a02b43d3","pubKey":"qX4iedA7Btr+6tbH74WfLCm7kB5/oUj6BPkOZbZx1cQ=","pubKeyId":"QpXW4/1npbdqn/++fNZI9zrOD1UopxO89sXhNZwScSE=","validNotAfter":"2022-07-25T12:10:41.005Z","validNotBefore":"2022-01-25T12:10:41.005Z"},"signature":"NaxqF32sRVflEycBOLSDDNewv0wJOHBVvjKrK0OdzvS0m3L9/VlcJkMg2JSMSEOL0P7LLypO+QakOd69P88kDw=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:37:42.737Z","hwDeviceId":"7cf5b4c3-ac93-4c8f-95b3-ff44a02b43d3","pubKey":"qUx7PcBqMGZmZa/0J07bFWHYF9V7HN5ylUyokEHsUzM=","pubKeyId":"ZfhPMdG5HgoaiQdSvkM2xZA71ACdSYqxbsc+VxV6JI0=","validNotAfter":"2032-01-31T12:37:42.737Z","validNotBefore":"2022-01-31T12:37:42.737Z"},"signature":"FnKwerlgxjfh1nzZHoYIL/aV5slcUqxS4Zh6Jk+XlB3t8UdPl3DdtjwIQo2SP9rr5RE04otZpI7x0xqbUVSCDg=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
         body should equal(dataKey2)
       }
 
-      get("/v1/pubkey/QpXW4/1npbdqn/++fNZI9zrOD1UopxO89sXhNZwScSE=") {
+      get("/v1/pubkey/ZfhPMdG5HgoaiQdSvkM2xZA71ACdSYqxbsc+VxV6JI0=") {
         status should equal(200)
         body should equal(dataKey2)
       }
@@ -592,14 +592,14 @@ class KeyServiceSpec
 
     "create a second key when signed by the previous key -json-" taggedAs Tag("soursop") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T09:34:47.540Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"fMBQsxqwcywjUBCvRCdlvE7vut/8aFsim5clavqNgXY=","pubKeyId":"fMBQsxqwcywjUBCvRCdlvE7vut/8aFsim5clavqNgXY=","validNotAfter":"2022-07-25T09:34:47.540Z","validNotBefore":"2022-01-25T09:34:47.540Z"},"signature":"RgYWPwb4507o6F9uNRRVPIM8pz6i7C6BIfirlarHA5C+tPgNECTxGo4hHZRq5vj+Cyw402dtOPfek6I9/SqeBw=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:43:55.736Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Ic1ItMPocr/A0Oy/YJ/s32MtC5MW5Fua7nQbQ3Q8N/0=","pubKeyId":"Ic1ItMPocr/A0Oy/YJ/s32MtC5MW5Fua7nQbQ3Q8N/0=","validNotAfter":"2032-01-31T12:43:55.736Z","validNotBefore":"2022-01-31T12:43:55.736Z"},"signature":"I7X3zDDGJaJWNep8rkTiIu9XPo9xDdutdgVUkOmylGk8fz7Z0vYU1gg2Ip414i75Zde7+KTK+TmpEsCl8OyQDg=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T09:34:51.883Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HKslFZ4fAtM9rGgMYkgIB0aUiy5Z4ajPeWaPYMc1I9Y=","pubKeyId":"HKslFZ4fAtM9rGgMYkgIB0aUiy5Z4ajPeWaPYMc1I9Y=","prevPubKeyId":"fMBQsxqwcywjUBCvRCdlvE7vut/8aFsim5clavqNgXY=","validNotAfter":"2022-07-25T09:34:51.883Z","validNotBefore":"2022-01-25T09:34:51.883Z"},"signature":"IfVTaREj0r64sMa16uF5AYwY7SePtcqIKxXUV4MxqRHWipn/qFnkDQAz7Sv4yU50qMTbiM+7caX7sV8LqYfAAw==","prevSignature":"MfFlOs59hOhxaeKDlEoOqcvgaut2Al0Tz1o8I4sJBj5k4EEsPxTOMqrpHgPJqTTO0iRVhPWAzifYFfZIvfpwAQ=="}""".stripMargin
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:43:56.659Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"FbhLNisIxGlDi38UZ3hGwv0mmXtqjExnBHbcEclOz4A=","pubKeyId":"FbhLNisIxGlDi38UZ3hGwv0mmXtqjExnBHbcEclOz4A=","prevPubKeyId":"Ic1ItMPocr/A0Oy/YJ/s32MtC5MW5Fua7nQbQ3Q8N/0=","validNotAfter":"2032-01-31T12:43:56.659Z","validNotBefore":"2022-01-31T12:43:56.659Z"},"signature":"0etd8obF45abmi1Ev5z3VwlhTr8hW0nucl4o2xQGeU6lxP35wEbfmiCdu6IJh6ciECRWgrYNou/Kj3VzamU4CA==","prevSignature":"L7o/I0W+dwR1A4cdERDAfgdZfo0VXStNkunXYzG6hef2Xmrtx1ABNX9zDTLUqCTvuuTjSaBQvpGhODc6MKejBg=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(200)
@@ -607,14 +607,14 @@ class KeyServiceSpec
       }
 
       //This key is not connected to any existing key
-      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T09:34:52.087Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"2jFZep/MfIEFyHlWSUVstqIENBA3ZTExyVKSQUecRBU=","pubKeyId":"2jFZep/MfIEFyHlWSUVstqIENBA3ZTExyVKSQUecRBU=","prevPubKeyId":"KKslFZ4fAtM9rGgMYkgIB0aUiy5Z4ajPeWaPYMc1I9Y=","validNotAfter":"2022-07-25T09:34:52.087Z","validNotBefore":"2022-01-25T09:34:52.087Z"},"signature":"pVfqihXmLTPyIiBhPGACUimet9ePb/cONoRnwFlpFY+C9k7NVaZCU+vayh/G56EDepvev6qJqM4/+qV5z+ABBQ==","prevSignature":"OZNUvvDk6K2q4o4aLUSDaiofIzTHlbfTP6pbODs2UgjiwB6cTqkXS9bGb+yCrD+6hk5PlcKxGSwSS4DLSGUpAQ=="}""".stripMargin
+      val dataKey3 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:43:56.676Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"nWtAGYzryz7ZgBAqxISFMN74HHHuDhQXavl6S4TE4Gs=","pubKeyId":"nWtAGYzryz7ZgBAqxISFMN74HHHuDhQXavl6S4TE4Gs=","prevPubKeyId":"GbhLNisIxGlDi38UZ3hGwv0mmXtqjExnBHbcEclOz4A=","validNotAfter":"2032-01-31T12:43:56.676Z","validNotBefore":"2022-01-31T12:43:56.676Z"},"signature":"Hzb/9D5NAZr5e7O+ferYkfjIZpf2I8rAV/FNR3ZOU8I4lzYlFuY25OaQmRHKcn7Y1VKFI+iA2UaAwH1vYKFBCw==","prevSignature":"xipMXdj2gODGLVRfq9TtaEsBWUQNsgFL8bxeZFy2YVq0IugQLvZVUewwsJ4ER5BLKXi0K77Bx+8/x0AcklXgCA=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey3) {
         status should equal(400)
         body should equal("""{"version":"1.0","status":"NOK","errorType":"PubkeyError","errorMessage":"Error creating pub key"}""")
       }
 
-      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T09:34:51.883Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"HKslFZ4fAtM9rGgMYkgIB0aUiy5Z4ajPeWaPYMc1I9Y=","pubKeyId":"HKslFZ4fAtM9rGgMYkgIB0aUiy5Z4ajPeWaPYMc1I9Y=","prevPubKeyId":"fMBQsxqwcywjUBCvRCdlvE7vut/8aFsim5clavqNgXY=","validNotAfter":"2022-07-25T09:34:51.883Z","validNotBefore":"2022-01-25T09:34:51.883Z"},"signature":"IfVTaREj0r64sMa16uF5AYwY7SePtcqIKxXUV4MxqRHWipn/qFnkDQAz7Sv4yU50qMTbiM+7caX7sV8LqYfAAw==","prevSignature":"MfFlOs59hOhxaeKDlEoOqcvgaut2Al0Tz1o8I4sJBj5k4EEsPxTOMqrpHgPJqTTO0iRVhPWAzifYFfZIvfpwAQ=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T09:34:47.540Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"fMBQsxqwcywjUBCvRCdlvE7vut/8aFsim5clavqNgXY=","pubKeyId":"fMBQsxqwcywjUBCvRCdlvE7vut/8aFsim5clavqNgXY=","validNotAfter":"2022-07-25T09:34:47.540Z","validNotBefore":"2022-01-25T09:34:47.540Z"},"signature":"RgYWPwb4507o6F9uNRRVPIM8pz6i7C6BIfirlarHA5C+tPgNECTxGo4hHZRq5vj+Cyw402dtOPfek6I9/SqeBw=="}]""".stripMargin
+      val expectedKeys = """[{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:43:56.659Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"FbhLNisIxGlDi38UZ3hGwv0mmXtqjExnBHbcEclOz4A=","pubKeyId":"FbhLNisIxGlDi38UZ3hGwv0mmXtqjExnBHbcEclOz4A=","prevPubKeyId":"Ic1ItMPocr/A0Oy/YJ/s32MtC5MW5Fua7nQbQ3Q8N/0=","validNotAfter":"2032-01-31T12:43:56.659Z","validNotBefore":"2022-01-31T12:43:56.659Z"},"signature":"0etd8obF45abmi1Ev5z3VwlhTr8hW0nucl4o2xQGeU6lxP35wEbfmiCdu6IJh6ciECRWgrYNou/Kj3VzamU4CA==","prevSignature":"L7o/I0W+dwR1A4cdERDAfgdZfo0VXStNkunXYzG6hef2Xmrtx1ABNX9zDTLUqCTvuuTjSaBQvpGhODc6MKejBg=="},{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:43:55.736Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Ic1ItMPocr/A0Oy/YJ/s32MtC5MW5Fua7nQbQ3Q8N/0=","pubKeyId":"Ic1ItMPocr/A0Oy/YJ/s32MtC5MW5Fua7nQbQ3Q8N/0=","validNotAfter":"2032-01-31T12:43:55.736Z","validNotBefore":"2022-01-31T12:43:55.736Z"},"signature":"I7X3zDDGJaJWNep8rkTiIu9XPo9xDdutdgVUkOmylGk8fz7Z0vYU1gg2Ip414i75Zde7+KTK+TmpEsCl8OyQDg=="}]""".stripMargin
 
       get("/v1/pubkey/current/hardwareId/6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==") {
         status should equal(200)
@@ -625,14 +625,14 @@ class KeyServiceSpec
 
     "second key should not be created if not signed -json-" taggedAs Tag("sapote") in {
 
-      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T12:16:08.001Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"Ml7Y9i213vXV9jHS8fbxgYlTVuNhVpOq1eEnGIIBiG4=","pubKeyId":"Ml7Y9i213vXV9jHS8fbxgYlTVuNhVpOq1eEnGIIBiG4=","validNotAfter":"2022-07-25T12:16:08.001Z","validNotBefore":"2022-01-25T12:16:08.001Z"},"signature":"dKIGpTxZuy5rdlqGCXeW1qTEXIkvBdUKkbMjQ37IFZ3YAbsdGmJrc6FXoEUtPUeFjk7i5+c1QoxbRqomUXdTCQ=="}""".stripMargin
+      val dataKey1 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:45:59.048Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"EDBJW+CunVnyQzdj1/BqdcpZlKScrsVBTWpK9pWAmf4=","pubKeyId":"EDBJW+CunVnyQzdj1/BqdcpZlKScrsVBTWpK9pWAmf4=","validNotAfter":"2032-01-31T12:45:59.048Z","validNotBefore":"2022-01-31T12:45:59.048Z"},"signature":"NZT3KzmdTN41L/w5+mJkeg9soRqSOIjEVWxf7fIpnEINR+6gFb4HfGbZdBy/V8QqSQVd03Om6qduVQV97uqAAQ=="}""".stripMargin
 
       post("/v1/pubkey", body = dataKey1) {
         status should equal(200)
         body should equal(dataKey1)
       }
 
-      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-25T12:16:09.103Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"mA7QrluS3/YBnyoEyS3QboT32J1gdMxEaE488a672hM=","pubKeyId":"mA7QrluS3/YBnyoEyS3QboT32J1gdMxEaE488a672hM=","validNotAfter":"2022-07-25T12:16:09.103Z","validNotBefore":"2022-01-25T12:16:09.103Z"},"signature":"EqJ5+5gr/V9wWMbrLJsJRYQtyXlNfbALPVnkrrJTf3PGSLswampZsKpXlOfk2x9LDYidGKtBU7ubke5Son50CQ=="}"""
+      val dataKey2 = """{"pubKeyInfo":{"algorithm":"ed25519-sha-512","created":"2022-01-31T12:46:59.124Z","hwDeviceId":"6waiGQ3EII8Zz6k65b8RTe+dqFfEroR1+T/WIj3io876d82OK05CSxur7qvpBdYtin/LOf9bK78Y8UuLHubYQA==","pubKey":"o1mWCLFM9NUpxMGgfK/eGZxqK4UNL9MM6DmbD4/rZKk=","pubKeyId":"o1mWCLFM9NUpxMGgfK/eGZxqK4UNL9MM6DmbD4/rZKk=","validNotAfter":"2032-01-31T12:46:59.124Z","validNotBefore":"2022-01-31T12:46:59.124Z"},"signature":"LNMqfC2pU04+Bp2/Vlutc2kMTI53X05Mum2gZld7PZ486ZoOj5Vr7GaTx8uPadxgrpS2DXN9iVHkuIdEWBtrCA=="}"""
 
       post("/v1/pubkey", body = dataKey2) {
         status should equal(400)
