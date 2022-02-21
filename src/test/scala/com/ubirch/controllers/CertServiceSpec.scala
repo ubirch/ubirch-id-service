@@ -83,17 +83,16 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
       }
     }
 
-    //TODO: update fixtures
-    "register CSR with Ed25519" taggedAs Tag("durian") ignore {
+    "register CSR with Ed25519" taggedAs Tag("durian") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ED25519","created":"2020-07-01T06:13:01.333Z","hwDeviceId":"a0d1f73c-8819-4a97-b96b-49cabd3eba47","pubKey":"DxRWvEGJ5Dih861Kww/jYfGnLqV6oXwbE/aKLxFgiAk=","pubKeyId":"DxRWvEGJ5Dih861Kww/jYfGnLqV6oXwbE/aKLxFgiAk=","validNotAfter":"2021-01-01T06:13:01.333Z","validNotBefore":"2020-07-01T06:13:01.333Z"},"signature":"Ck2sUmbYk6rQmJEx6x2un0B9gfn5wIJWkgLtXDNc+rtD6+OKez5R2z2OPAzMhYLdXAKR06BgUIJBvie5nHQLCQ=="}""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ED25519","created":"2022-02-21T14:56:51.220Z","hwDeviceId":"a273f05a-c6bc-4649-a1ef-88c9430d0420","pubKey":"x3iUyiICYaUqqS457ZP3GF3T116OaaMGIwND47SIPLI=","pubKeyId":"x3iUyiICYaUqqS457ZP3GF3T116OaaMGIwND47SIPLI=","validNotAfter":"2022-08-21T14:56:51.220Z","validNotBefore":"2022-02-21T14:56:51.220Z"},"signature":"1qUAt2WCAeaZEOO+iY6rJ1Gl6QOlnUFBZ/xhjrJa5Cn6WfcPSwmFQZQ2FBRlLUh9BxhdW9aqskJBttLiyM/LBw=="}""".stripMargin
 
       post("/key/v1/pubkey", body = expectedBody) {
         status should equal(200)
         body should equal(expectedBody)
       }
 
-      val bytes = loadFixture("src/main/resources/fixtures/3_CSR_Ed25519.der")
+      val bytes = loadFixture("src/main/resources/fixtures/a273f05a-c6bc-4649-a1ef-88c9430d0420.der")
       post("/v1/csr/register", body = bytes) {
         assert(jsonConverter.as[PublicKeyInfo](body).isRight)
         status should equal(200)
