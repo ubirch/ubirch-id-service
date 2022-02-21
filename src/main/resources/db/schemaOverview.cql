@@ -35,7 +35,7 @@ drop table if exists keys;
 create table if not exists keys(
     pub_key          text,
     pub_key_id       text,
-    hw_device_id     text,
+    owner_id         text,
     algorithm        text,
     valid_not_after  timestamp,
     valid_not_before timestamp,
@@ -46,7 +46,7 @@ create table if not exists keys(
     prev_pub_key_id   text,
     "revoked_at"      timestamp,
     created           timestamp,
-    PRIMARY KEY (pub_key_id, hw_device_id)
+    PRIMARY KEY (pub_key_id, owner_id)
 );
 
 drop MATERIALIZED VIEW IF exists keys_hw_device_id;
@@ -54,7 +54,7 @@ drop MATERIALIZED VIEW IF exists keys_hw_device_id;
 CREATE MATERIALIZED VIEW keys_hw_device_id AS
 SELECT *
 FROM keys
-WHERE hw_device_id is not null
+WHERE owner_id is not null
     and pub_key         is not null
     and pub_key_id       is not null
     and algorithm        is not null
@@ -64,16 +64,16 @@ WHERE hw_device_id is not null
     and raw              is not null
     and category         is not null
     and created          is not null
-PRIMARY KEY (hw_device_id, pub_key_id);
+PRIMARY KEY (owner_id, pub_key_id);
 
-drop MATERIALIZED VIEW IF exists keys_pub_key_id;
+drop MATERIALIZED VIEW IF exists keys_by_pub_key_id;
 
-CREATE MATERIALIZED VIEW keys_pub_key_id AS
+CREATE MATERIALIZED VIEW keys_by_pub_key_id AS
 SELECT *
 FROM keys
 WHERE pub_key_id is not null
-    and pub_key         is not null
-    and hw_device_id     is not null
+    and pub_key          is not null
+    and owner_id         is not null
     and algorithm        is not null
     and valid_not_after  is not null
     and valid_not_before is not null
@@ -81,4 +81,4 @@ WHERE pub_key_id is not null
     and raw              is not null
     and category         is not null
     and created          is not null
-PRIMARY KEY (pub_key_id, hw_device_id);
+PRIMARY KEY (pub_key_id, owner_id);
