@@ -83,9 +83,10 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
       }
     }
 
+    //How to generate: https://gist.github.com/Carlos-Augusto/b626a6c017ba4289aa0e71becd433c04
     "register CSR with Ed25519" taggedAs Tag("durian") in {
 
-      val expectedBody = """{"pubKeyInfo":{"algorithm":"ED25519","created":"2022-02-21T14:56:51.220Z","hwDeviceId":"a273f05a-c6bc-4649-a1ef-88c9430d0420","pubKey":"x3iUyiICYaUqqS457ZP3GF3T116OaaMGIwND47SIPLI=","pubKeyId":"x3iUyiICYaUqqS457ZP3GF3T116OaaMGIwND47SIPLI=","validNotAfter":"2022-08-21T14:56:51.220Z","validNotBefore":"2022-02-21T14:56:51.220Z"},"signature":"1qUAt2WCAeaZEOO+iY6rJ1Gl6QOlnUFBZ/xhjrJa5Cn6WfcPSwmFQZQ2FBRlLUh9BxhdW9aqskJBttLiyM/LBw=="}""".stripMargin
+      val expectedBody = """{"pubKeyInfo":{"algorithm":"ED25519","created":"2022-02-21T15:54:50.980Z","hwDeviceId":"a273f05a-c6bc-4649-a1ef-88c9430d0420","pubKey":"x3iUyiICYaUqqS457ZP3GF3T116OaaMGIwND47SIPLI=","pubKeyId":"x3iUyiICYaUqqS457ZP3GF3T116OaaMGIwND47SIPLI=","validNotAfter":"2028-02-21T15:54:50.980Z","validNotBefore":"2022-02-21T15:54:50.980Z"},"signature":"asQmkurKQiuZfBDR3QWL+hQ1vZ8Ihr5Y5MMv6yzrQ5PT44chTODd8CsDz5o/9KX47pHGui+BMgxqVtW0Hfx2Ag=="}""".stripMargin
 
       post("/key/v1/pubkey", body = expectedBody) {
         status should equal(200)
