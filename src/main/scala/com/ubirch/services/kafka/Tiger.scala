@@ -3,8 +3,8 @@ package services.kafka
 
 import java.io.ByteArrayInputStream
 import java.util.concurrent.ExecutionException
-
-import com.datastax.driver.core.exceptions.{ InvalidQueryException, NoHostAvailableException }
+import com.datastax.oss.driver.api.core.servererrors.InvalidQueryException
+import com.datastax.oss.driver.api.core.AllNodesFailedException
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.{ TigerConsumerConfPaths, TigerProducerConfPaths }
@@ -119,7 +119,7 @@ class DefaultTiger @Inject() (
       .onErrorHandle {
         case e: ExecutionException =>
           e.getCause match {
-            case e: NoHostAvailableException =>
+            case e: AllNodesFailedException =>
               logger.error("Error connecting to host: " + e)
               p.failure(NeedForPauseException("Error connecting", e.getLocalizedMessage))
             case e: InvalidQueryException =>
@@ -185,7 +185,7 @@ class DefaultTiger @Inject() (
       .onErrorHandle {
         case e: ExecutionException =>
           e.getCause match {
-            case e: NoHostAvailableException =>
+            case e: AllNodesFailedException =>
               logger.error("Error connecting to host: " + e)
               p.failure(NeedForPauseException("Error connecting", e.getLocalizedMessage))
             case e: InvalidQueryException =>

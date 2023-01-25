@@ -1,6 +1,6 @@
 package com.ubirch.models
 
-import java.util.Date
+import java.time.Instant
 
 import io.getquill.Embedded
 
@@ -16,14 +16,14 @@ import io.getquill.Embedded
   */
 case class PublicKeyInfoRow(
     algorithm: String,
-    created: Date,
+    created: Instant,
     ownerId: String,
     pubKey: String,
     pubKeyId: String,
     prevPubKeyId: Option[String],
-    validNotAfter: Option[Date],
-    validNotBefore: Date,
-    revokedAt: Option[Date]
+    validNotAfter: Option[Instant],
+    validNotBefore: Instant,
+    revokedAt: Option[Instant]
 ) extends Embedded
 
 /**

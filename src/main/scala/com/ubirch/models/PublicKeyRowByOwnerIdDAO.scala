@@ -1,7 +1,8 @@
 package com.ubirch.models
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, SnakeCase }
+import io.getquill.{ CassandraStreamContext, EntityQuery, Quoted, SnakeCase }
+
 import javax.inject._
 import monix.reactive.Observable
 
@@ -16,7 +17,7 @@ trait PublicKeyRowByOwnerIdQueries extends TablePointer[PublicKeyRow] {
 
   implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys_by_owner_id")
 
-  def byOwnerIdQ(ownerId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
+  def byOwnerIdQ(ownerId: String): Quoted[EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]
       .filter(x => x.pubKeyInfoRow.ownerId == lift(ownerId))
       .map(x => x)
@@ -30,7 +31,7 @@ trait PublicKeyRowByOwnerIdQueries extends TablePointer[PublicKeyRow] {
   */
 @Singleton
 class PublicKeyRowByOwnerIdDAO @Inject() (val connectionService: ConnectionService) extends PublicKeyRowByOwnerIdQueries {
-  val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
+  val db: CassandraStreamContext[SnakeCase] = connectionService.context
 
   import db._
 

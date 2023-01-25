@@ -1,10 +1,10 @@
 package com.ubirch.controllers
 
 import java.util.{ Base64, UUID }
-
 import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ NOK, PublicKey, PublicKeyDelete, PublicKeyRevoke }
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.cassandra.test.EmbeddedCassandraBase
 import com.ubirch.util.{ DateUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import com.ubirch.{ EmbeddedCassandra, _ }
 import io.prometheus.client.CollectorRegistry
@@ -20,7 +20,7 @@ import scala.util.Try
   */
 class KeyServiceSpec
   extends ScalatraWordSpec
-  with EmbeddedCassandra
+  with EmbeddedCassandraBase
   with EmbeddedKafka
   with WithFixtures
   with BeforeAndAfterEach {
@@ -791,7 +791,7 @@ class KeyServiceSpec
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
+    cassandra.executeScripts(List(EmbeddedCassandra.truncateScript))
   }
 
   protected override def afterAll(): Unit = {
@@ -804,7 +804,7 @@ class KeyServiceSpec
 
     CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
-    cassandra.startAndCreateDefaults()
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts)
 
     lazy val keyController = Injector.get[KeyController]
 

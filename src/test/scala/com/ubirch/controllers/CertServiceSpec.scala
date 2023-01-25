@@ -3,9 +3,9 @@ package com.ubirch.controllers
 import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ NOK, PublicKeyInfo }
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.cassandra.test.EmbeddedCassandraBase
 import com.ubirch.util.{ CertUtil, PublicKeyCreationHelpers, PublicKeyUtil }
 import com.ubirch.{ EmbeddedCassandra, InjectorHelperImpl, WithFixtures }
-
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.scalatest.{ BeforeAndAfterEach, Tag }
@@ -17,7 +17,7 @@ import java.util.UUID
 /**
   * Test for the Cert Controller
   */
-class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach {
+class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandraBase with EmbeddedKafka with WithFixtures with BeforeAndAfterEach {
 
   val cassandra = new CassandraTest
 
@@ -119,7 +119,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
+    cassandra.executeScripts(List(EmbeddedCassandra.truncateScript))
   }
 
   protected override def afterAll(): Unit = {
@@ -131,7 +131,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandra with Embed
   protected override def beforeAll(): Unit = {
 
     EmbeddedKafka.start()
-    cassandra.startAndCreateDefaults()
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts)
 
     lazy val certController = Injector.get[CertController]
     lazy val keyController = Injector.get[KeyController]

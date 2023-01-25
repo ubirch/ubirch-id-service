@@ -1,7 +1,8 @@
 package com.ubirch.models
 
-import java.util.{ Base64, Date }
+import java.util.Base64
 
+import java.time.Instant
 import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.util.DateUtil
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -19,14 +20,14 @@ import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
   */
 case class PublicKeyInfo(
     algorithm: String,
-    created: Date,
+    created: Instant,
     hwDeviceId: String,
     pubKey: String,
     pubKeyId: String,
     prevPubKeyId: Option[String],
-    validNotAfter: Option[Date] = None,
-    validNotBefore: Date = new Date(),
-    revokedAt: Option[Date] = None
+    validNotAfter: Option[Instant] = None,
+    validNotBefore: Instant = Instant.now(),
+    revokedAt: Option[Instant] = None
 )
 
 /**
@@ -119,7 +120,7 @@ object PublicKey {
 
   def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
     publicKeys
-      .sortWith((a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created))
+      .sortWith((a, b) => a.pubKeyInfo.created.isAfter(b.pubKeyInfo.created))
       .sortWith((a, _) => a.prevSignature.isDefined)
   }
 

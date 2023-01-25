@@ -1,6 +1,6 @@
 package com.ubirch.models
 
-import java.util.Date
+import java.time.Instant
 
 /**
   * Represents the identity data access object
@@ -13,7 +13,7 @@ case class IdentityByStateRow(
     ownerId: String,
     identityId: String,
     state: String,
-    created: Date
+    created: Instant
 )
 
 object IdentityByStateRow {

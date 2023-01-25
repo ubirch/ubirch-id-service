@@ -4,10 +4,10 @@ package services.key
 import java.io.ByteArrayInputStream
 import java.security.cert.{ CertificateFactory, X509Certificate }
 import java.util.Date
-
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models._
 import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil, TaskHelpers }
+
 import javax.inject.{ Inject, Singleton }
 import monix.eval.Task
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder
@@ -16,6 +16,7 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.bouncycastle.util.encoders.{ Base64, Hex }
 
+import java.time.Instant
 import scala.util.Try
 
 /**
@@ -190,7 +191,7 @@ class DefaultCertService @Inject() (
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
     } yield {
-      PublicKeyInfo(curve.name(), new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, None, new Date())
+      PublicKeyInfo(curve.name(), Instant.now(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, None, Instant.now())
     }
 
   }
@@ -208,7 +209,7 @@ class DefaultCertService @Inject() (
       pubKey <- liftTry(pubKeyService.recreatePublicKey(cert.getPublicKey.getEncoded, curve))(RecreationException("Error recreating pubkey"))
       pubKeyAsBase64 <- liftTry(Try(Base64.toBase64String(pubKey.getRawPublicKey)))(EncodingException("Error encoding key into base 64"))
 
-      pubKeyInfo = PublicKeyInfo(normalizedAlgName, new Date(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, Option(cert.getNotAfter), cert.getNotBefore)
+      pubKeyInfo = PublicKeyInfo(normalizedAlgName, Instant.now(), uuid.toString, pubKeyAsBase64, pubKeyAsBase64, None, Option(cert.getNotAfter.toInstant), cert.getNotBefore.toInstant)
       publicKey = PublicKey(pubKeyInfo, Hex.toHexString(cert.getSignature))
 
     } yield {
