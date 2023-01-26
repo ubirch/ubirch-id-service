@@ -6,10 +6,10 @@ import com.ubirch.crypto.GeneratorKeyFactory
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.key.DefaultPubKeyVerificationService
 import com.ubirch.services.pm.DefaultProtocolMessageService
-import com.ubirch.util.PublicKeyUtil
+import com.ubirch.util.{ DateUtil, PublicKeyUtil }
 import org.joda.time.format.ISODateTimeFormat
 
-import java.time.temporal.ChronoUnit
+import java.time.Instant
 import scala.util.Try
 
 /**
@@ -31,15 +31,15 @@ class PublicKeySpec extends TestBase {
 
         val hardwareDeviceId = UUID.randomUUID()
 
-        val now = java.time.Instant.now()
-        val inSixMonths = now.plus(6, ChronoUnit.MONTHS)
+        val now = DateUtil.nowUTC
+        val inSixMonth = now.plusMonths(6)
         val pubKeyUUID = UUID.randomUUID()
 
         val res = for {
           curve <- PublicKeyUtil.associateCurve(curveName).toEither
           newPrivKey <- Try(GeneratorKeyFactory.getPrivKey(curve)).toEither
           newPublicKey = Base64.getEncoder.encodeToString(newPrivKey.getRawPublicKey)
-          pubKeyInfo = PublicKeyInfo(algorithm = curveName, created = now, hwDeviceId = hardwareDeviceId.toString, pubKey = newPublicKey, pubKeyId = pubKeyUUID.toString, None, validNotAfter = Some(inSixMonths), validNotBefore = now)
+          pubKeyInfo = PublicKeyInfo(algorithm = curveName, created = now.toDate, hwDeviceId = hardwareDeviceId.toString, pubKey = newPublicKey, pubKeyId = pubKeyUUID.toString, None, validNotAfter = Some(inSixMonth.toDate), validNotBefore = now.toDate)
 
           publicKeyInfoAsString <- jsonConverter.toString[PublicKeyInfo](pubKeyInfo)
           signature <- Try(Base64.getEncoder.encodeToString(newPrivKey.sign(publicKeyInfoAsString.getBytes))).toEither
@@ -49,10 +49,10 @@ class PublicKeySpec extends TestBase {
           invalidVerification <- Try(verification.validate(publicKey.copy(signature = publicKey.signature.substring(2)))).toEither
         } yield {
 
-          val nowString = dateTimeFormat.print(now.toEpochMilli)
-          val inSixMonthsString = dateTimeFormat.print(inSixMonths.toEpochMilli)
+          val nowString = dateTimeFormat.print(now)
+          val inSixMonthString = dateTimeFormat.print(inSixMonth)
 
-          val expectedPublicKeyInfo = s"""{"algorithm":"${pubKeyInfo.algorithm}","created":"$nowString","hwDeviceId":"$hardwareDeviceId","pubKey":"${pubKeyInfo.pubKey}","pubKeyId":"${pubKeyInfo.pubKeyId}","validNotAfter":"$inSixMonthsString","validNotBefore":"$nowString"}"""
+          val expectedPublicKeyInfo = s"""{"algorithm":"${pubKeyInfo.algorithm}","created":"$nowString","hwDeviceId":"$hardwareDeviceId","pubKey":"${pubKeyInfo.pubKey}","pubKeyId":"${pubKeyInfo.pubKeyId}","validNotAfter":"$inSixMonthString","validNotBefore":"$nowString"}"""
           val expectedPublicKey = s"""{"pubKeyInfo":$expectedPublicKeyInfo,"signature":"$signature"}""".stripMargin
 
           assert(expectedPublicKeyInfo == publicKeyInfoAsString)

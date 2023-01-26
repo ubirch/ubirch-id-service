@@ -131,7 +131,7 @@ class CertServiceSpec extends ScalatraWordSpec with EmbeddedCassandraBase with E
   protected override def beforeAll(): Unit = {
 
     EmbeddedKafka.start()
-    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts)
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts, timeoutMS = 180000)
 
     lazy val certController = Injector.get[CertController]
     lazy val keyController = Injector.get[KeyController]

@@ -15,31 +15,31 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 
   import db._
 
-  //These represent query descriptions only
-
-  implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys")
+  implicit val eventSchemaMeta: SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys")
 
   def byPubKeyIdQ(pubKeyId: String): Quoted[EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.pubKeyId == lift(pubKeyId))
+      .filter(x => x.pubKeyId == lift(pubKeyId))
       .map(x => x)
   }
 
   def insertQ(publicKeyRow: PublicKeyRow): Quoted[Insert[PublicKeyRow]] = quote {
-    query[PublicKeyRow].insertValue(lift(publicKeyRow))
+    query[PublicKeyRow]
+      .insertValue(lift(publicKeyRow))
   }
 
   def revokedAtQ(publicKeyId: String, ownerId: String, revokedAt: Option[Instant]): Quoted[Insert[PublicKeyRow]] = quote {
     query[PublicKeyRow]
       .insert(
-        _.pubKeyInfoRow.pubKeyId -> lift(publicKeyId),
-        _.pubKeyInfoRow.ownerId -> lift(ownerId),
-        _.pubKeyInfoRow.revokedAt -> lift(revokedAt)
+        _.pubKeyId -> lift(publicKeyId),
+        _.ownerId -> lift(ownerId),
+        _.revokedAt -> lift(revokedAt)
       )
   }
 
   def deleteQ(pubKeyId: String): Quoted[Delete[PublicKeyRow]] = quote {
-    query[PublicKeyRow].filter(_.pubKeyInfoRow.pubKeyId == lift(pubKeyId)).delete
+    query[PublicKeyRow]
+      .filter(_.pubKeyId == lift(pubKeyId)).delete
   }
 
   def getSomeQ(take: Int): Quoted[Query[PublicKeyRow]] = quote {

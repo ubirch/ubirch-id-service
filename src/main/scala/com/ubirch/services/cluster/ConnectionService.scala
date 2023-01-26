@@ -4,7 +4,8 @@ package services.cluster
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.CassandraClusterConfPaths
 import com.ubirch.services.lifeCycle.Lifecycle
-import com.ubirch.util.cassandra.{ CQLSessionService, StreamContextFactory }
+import com.ubirch.util.cassandra.CQLSessionService
+import io.getquill.context.cassandra.encoding.{ Decoders, Encoders }
 import io.getquill.{ CassandraStreamContext, NamingStrategy, SnakeCase }
 
 import javax.inject._
@@ -36,7 +37,11 @@ trait ConnectionService extends ConnectionServiceBase[SnakeCase]
 class DefaultConnectionService @Inject() (cqlSessionService: CQLSessionService, lifecycle: Lifecycle)
   extends ConnectionService with CassandraClusterConfPaths with LazyLogging {
 
-  override val context = StreamContextFactory.create(cqlSessionService)
+  override val context = new CassandraStreamContext[SnakeCase](
+    SnakeCase,
+    cqlSessionService.cqlSession,
+    cqlSessionService.preparedStatementCacheSize
+  ) with Encoders with Decoders
 
   lifecycle.addStopHook { () =>
     logger.info("Shutting down Connection Service")

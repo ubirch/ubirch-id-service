@@ -13,14 +13,11 @@ trait PublicKeyRowByOwnerIdQueries extends TablePointer[PublicKeyRow] {
 
   import db._
 
-  //These represent query descriptions only
-
-  implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys_by_owner_id")
+  implicit val eventSchemaMeta: SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys_by_owner_id")
 
   def byOwnerIdQ(ownerId: String): Quoted[EntityQuery[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.ownerId == lift(ownerId))
-      .map(x => x)
+    querySchema[PublicKeyRow]("keys_by_owner_id")
+      .filter(x => x.ownerId == lift(ownerId))
   }
 
 }

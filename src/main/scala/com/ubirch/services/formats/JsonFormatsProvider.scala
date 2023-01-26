@@ -10,7 +10,7 @@ import org.json4s.{ DefaultFormats, Formats }
 @Singleton
 class JsonFormatsProvider extends Provider[Formats] {
 
-  private val formats: Formats = DefaultFormats.lossless ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JavaTimeSerializers.all
+  private val formats: Formats = DefaultFormats.lossless ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
   override def get(): Formats = formats
 
 }

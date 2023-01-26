@@ -109,10 +109,10 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandraBase wi
 
         val keys = await(publicKeyRowDAO.selectAll, 5 seconds)
 
-        assert(keys.exists(_.pubKeyInfoRow.ownerId == ownerId))
-        assert(keys.exists(_.pubKeyInfoRow.pubKey == identityId))
+        assert(keys.exists(_.ownerId == ownerId))
+        assert(keys.exists(_.pubKey == identityId))
         assert(keys.exists(_.category == CERT.toString))
-        assert(keys.exists(_.pubKeyInfoRow.algorithm == PublicKeyUtil.normalize(algo.name()).get))
+        assert(keys.exists(_.algorithm == PublicKeyUtil.normalize(algo.name()).get))
 
         //Creates CSR
 

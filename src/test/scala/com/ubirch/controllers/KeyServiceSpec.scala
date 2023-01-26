@@ -804,7 +804,7 @@ class KeyServiceSpec
 
     CollectorRegistry.defaultRegistry.clear()
     EmbeddedKafka.start()
-    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts)
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts, timeoutMS = 180000)
 
     lazy val keyController = Injector.get[KeyController]
 

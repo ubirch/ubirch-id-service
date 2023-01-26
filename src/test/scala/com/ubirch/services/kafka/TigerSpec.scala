@@ -164,7 +164,7 @@ class TigerSpec extends TestBase with EmbeddedCassandraBase with EmbeddedKafka {
   }
 
   protected override def beforeAll(): Unit = {
-    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts)
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts, timeoutMS = 180000)
   }
 
 }

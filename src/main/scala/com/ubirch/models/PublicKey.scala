@@ -1,8 +1,6 @@
 package com.ubirch.models
 
-import java.util.Base64
-
-import java.time.Instant
+import java.util.{ Base64, Date }
 import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.util.DateUtil
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -20,14 +18,14 @@ import org.json4s.JsonAST.{ JInt, JObject, JString, JValue }
   */
 case class PublicKeyInfo(
     algorithm: String,
-    created: Instant,
+    created: Date,
     hwDeviceId: String,
     pubKey: String,
     pubKeyId: String,
     prevPubKeyId: Option[String],
-    validNotAfter: Option[Instant] = None,
-    validNotBefore: Instant = Instant.now(),
-    revokedAt: Option[Instant] = None
+    validNotAfter: Option[Date] = None,
+    validNotBefore: Date = new Date(),
+    revokedAt: Option[Date] = None
 )
 
 /**
@@ -74,17 +72,17 @@ object PublicKeyInfo {
     }
   }
 
-  def fromPublicKeyInfoRow(publicKeyInfoRow: PublicKeyInfoRow): PublicKeyInfo = {
+  def fromPublicKeyInfoRow(publicKeyRow: PublicKeyRow): PublicKeyInfo = {
     PublicKeyInfo(
-      publicKeyInfoRow.algorithm,
-      publicKeyInfoRow.created,
-      publicKeyInfoRow.ownerId,
-      publicKeyInfoRow.pubKey,
-      publicKeyInfoRow.pubKeyId,
-      publicKeyInfoRow.prevPubKeyId,
-      publicKeyInfoRow.validNotAfter,
-      publicKeyInfoRow.validNotBefore,
-      publicKeyInfoRow.revokedAt
+      publicKeyRow.algorithm,
+      Date.from(publicKeyRow.created),
+      publicKeyRow.ownerId,
+      publicKeyRow.pubKey,
+      publicKeyRow.pubKeyId,
+      publicKeyRow.prevPubKeyId,
+      publicKeyRow.validNotAfter.map(Date.from),
+      Date.from(publicKeyRow.validNotBefore),
+      publicKeyRow.revokedAt.map(Date.from)
     )
   }
 }
@@ -113,14 +111,14 @@ case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, prevSignature
 object PublicKey {
 
   def fromPublicKeyRow(publicKeyRow: PublicKeyRow): PublicKey = PublicKey(
-    PublicKeyInfo.fromPublicKeyInfoRow(publicKeyRow.pubKeyInfoRow),
+    PublicKeyInfo.fromPublicKeyInfoRow(publicKeyRow),
     publicKeyRow.signature,
     publicKeyRow.prevSignature
   )
 
   def sort(publicKeys: Seq[PublicKey]): Seq[PublicKey] = {
     publicKeys
-      .sortWith((a, b) => a.pubKeyInfo.created.isAfter(b.pubKeyInfo.created))
+      .sortWith((a, b) => a.pubKeyInfo.created.after(b.pubKeyInfo.created))
       .sortWith((a, _) => a.prevSignature.isDefined)
   }
 

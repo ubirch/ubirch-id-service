@@ -61,18 +61,17 @@ class DefaultPubKeyService @Inject() (
       maybeKey <- publicKeyDAO.byPubKeyId(publicKeyRevoke.publicKey).headOptionL
       _ = if (maybeKey.isEmpty) logger.error("key_not_found={}", publicKeyRevoke.publicKey)
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyRevoke.publicKey))
-      alreadyRevoked = maybeKey.flatMap(_.pubKeyInfoRow.revokedAt).isDefined
+      alreadyRevoked = maybeKey.flatMap(_.revokedAt).isDefined
       _ = if (alreadyRevoked) logger.error("key_already_revoked={}", publicKeyRevoke.publicKey)
       _ <- earlyResponseIf(alreadyRevoked)(KeyAlreadyRevoked(publicKeyRevoke.publicKey))
 
       key = maybeKey.get
-      pubKeyInfo = key.pubKeyInfoRow
-      curve <- Task.fromTry(verification.getCurve(pubKeyInfo.algorithm))
+      curve <- Task.fromTry(verification.getCurve(key.algorithm))
       verification <- Task.delay(verification.validateFromBase64(publicKeyRevoke.publicKey, publicKeyRevoke.signature, curve))
       _ = if (!verification) logger.error("invalid_signature_on_key_revoke={}", publicKeyRevoke)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(PublicKey.fromPublicKeyRow(key)))
 
-      revoke <- publicKeyDAO.revoke(key.pubKeyInfoRow.pubKeyId, key.pubKeyInfoRow.ownerId).headOptionL
+      revoke <- publicKeyDAO.revoke(key.pubKeyId, key.ownerId).headOptionL
       _ = if (revoke.isEmpty) logger.error("failed_key_revoke={}", publicKeyRevoke.publicKey)
       _ = if (revoke.isDefined) logger.info("key_revoke_succeeded={}", publicKeyRevoke.publicKey)
 
@@ -95,8 +94,7 @@ class DefaultPubKeyService @Inject() (
       _ <- earlyResponseIf(maybeKey.isEmpty)(KeyNotExists(publicKeyDelete.publicKey))
 
       key = maybeKey.get
-      pubKeyInfo = key.pubKeyInfoRow
-      curve <- Task.fromTry(verification.getCurve(pubKeyInfo.algorithm))
+      curve <- Task.fromTry(verification.getCurve(key.algorithm))
       verification <- Task.delay(verification.validateFromBase64(publicKeyDelete.publicKey, publicKeyDelete.signature, curve))
       _ = if (!verification) logger.error("invalid_signature_on_key_deletion={}", publicKeyDelete)
       _ <- earlyResponseIf(!verification)(InvalidKeyVerification(PublicKey.fromPublicKeyRow(key)))
