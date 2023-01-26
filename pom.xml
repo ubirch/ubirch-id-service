@@ -178,8 +178,6 @@
             <groupId>com.ubirch</groupId>
             <artifactId>ubirch-cassandra-utils_${scala.compat.version}</artifactId>
             <version>${ubirch-cassandra-utils.version}</version>
-            <scope>system</scope>
-            <systemPath>/Users/hirokifujino/.ivy2/local/com.ubirch/ubirch-cassandra-utils_2.12/1.0-SNAPSHOT/jars/ubirch-cassandra-utils_2.12.jar</systemPath>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.github.nosan/embedded-cassandra -->
