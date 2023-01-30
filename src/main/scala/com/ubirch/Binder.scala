@@ -11,6 +11,7 @@ import com.ubirch.services.key._
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.pm.{ DefaultProtocolMessageService, ProtocolMessageService }
 import com.ubirch.services.rest.SwaggerProvider
+import com.ubirch.util.cassandra.{ CQLSessionService, CassandraConfig, DefaultCQLSessionServiceProvider, DefaultCassandraConfigProvider }
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
@@ -34,7 +35,8 @@ class Binder
   def ProtocolMessageService = bind(classOf[ProtocolMessageService]).to(classOf[DefaultProtocolMessageService])
   def PubKeyVerificationService = bind(classOf[PubKeyVerificationService]).to(classOf[DefaultPubKeyVerificationService])
   def PubKeyService = bind(classOf[PubKeyService]).to(classOf[DefaultPubKeyService])
-  def ClusterService = bind(classOf[ClusterService]).to(classOf[DefaultClusterService])
+  def CassandraConfig = bind(classOf[CassandraConfig]).toProvider(classOf[DefaultCassandraConfigProvider])
+  def CQLSessionService = bind(classOf[CQLSessionService]).toProvider(classOf[DefaultCQLSessionServiceProvider])
   def ConnectionService = bind(classOf[ConnectionService]).to(classOf[DefaultConnectionService])
   def Tiger = bind(classOf[Tiger]).to(classOf[DefaultTiger])
   def KeyAnchoring = bind(classOf[KeyAnchoring]).to(classOf[DefaultKeyAnchoring])
@@ -50,7 +52,8 @@ class Binder
     JVMHook
     JsonConverterService
     PubKeyService
-    ClusterService
+    CassandraConfig
+    CQLSessionService
     ConnectionService
     Tiger
     CertService

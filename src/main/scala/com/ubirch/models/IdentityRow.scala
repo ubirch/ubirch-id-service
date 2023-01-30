@@ -1,6 +1,6 @@
 package com.ubirch.models
 
-import java.util.Date
+import java.time.Instant
 
 /**
   * Represents the identity data access object
@@ -16,7 +16,7 @@ case class IdentityRow(
     identityId: String,
     dataId: String,
     category: String,
-    created: Date,
+    created: Instant,
     data: String,
     description: String
 )
@@ -27,7 +27,7 @@ case class IdentityRow(
 object IdentityRow {
 
   def apply(ownerId: String, identityId: String, dataId: String, category: String, data: String, description: String): IdentityRow =
-    new IdentityRow(ownerId, identityId, dataId, category, new Date, data, description)
+    new IdentityRow(ownerId, identityId, dataId, category, Instant.now(), data, description)
 
 }
 

@@ -3,10 +3,12 @@ services:
   # copied from https://github.com/calvinlfer/compose-cassandra-cluster/blob/master/docker-compose.yml
   cassandra-seed-id-service:
     container_name: cassandra-seed-id-service
-    image: cassandra:3.11.0
+    image: cassandra:4.0.7
     ports:
       - 9042:9042   # Native transport
       - 9160:9160   # Thrift clients
+    volumes:
+      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml
     environment:
       - MAX_HEAP_SIZE=256M
       - HEAP_NEWSIZE=128M
@@ -15,8 +17,10 @@ services:
 
   cassandra-node-1-id-service:
     container_name: cassandra-node-1-id-service
-    image: cassandra:3.11.0
+    image: cassandra:4.0.7
     command: /bin/bash -c "echo 'Waiting for seed node' && sleep 30 && /docker-entrypoint.sh cassandra -f"
+    volumes:
+      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml
     environment:
       - CASSANDRA_SEEDS=cassandra-seed-id-service
     depends_on:
@@ -27,11 +31,12 @@ services:
   # This cassandra only helps to load the schema, thus keyspace and it's different tables
   cassandra-load-schema-node-id-service:
     container_name: cassandra-load-schema-node-id-service
-    image: cassandra:3.11.0
+    image: cassandra:4.0.7
     depends_on:
       - cassandra-seed-id-service
     volumes:
       - ./src/main/resources/db:/db
+      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml
     command: /bin/bash -c  "sleep 50 && ls db/ && echo importing schema && cqlsh cassandra-seed-id-service -f db/schemaOverview.cql "
 
   zookeeper-id-service:

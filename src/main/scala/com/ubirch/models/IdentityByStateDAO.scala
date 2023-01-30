@@ -1,7 +1,8 @@
 package com.ubirch.models
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, SnakeCase }
+import io.getquill.{ CassandraStreamContext, EntityQuery, Insert, Quoted, SnakeCase }
+
 import javax.inject.Inject
 import monix.reactive.Observable
 
@@ -16,11 +17,11 @@ trait IdentitiesByStateQueries extends TablePointer[IdentityByStateRow] {
 
   implicit val eventSchemaMeta: db.SchemaMeta[IdentityByStateRow] = schemaMeta[IdentityByStateRow]("identities_by_state")
 
-  def insertQ(identityByStateRow: IdentityByStateRow): db.Quoted[db.Insert[IdentityByStateRow]] = quote {
-    query[IdentityByStateRow].insert(lift(identityByStateRow))
+  def insertQ(identityByStateRow: IdentityByStateRow): Quoted[Insert[IdentityByStateRow]] = quote {
+    query[IdentityByStateRow].insertValue(lift(identityByStateRow))
   }
 
-  def selectAllQ: db.Quoted[db.EntityQuery[IdentityByStateRow]] = quote(query[IdentityByStateRow])
+  def selectAllQ: Quoted[EntityQuery[IdentityByStateRow]] = quote(query[IdentityByStateRow])
 
 }
 
@@ -29,7 +30,7 @@ trait IdentitiesByStateQueries extends TablePointer[IdentityByStateRow] {
   * @param connectionService Represents the Connection to Cassandra
   */
 class IdentityByStateDAO @Inject() (val connectionService: ConnectionService) extends IdentitiesByStateQueries {
-  val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
+  val db: CassandraStreamContext[SnakeCase] = connectionService.context
 
   import db._
 

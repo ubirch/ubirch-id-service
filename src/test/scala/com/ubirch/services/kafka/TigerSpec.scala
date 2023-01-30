@@ -1,7 +1,6 @@
 package com.ubirch.services.kafka
 
 import java.util.UUID
-
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.ConfPaths.{ AnchoringProducerConfPaths, TigerConsumerConfPaths, TigerProducerConfPaths }
@@ -10,6 +9,7 @@ import com.ubirch.kafka.util.PortGiver
 import com.ubirch.models.{ IdentitiesDAO, Identity, IdentityActivation, PublicKeyRowDAO }
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.JsonConverterService
+import com.ubirch.util.cassandra.test.EmbeddedCassandraBase
 import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil }
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
@@ -21,7 +21,7 @@ import scala.language.postfixOps
 /**
   * Test for the Tiger Engine
   */
-class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
+class TigerSpec extends TestBase with EmbeddedCassandraBase with EmbeddedKafka {
 
   val cassandra = new CassandraTest
 
@@ -156,7 +156,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
+    cassandra.executeScripts(List(EmbeddedCassandra.truncateScript))
   }
 
   protected override def afterAll(): Unit = {
@@ -164,7 +164,7 @@ class TigerSpec extends TestBase with EmbeddedCassandra with EmbeddedKafka {
   }
 
   protected override def beforeAll(): Unit = {
-    cassandra.startAndCreateDefaults()
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts, timeoutMS = 180000)
   }
 
 }

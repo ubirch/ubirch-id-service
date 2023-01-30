@@ -1,7 +1,6 @@
 package com.ubirch.models
 
 import java.util.{ Base64, Date }
-
 import com.ubirch.protocol.codec.UUIDUtil
 import com.ubirch.util.DateUtil
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -73,17 +72,17 @@ object PublicKeyInfo {
     }
   }
 
-  def fromPublicKeyInfoRow(publicKeyInfoRow: PublicKeyInfoRow): PublicKeyInfo = {
+  def fromPublicKeyInfoRow(publicKeyRow: PublicKeyRow): PublicKeyInfo = {
     PublicKeyInfo(
-      publicKeyInfoRow.algorithm,
-      publicKeyInfoRow.created,
-      publicKeyInfoRow.ownerId,
-      publicKeyInfoRow.pubKey,
-      publicKeyInfoRow.pubKeyId,
-      publicKeyInfoRow.prevPubKeyId,
-      publicKeyInfoRow.validNotAfter,
-      publicKeyInfoRow.validNotBefore,
-      publicKeyInfoRow.revokedAt
+      publicKeyRow.algorithm,
+      Date.from(publicKeyRow.created),
+      publicKeyRow.ownerId,
+      publicKeyRow.pubKey,
+      publicKeyRow.pubKeyId,
+      publicKeyRow.prevPubKeyId,
+      publicKeyRow.validNotAfter.map(Date.from),
+      Date.from(publicKeyRow.validNotBefore),
+      publicKeyRow.revokedAt.map(Date.from)
     )
   }
 }
@@ -112,7 +111,7 @@ case class PublicKey(pubKeyInfo: PublicKeyInfo, signature: String, prevSignature
 object PublicKey {
 
   def fromPublicKeyRow(publicKeyRow: PublicKeyRow): PublicKey = PublicKey(
-    PublicKeyInfo.fromPublicKeyInfoRow(publicKeyRow.pubKeyInfoRow),
+    PublicKeyInfo.fromPublicKeyInfoRow(publicKeyRow),
     publicKeyRow.signature,
     publicKeyRow.prevSignature
   )

@@ -11,8 +11,8 @@ import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.kafka.Tiger
 import com.ubirch.services.key.PubKeyService
+import com.ubirch.util.cassandra.test.EmbeddedCassandraBase
 import com.ubirch.util.{ CertUtil, Hasher, PublicKeyUtil }
-
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.bouncycastle.jcajce.BCFKSLoadStoreParameter.SignatureAlgorithm
@@ -22,7 +22,7 @@ import org.scalatra.test.scalatest.ScalatraWordSpec
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with EmbeddedKafka with WithFixtures with BeforeAndAfterEach with Awaits with ExecutionContextsTests {
+class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandraBase with EmbeddedKafka with WithFixtures with BeforeAndAfterEach with Awaits with ExecutionContextsTests {
 
   val cassandra = new CassandraTest
 
@@ -109,10 +109,10 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
         val keys = await(publicKeyRowDAO.selectAll, 5 seconds)
 
-        assert(keys.exists(_.pubKeyInfoRow.ownerId == ownerId))
-        assert(keys.exists(_.pubKeyInfoRow.pubKey == identityId))
+        assert(keys.exists(_.ownerId == ownerId))
+        assert(keys.exists(_.pubKey == identityId))
         assert(keys.exists(_.category == CERT.toString))
-        assert(keys.exists(_.pubKeyInfoRow.algorithm == PublicKeyUtil.normalize(algo.name()).get))
+        assert(keys.exists(_.algorithm == PublicKeyUtil.normalize(algo.name()).get))
 
         //Creates CSR
 
@@ -138,7 +138,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    EmbeddedCassandra.truncateScript.forEachStatement(cassandra.connection.execute _)
+    cassandra.executeScripts(List(EmbeddedCassandra.truncateScript))
   }
 
   protected override def afterAll(): Unit = {
@@ -147,7 +147,7 @@ class ActivationRoundSpec extends ScalatraWordSpec with EmbeddedCassandra with E
   }
 
   protected override def beforeAll(): Unit = {
-    cassandra.startAndCreateDefaults()
+    cassandra.startAndExecuteScripts(EmbeddedCassandra.creationScripts)
     super.beforeAll()
   }
 

@@ -49,9 +49,9 @@ create table if not exists keys(
     PRIMARY KEY (pub_key_id, owner_id)
 );
 
-drop MATERIALIZED VIEW IF exists keys_hw_device_id;
+drop MATERIALIZED VIEW IF exists keys_by_owner_id;
 
-CREATE MATERIALIZED VIEW keys_hw_device_id AS
+CREATE MATERIALIZED VIEW keys_by_owner_id AS
 SELECT *
 FROM keys
 WHERE owner_id is not null

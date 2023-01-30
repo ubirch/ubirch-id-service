@@ -1,11 +1,12 @@
 package com.ubirch.models
 
-import java.util.Date
-
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, SnakeCase }
+import io.getquill.{ CassandraStreamContext, Delete, EntityQuery, Insert, Query, Quoted, SnakeCase }
+
 import javax.inject.{ Inject, Singleton }
 import monix.reactive.Observable
+
+import java.time.Instant
 
 /**
   * Represents the queries for the key column family.
@@ -14,40 +15,40 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
 
   import db._
 
-  //These represent query descriptions only
+  implicit val eventSchemaMeta: SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys")
 
-  implicit val eventSchemaMeta: db.SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys")
-
-  def byPubKeyIdQ(pubKeyId: String): db.Quoted[db.EntityQuery[PublicKeyRow]] = quote {
+  def byPubKeyIdQ(pubKeyId: String): Quoted[EntityQuery[PublicKeyRow]] = quote {
     query[PublicKeyRow]
-      .filter(x => x.pubKeyInfoRow.pubKeyId == lift(pubKeyId))
+      .filter(x => x.pubKeyId == lift(pubKeyId))
       .map(x => x)
   }
 
-  def insertQ(publicKeyRow: PublicKeyRow): db.Quoted[db.Insert[PublicKeyRow]] = quote {
-    query[PublicKeyRow].insert(lift(publicKeyRow))
+  def insertQ(publicKeyRow: PublicKeyRow): Quoted[Insert[PublicKeyRow]] = quote {
+    query[PublicKeyRow]
+      .insertValue(lift(publicKeyRow))
   }
 
-  def revokedAtQ(publicKeyId: String, ownerId: String, revokedAt: Option[Date]): db.Quoted[db.Insert[PublicKeyRow]] = quote {
+  def revokedAtQ(publicKeyId: String, ownerId: String, revokedAt: Option[Instant]): Quoted[Insert[PublicKeyRow]] = quote {
     query[PublicKeyRow]
       .insert(
-        _.pubKeyInfoRow.pubKeyId -> lift(publicKeyId),
-        _.pubKeyInfoRow.ownerId -> lift(ownerId),
-        _.pubKeyInfoRow.revokedAt -> lift(revokedAt)
+        _.pubKeyId -> lift(publicKeyId),
+        _.ownerId -> lift(ownerId),
+        _.revokedAt -> lift(revokedAt)
       )
   }
 
-  def deleteQ(pubKeyId: String): db.Quoted[db.Delete[PublicKeyRow]] = quote {
-    query[PublicKeyRow].filter(_.pubKeyInfoRow.pubKeyId == lift(pubKeyId)).delete
+  def deleteQ(pubKeyId: String): Quoted[Delete[PublicKeyRow]] = quote {
+    query[PublicKeyRow]
+      .filter(_.pubKeyId == lift(pubKeyId)).delete
   }
 
-  def getSomeQ(take: Int): db.Quoted[db.Query[PublicKeyRow]] = quote {
+  def getSomeQ(take: Int): Quoted[Query[PublicKeyRow]] = quote {
     query[PublicKeyRow]
       .take(lift(take))
       .map(x => x)
   }
 
-  def selectAllQ: db.Quoted[db.EntityQuery[PublicKeyRow]] = quote(query[PublicKeyRow])
+  def selectAllQ: Quoted[EntityQuery[PublicKeyRow]] = quote(query[PublicKeyRow])
 
 }
 
@@ -57,7 +58,7 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
   */
 @Singleton
 class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) extends PublicKeyRowQueries {
-  val db: CassandraStreamContext[SnakeCase.type] = connectionService.context
+  val db: CassandraStreamContext[SnakeCase] = connectionService.context
 
   import db._
 
@@ -65,7 +66,7 @@ class PublicKeyRowDAO @Inject() (val connectionService: ConnectionService) exten
 
   def insert(publicKeyRow: PublicKeyRow): Observable[Unit] = run(insertQ(publicKeyRow))
 
-  def revoke(publicKeyId: String, ownerId: String): Observable[Unit] = run(revokedAtQ(publicKeyId, ownerId, Some(new Date())))
+  def revoke(publicKeyId: String, ownerId: String): Observable[Unit] = run(revokedAtQ(publicKeyId, ownerId, Some(Instant.now())))
 
   def delete(pubKeyId: String): Observable[Unit] = run(deleteQ(pubKeyId))
 
