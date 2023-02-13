@@ -1,7 +1,7 @@
 package com.ubirch.models
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, EntityQuery, Quoted, SnakeCase }
+import io.getquill.{ CassandraStreamContext, SnakeCase }
 
 import javax.inject._
 import monix.reactive.Observable
@@ -9,14 +9,12 @@ import monix.reactive.Observable
 /**
   * Represents the queries for the keys_pub_key_id materialized view.
   */
-trait PublicKeyRowByPubKeyIdQueries extends TablePointer[PublicKeyRow] {
+trait PublicKeyRowByPubKeyIdQueries extends CassandraBase {
 
   import db._
 
-  implicit val eventSchemaMeta: SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys_by_pub_key_id")
-
-  def byPubKeyIdQ(pubKeyId: String): Quoted[EntityQuery[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
+  def byPubKeyIdQ(pubKeyId: String) = quote {
+    querySchema[PublicKeyRow]("keys_by_pub_key_id")
       .filter(x => x.pubKeyId == lift(pubKeyId))
   }
 
