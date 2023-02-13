@@ -1,7 +1,7 @@
 package com.ubirch.models
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, Delete, EntityQuery, Insert, Query, Quoted, SnakeCase }
+import io.getquill.{ CassandraStreamContext, SnakeCase }
 
 import javax.inject.{ Inject, Singleton }
 import monix.reactive.Observable
@@ -11,25 +11,23 @@ import java.time.Instant
 /**
   * Represents the queries for the key column family.
   */
-trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
+trait PublicKeyRowQueries extends CassandraBase {
 
   import db._
 
-  implicit val eventSchemaMeta: SchemaMeta[PublicKeyRow] = schemaMeta[PublicKeyRow]("keys")
-
-  def byPubKeyIdQ(pubKeyId: String): Quoted[EntityQuery[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
+  def byPubKeyIdQ(pubKeyId: String) = quote {
+    querySchema[PublicKeyRow]("keys")
       .filter(x => x.pubKeyId == lift(pubKeyId))
       .map(x => x)
   }
 
-  def insertQ(publicKeyRow: PublicKeyRow): Quoted[Insert[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
+  def insertQ(publicKeyRow: PublicKeyRow) = quote {
+    querySchema[PublicKeyRow]("keys")
       .insertValue(lift(publicKeyRow))
   }
 
-  def revokedAtQ(publicKeyId: String, ownerId: String, revokedAt: Option[Instant]): Quoted[Insert[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
+  def revokedAtQ(publicKeyId: String, ownerId: String, revokedAt: Option[Instant]) = quote {
+    querySchema[PublicKeyRow]("keys")
       .insert(
         _.pubKeyId -> lift(publicKeyId),
         _.ownerId -> lift(ownerId),
@@ -37,18 +35,18 @@ trait PublicKeyRowQueries extends TablePointer[PublicKeyRow] {
       )
   }
 
-  def deleteQ(pubKeyId: String): Quoted[Delete[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
+  def deleteQ(pubKeyId: String) = quote {
+    querySchema[PublicKeyRow]("keys")
       .filter(_.pubKeyId == lift(pubKeyId)).delete
   }
 
-  def getSomeQ(take: Int): Quoted[Query[PublicKeyRow]] = quote {
-    query[PublicKeyRow]
+  def getSomeQ(take: Int) = quote {
+    querySchema[PublicKeyRow]("keys")
       .take(lift(take))
       .map(x => x)
   }
 
-  def selectAllQ: Quoted[EntityQuery[PublicKeyRow]] = quote(query[PublicKeyRow])
+  def selectAllQ = quote(querySchema[PublicKeyRow]("keys"))
 
 }
 

@@ -1,35 +1,36 @@
 package com.ubirch.models
 
 import com.ubirch.services.cluster.ConnectionService
-import io.getquill.{ CassandraStreamContext, EntityQuery, Insert, Quoted, SnakeCase }
+import io.getquill.{ CassandraStreamContext, SnakeCase }
 
 import javax.inject.Inject
 import monix.reactive.Observable
 
 /**
   * Represents the queries for the Identity Column Family.
+  *
+  * @important
+  * Since at least quill 3.12, dynamic query might leads to OutOfMemory.
+  * Therefore, we need to avoid using it.
+  * @see [[https://github.com/zio/zio-quill/issues/2484]]
   */
-trait IdentitiesQueries extends TablePointer[IdentityRow] {
+trait IdentitiesQueries extends CassandraBase {
 
   import db._
 
-  //These represent query descriptions only
-
-  implicit val eventSchemaMeta: db.SchemaMeta[IdentityRow] = schemaMeta[IdentityRow]("identities")
-
-  def byOwnerIdAndIdentityIdAndDataIdQ(ownerId: String, identityId: String, dataId: String): Quoted[EntityQuery[IdentityRow]] = quote {
-    query[IdentityRow]
+  def byOwnerIdAndIdentityIdAndDataIdQ(ownerId: String, identityId: String, dataId: String) = quote {
+    querySchema[IdentityRow]("identities")
       .filter(x => x.ownerId == lift(ownerId))
       .filter(x => x.identityId == lift(identityId))
       .filter(x => x.dataId == lift(dataId))
       .map(x => x)
   }
 
-  def insertQ(identityRow: IdentityRow): Quoted[Insert[IdentityRow]] = quote {
-    query[IdentityRow].insertValue(lift(identityRow))
+  def insertQ(identityRow: IdentityRow) = quote {
+    querySchema[IdentityRow]("identities").insertValue(lift(identityRow))
   }
 
-  def selectAllQ: Quoted[EntityQuery[IdentityRow]] = quote(query[IdentityRow])
+  def selectAllQ = quote(querySchema[IdentityRow]("identities"))
 
 }
 
