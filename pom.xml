@@ -70,7 +70,7 @@
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <quill.cassandra.version>4.6.0</quill.cassandra.version>
         <embedded-kafka>2.3.0</embedded-kafka>
-        <ubirch-cassandra-utils.version>1.0-SNAPSHOT</ubirch-cassandra-utils.version>
+        <ubirch-cassandra-utils.version>1.0</ubirch-cassandra-utils.version>
 
         <guice.version>4.1.0</guice.version>
 
