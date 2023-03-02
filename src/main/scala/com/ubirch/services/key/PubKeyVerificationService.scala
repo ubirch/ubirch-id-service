@@ -113,7 +113,7 @@ class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterSe
       verification
     }).recover {
       case e: Exception =>
-        logger.error("Failed to validate -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+        logger.error(s"Failed to validate -> exception=${e.getClass.getCanonicalName} message=${e.getMessage}", e)
         false
     }.get
   }
