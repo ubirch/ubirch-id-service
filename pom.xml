@@ -67,7 +67,6 @@
         <scala.logging.version>3.9.0</scala.logging.version>
 
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
-        <ubirch-crypto.version>2.1.4</ubirch-crypto.version>
         <quill.cassandra.version>4.6.0</quill.cassandra.version>
         <embedded-kafka>2.3.0</embedded-kafka>
         <ubirch-cassandra-utils.version>1.0</ubirch-cassandra-utils.version>
@@ -78,9 +77,6 @@
         <logback-classic.version>1.2.3</logback-classic.version>
         <jcl-over-slf4j.version>1.7.25</jcl-over-slf4j.version>
         <logstash-logback-encoder.version>5.3</logstash-logback-encoder.version>
-
-        <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
-        <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
 
         <!-- Scalatra -->
         <scalatra.version>2.6.5</scalatra.version>
@@ -115,37 +111,10 @@
 
     <dependencies>
 
-
-        <!--BouncyCastle-->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-            <version>${bcprov-jdk15on.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk15on</artifactId>
-            <version>${bcpkix-jdk15on.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>com.ubirch</groupId>
             <artifactId>ubirch-kafka-express</artifactId>
             <version>${ubirch-kafka-express.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.ubirch</groupId>
-            <artifactId>ubirch-crypto</artifactId>
-            <version>${ubirch-crypto.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.ubirch/ubirch-protocol-java -->
-        <dependency>
-            <groupId>com.ubirch</groupId>
-            <artifactId>ubirch-protocol-java</artifactId>
-            <version>2.1.1</version>
         </dependency>
 
         <dependency>
