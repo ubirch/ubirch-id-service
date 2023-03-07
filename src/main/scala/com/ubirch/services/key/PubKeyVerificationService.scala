@@ -2,18 +2,18 @@ package com.ubirch.services.key
 
 import java.security.spec.InvalidKeySpecException
 import java.util.Base64
-
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.InvalidPreSignature
 import com.ubirch.crypto.GeneratorKeyFactory
-import com.ubirch.crypto.utils.Curve
+import com.ubirch.crypto.utils.{ Curve, Utils }
 import com.ubirch.models.{ PublicKey, PublicKeyInfo }
 import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.services.formats.JsonConverterService
 import com.ubirch.services.pm.ProtocolMessageService
 import com.ubirch.util.PublicKeyUtil
-import javax.inject._
 
+import java.security.SignatureException
+import javax.inject._
 import scala.util.Try
 
 /**
@@ -76,14 +76,19 @@ class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterSe
   }
 
   def validate(publicKey: Array[Byte], signature: Array[Byte], message: Array[Byte], curve: Curve): Boolean = {
+
+    def validateBase(signature: Array[Byte]): Boolean = GeneratorKeyFactory
+      .getPubKey(publicKey, curve)
+      .verify(message, signature)
+
     try {
-      GeneratorKeyFactory
-        .getPubKey(publicKey, curve)
-        .verify(message, signature)
+      validateBase(signature)
     } catch {
       case e: InvalidKeySpecException =>
         logger.error("Failed to decode 2 -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
         false
+      case _: SignatureException =>
+        validateBase(Utils.pointsToASN1(signature))
     }
   }
 
