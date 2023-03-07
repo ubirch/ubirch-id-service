@@ -332,6 +332,26 @@ class KeyServiceSpec
 
     }
 
+    "create key using the json ecdsa" in {
+
+      val pkAsString = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2023-03-07T04:30:24.000Z","hwDeviceId":"4d9e9a47-8355-5616-b166-9bc4777701fd","pubKey":"83d0fDvoYbAGbUWkSjTs4Q4EJm3T1PLl/s2xpeoJk3c=","pubKeyId":"83d0fDvoYbAGbUWkSjTs4Q4EJm3T1PLl/s2xpeoJk3c=","validNotAfter":"2024-03-06T04:30:24.000Z","validNotBefore":"2023-03-07T04:30:24.000Z"},"signature":"GPY9/W5XWfOUQRpzlkXjL8mNo43TM9HHmdT843xiltFv8jU6XGiwg+drtxBBF+ojuI05NXJSdwSXdUwvQ7g+Cg=="}""".stripMargin
+
+      post("/v1/pubkey", body = pkAsString) {
+        status should equal(200)
+      }
+
+    }
+
+    "create key using the json ecdsa - other" in {
+
+      val pkAsString = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2023-03-06T15:42:02.728Z","hwDeviceId":"5a7f7540-dd46-4553-a5cc-5ac894cff45c","pubKey":"D9Qmm09SJATOJxKPix3wA2ANVtrX7etkxxcDS3PeAxv3OA8GfzD9aDiDsQeJvSFxjkaU6UngC+wQtslMPQAmdg==","pubKeyId":"D9Qmm09SJATOJxKPix3wA2ANVtrX7etkxxcDS3PeAxv3OA8GfzD9aDiDsQeJvSFxjkaU6UngC+wQtslMPQAmdg==","validNotAfter":"2033-03-03T15:42:02.728Z","validNotBefore":"2023-03-06T15:42:02.728Z"},"signature":"oThubhumkSBAneX/fTw0G2rf+YrP2HXGRwEXAwrwthiHAY04FsR/gBSuPOPU7R/b4Cduhr4PcLCoI3ivw1Qo3A=="}""".stripMargin
+
+      post("/v1/pubkey", body = pkAsString) {
+        status should equal(200)
+      }
+
+    }
+
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
