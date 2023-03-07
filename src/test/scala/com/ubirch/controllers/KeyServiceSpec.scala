@@ -352,6 +352,32 @@ class KeyServiceSpec
 
     }
 
+    "create keys from devices" in {
+
+      val pkAsMsgECDSA = Hex.decodeHex("9522c4104d2273e33c6c456ea8df090848124ef40187a9616c676f726974686dac65636473612d703235367631a763726561746564ce64070c83aa68774465766963654964c4104d2273e33c6c456ea8df090848124ef4a67075624b6579c440686a40462cab63ab1ce13cfd7cd48fba6ee5d19a2be4aa94c6bdd248b15a0f66c47b20970c780682cc2e8f4cc576cf6328a675e34fd57915d3ebb0661e17a900a87075624b65794964c440686a40462cab63ab1ce13cfd7cd48fba6ee5d19a2be4aa94c6bdd248b15a0f66c47b20970c780682cc2e8f4cc576cf6328a675e34fd57915d3ebb0661e17a900ad76616c69644e6f744166746572ce76d30f83ae76616c69644e6f744265666f7265ce64070c83c440ffbd84247390dfd430a30ab3702483e7794b4de2b108a90b13a47a8bced14ea3aac0cbf374d6068d0183288a04b0993541e8f4a429785eb7d37681b13bfa3d1e")
+      val pkAsStringECDSA = """{"pubKeyInfo":{"algorithm":"ecdsa-p256v1","created":"2023-03-07T10:05:57.000Z","hwDeviceId":"2afa5b40-4329-4012-91f6-69f4d08c7a53","pubKey":"kv2YKXoBlWLLgRrbJDyhNJeWROeVQuAbfpFkydHIew2liXJoAIX9H9z8hAKUpg3rCkbfIyF60FxOewnPSCqm0Q==","pubKeyId":"kv2YKXoBlWLLgRrbJDyhNJeWROeVQuAbfpFkydHIew2liXJoAIX9H9z8hAKUpg3rCkbfIyF60FxOewnPSCqm0Q==","validNotAfter":"2033-03-04T10:05:57.000Z","validNotBefore":"2023-03-07T10:05:57.000Z"},"signature":"y4+ZDtSdrm96r2/w3D1Av8XAFs2JOyD7I/UvZhvnYHIQ41uCXi4Qol/oZQvaSAsy0HRP2EExJm20x//0XiP/0Q=="}""".stripMargin
+
+      post("/v1/pubkey/mpack", body = pkAsMsgECDSA) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey", body = pkAsStringECDSA) {
+        status should equal(200)
+      }
+
+      val pkAsMsgEDDSA = Hex.decodeHex("9522c4106f36b1f0b03e4d789ace5853bc8c71030187a9616c676f726974686dab4543435f45443235353139a763726561746564ce64070c82aa68774465766963654964c4106f36b1f0b03e4d789ace5853bc8c7103a67075624b6579c420c46a00bf3bc63c649e1c11902a9bbb2fe986b0ed1e8ac76793a24f42202df023a87075624b65794964c420c46a00bf3bc63c649e1c11902a9bbb2fe986b0ed1e8ac76793a24f42202df023ad76616c69644e6f744166746572ce76d30f82ae76616c69644e6f744265666f7265ce64070c82c44096694c8f4ad850b5269399583cfd98524fb4c154ce018d9bd1ca36066de2c856962ad2e562e3c8078d27f9665a9b8a82a0d30cf4ae3907f0f3c67bc451caad09")
+      val pkAsStringEDDSA = """{"pubKeyInfo": {"algorithm": "ECC_ED25519", "created": "2023-03-07T12:45:33.000Z", "hwDeviceId": "3efabf03-3191-51ce-a074-d7680686ad95", "pubKey": "HQE3Af3cE6Oz9kfP0QfwjejLsArn7Zfs838aJjfkEN4=", "pubKeyId": "HQE3Af3cE6Oz9kfP0QfwjejLsArn7Zfs838aJjfkEN4=", "validNotAfter": "2024-03-06T12:45:33.000Z", "validNotBefore": "2023-03-07T12:45:33.000Z"}, "signature": "rG6tAVVDVjb2RFbxbhpiWeT7w85TQfZ/QTLPKOSUGC/s4LnRCV7px3pI8y2UzXRMeXJ08FXC3DyW/xIcJUMnBA=="}"""
+
+      post("/v1/pubkey/mpack", body = pkAsMsgEDDSA) {
+        status should equal(200)
+      }
+
+      post("/v1/pubkey", body = pkAsStringEDDSA) {
+        status should equal(200)
+      }
+
+    }
+
     "create key using the mpack endpoint" taggedAs Tag("apple") in {
 
       val expectedBody = """{"pubKeyInfo":{"algorithm":"ECC_ED25519","created":"2019-06-14T13:53:20.000Z","hwDeviceId":"55424952-3c71-bf88-1fa4-3c71bf881fa4","pubKey":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","pubKeyId":"6LFYOnlZEbpIIfbRWVf7sqi2WJ+sDijwRp8dXUZOFzk=","validNotAfter":"2020-06-04T13:53:20.000Z","validNotBefore":"2019-06-14T13:53:20.000Z"},"signature":"fde03123a4a784a825ea879216d4186b4729aead7c649d94aa0db72964fe8b3d2a4cdf5b1adf432b9df2f8af69215378fe30b3e9c5e2be4d27efa03d85538c0f"}"""
