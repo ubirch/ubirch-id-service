@@ -73,7 +73,7 @@ class DefaultTiger @Inject() (
     identitiesDAO: IdentitiesDAO,
     config: Config,
     lifecycle: Lifecycle
-)(implicit val ec: ExecutionContext, scheduler: Scheduler) extends Tiger(config, lifecycle) {
+)(implicit val ec: ExecutionContext, val scheduler: Scheduler) extends Tiger(config, lifecycle) {
 
   implicit val formats: Formats = DefaultFormats
 
