@@ -78,12 +78,7 @@ class DefaultPubKeyVerificationService @Inject() (jsonConverter: JsonConverterSe
   def validate(publicKey: Array[Byte], signature: Array[Byte], message: Array[Byte], curve: Curve): Boolean = {
     try {
       val pubKey = GeneratorKeyFactory.getPubKey(publicKey, curve)
-      val readySignature = if ((signature.length == 64) && (!pubKey.getSignatureAlgorithm.equals("Ed25519"))) {
-        Utils.pointsToASN1(signature)
-      } else {
-        signature
-      }
-      pubKey.verify(message, readySignature)
+      pubKey.verify(message, signature)
     } catch {
       case e: InvalidKeySpecException =>
         logger.error("Failed to decode 2 -> exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
