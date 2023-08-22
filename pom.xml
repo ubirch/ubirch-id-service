@@ -62,7 +62,6 @@
 
         <scala.major.version>2.12</scala.major.version>
         <scala.version>2.12.8</scala.version>
-        <scala.compat.version>2.12</scala.compat.version>
         <scalatest.version>3.0.5</scalatest.version>
         <scala.logging.version>3.9.0</scala.logging.version>
 
@@ -83,9 +82,8 @@
         <!-- Scalatra -->
         <scalatra.version>2.6.5</scalatra.version>
         <scalatra-scalatest.version>2.6.5</scalatra-scalatest.version>
-        <scalactic.version>3.0.5</scalactic.version>
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
-        <jetty.version>9.4.45.v20220203</jetty.version>
+        <jetty.version>9.4.51.v20230217</jetty.version>
 
         <!-- plugins -->
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
@@ -127,7 +125,7 @@
 
         <dependency>
             <groupId>io.monix</groupId>
-            <artifactId>monix_${scala.compat.version}</artifactId>
+            <artifactId>monix_${scala.major.version}</artifactId>
             <version>3.1.0</version>
             <type>pom</type>
         </dependency>
@@ -135,19 +133,19 @@
         <!-- https://mvnrepository.com/artifact/io.getquill/quill-cassandra-monix -->
         <dependency>
             <groupId>io.getquill</groupId>
-            <artifactId>quill-cassandra-monix_${scala.compat.version}</artifactId>
+            <artifactId>quill-cassandra-monix_${scala.major.version}</artifactId>
             <version>${quill.cassandra.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.getquill</groupId>
-            <artifactId>quill-cassandra_${scala.compat.version}</artifactId>
+            <artifactId>quill-cassandra_${scala.major.version}</artifactId>
             <version>${quill.cassandra.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.ubirch</groupId>
-            <artifactId>ubirch-cassandra-utils_${scala.compat.version}</artifactId>
+            <artifactId>ubirch-cassandra-utils_${scala.major.version}</artifactId>
             <version>${ubirch-cassandra-utils.version}</version>
         </dependency>
 
@@ -166,7 +164,7 @@
 
         <dependency>
             <groupId>com.roundeights</groupId>
-            <artifactId>hasher_${scala.compat.version}</artifactId>
+            <artifactId>hasher_${scala.major.version}</artifactId>
             <version>1.2.0</version>
         </dependency>
 
@@ -209,25 +207,25 @@
 
         <dependency>
             <groupId>com.typesafe.scala-logging</groupId>
-            <artifactId>scala-logging_${scala.compat.version}</artifactId>
+            <artifactId>scala-logging_${scala.major.version}</artifactId>
             <version>${scala.logging.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
-            <artifactId>json4s-native_${scala.compat.version}</artifactId>
+            <artifactId>json4s-native_${scala.major.version}</artifactId>
             <version>${json4s.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
-            <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+            <artifactId>json4s-jackson_${scala.major.version}</artifactId>
             <version>${json4s.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
-            <artifactId>json4s-ext_${scala.compat.version}</artifactId>
+            <artifactId>json4s-ext_${scala.major.version}</artifactId>
             <version>${json4s.version}</version>
         </dependency>
 
@@ -235,24 +233,19 @@
 
         <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra_2.12</artifactId>
+            <artifactId>scalatra_${scala.major.version}</artifactId>
             <version>${scalatra.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.scalactic</groupId>
-            <artifactId>scalactic_${scala.compat.version}</artifactId>
-            <version>${scalactic.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra-swagger_${scala.compat.version}</artifactId>
+            <artifactId>scalatra-swagger_${scala.major.version}</artifactId>
             <version>${scalatraSwagger.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.scalatra/scalatra-scalatest -->
         <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra-scalatest_${scala.compat.version}</artifactId>
+            <artifactId>scalatra-scalatest_${scala.major.version}</artifactId>
             <version>${scalatra-scalatest.version}</version>
             <scope>test</scope>
         </dependency>
@@ -296,7 +289,7 @@
 
         <dependency>
             <groupId>io.github.embeddedkafka</groupId>
-            <artifactId>embedded-kafka_${scala.compat.version}</artifactId>
+            <artifactId>embedded-kafka_${scala.major.version}</artifactId>
             <version>${embedded-kafka}</version>
         </dependency>
 
